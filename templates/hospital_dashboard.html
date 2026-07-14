@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ hospital.name }} — Hospital Dashboard</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="dashboard-hospital">
+  <div class="dashboard-container">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <h2>{{ hospital.name }}</h2>
+        <span>{{ hospital.district }}, {{ hospital.city }}</span>
+      </div>
+      <nav>
+        <a href="#" class="active" data-panel="live">Live Dispatch</a>
+        <a href="#" data-panel="history">History</a>
+        <a href="#" data-panel="profile">Hospital Profile</a>
+      </nav>
+      <div class="dashboard-links">
+        <span>Logged in as <strong>{{ user.name }}</strong> (hospital)</span>
+      </div>
+    </aside>
+
+    <div class="main-content">
+      <header class="top-bar">
+        <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="Menu">☰</button>
+        <h1>{{ hospital.name }}</h1>
+        <div class="top-bar-actions">
+          <span class="notif-badge" id="notif-badge" title="Notifications">🔔 <span id="notif-count">0</span></span>
+          <span class="user-badge">{{ user.name }}</span>
+          <span class="status-badge online">Online</span>
+          <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <div id="panel-live">
+          <div class="stats">
+            <div class="stat-card">
+              <div class="stat-value" id="stat-total">0</div>
+              <div class="stat-label">Total requests today</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">{{ settings.ambulance_response_time }} min</div>
+              <div class="stat-label">Average response time</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="stat-ambulance">{{ hospital.ambulance_count or 0 }}</div>
+              <div class="stat-label">Available ambulances</div>
+            </div>
+          </div>
+
+          <p class="hospital-status-line">
+            Status: <strong>{{ hospital.operating_status|upper }}</strong>
+            · {{ hospital.address }}
+            · GPS: {{ hospital.latitude }}, {{ hospital.longitude }}
+          </p>
+
+          <h2 class="section-title">
+            Live emergency requests
+            <span class="refresh-indicator" id="refresh-time">Updating...</span>
+          </h2>
+          <div class="alerts-grid" id="alerts-container"></div>
+
+          <h2 class="section-title">Live emergencies map</h2>
+          <div id="hospital-overview-map" class="leaflet-map-container dashboard-map"></div>
+        </div>
+
+        <div id="panel-history" class="hidden-panel panel-section">
+          <h2 class="section-title">Request history</h2>
+          <p style="color: #757575;">Resolved medical emergencies from the last 24 hours appear here.</p>
+          <div class="alerts-grid" id="history-container" style="margin-top: 16px;"></div>
+        </div>
+
+        <div id="panel-profile" class="hidden-panel panel-section">
+          <h2 class="section-title">Manage hospital profile</h2>
+          <form id="hospital-profile-form" class="hospital-form">
+            <div class="form-row-2">
+              <div class="form-group">
+                <label for="pf-name">Hospital name</label>
+                <input type="text" id="pf-name" required>
+              </div>
+              <div class="form-group">
+                <label for="pf-phone">Phone</label>
+                <input type="tel" id="pf-phone" required>
+              </div>
+            </div>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label for="pf-region">Region</label>
+                <input type="text" id="pf-region" required>
+              </div>
+              <div class="form-group">
+                <label for="pf-district">District</label>
+                <input type="text" id="pf-district" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="pf-city">City</label>
+              <input type="text" id="pf-city" required>
+            </div>
+            <div class="form-group">
+              <label for="pf-address">Full address</label>
+              <textarea id="pf-address" rows="2" required></textarea>
+            </div>
+            <div class="form-group">
+              <label for="pf-emergency">Emergency contacts</label>
+              <textarea id="pf-emergency" rows="2"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Services</label>
+              <div class="checkbox-grid">
+                {% for svc in ['Emergency','Trauma','General','Surgery','ICU','Maternity','Pediatrics','Ambulance','Laboratory','Radiology','Pharmacy'] %}
+                <label class="checkbox-label"><input type="checkbox" name="pf-services" value="{{ svc }}"> {{ svc }}</label>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label for="pf-capacity">Emergency capacity</label>
+                <input type="number" id="pf-capacity" min="0">
+              </div>
+              <div class="form-group">
+                <label for="pf-status">Operating status</label>
+                <select id="pf-status">
+                  <option value="open">Open</option>
+                  <option value="limited">Limited</option>
+                  <option value="closed">Closed</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row-2">
+              <label class="checkbox-label"><input type="checkbox" id="pf-ambulance"> Ambulance available</label>
+              <div class="form-group">
+                <label for="pf-amb-count">Ambulance count</label>
+                <input type="number" id="pf-amb-count" min="0">
+              </div>
+            </div>
+            <p class="field-hint">Drag pin to update exact hospital location on map.</p>
+            <div id="profile-map" class="leaflet-map-container dashboard-map"></div>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label for="pf-lat">Latitude</label>
+                <input type="text" id="pf-lat" readonly>
+              </div>
+              <div class="form-group">
+                <label for="pf-lng">Longitude</label>
+                <input type="text" id="pf-lng" readonly>
+              </div>
+            </div>
+            <button type="submit" class="btn-primary" style="max-width:280px;margin-top:12px;">Save profile</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="{{ url_for('static', filename='js/location.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/hospital.js') }}"></script>
+  <script>
+    var HOSPITAL_DATA = {{ hospital|tojson }};
+  </script>
+  <script>
+    (function () {
+      const API_TYPE = "medical";
+      let REFRESH_MS = {{ settings.refresh_interval * 1000 }};
+
+      function formatTime(iso) {
+        try {
+          return new Date(iso).toLocaleString("en-GB", {
+            hour: "2-digit",
+            minute: "2-digit",
+            day: "numeric",
+            month: "short"
+          });
+        } catch (e) {
+          return iso;
+        }
+      }
+
+      function formatType(type) {
+        return (type || "medical").replace(/_/g, " ").toUpperCase();
+      }
+
+      function renderCard(em) {
+        const card = document.createElement("div");
+        card.className = "alert-card";
+        card.innerHTML =
+          '<div class="alert-type">' +
+          formatType(em.type) +
+          (em.source === "call_center" ? ' · 📞 CALL CENTER' : "") +
+          "</div>" +
+          '<div class="alert-location">' +
+          escapeHtml(em.location) +
+          "</div>" +
+          '<div class="alert-meta">Caller: ' +
+          escapeHtml(em.caller_name || "Unknown") +
+          " · " +
+          escapeHtml(em.phone || "N/A") +
+          "</div>" +
+          '<div class="alert-meta">GPS: ' +
+          (em.latitude != null ? em.latitude.toFixed(5) + ", " + em.longitude.toFixed(5) : "N/A") +
+          (em.tracking_active ? " · <strong style='color:#c62828'>LIVE</strong>" : "") +
+          "</div>" +
+          '<div class="alert-meta">Mode: ' +
+          escapeHtml(em.request_mode || "emergency") +
+          (em.notes ? " · " + escapeHtml(em.notes) : "") +
+          "</div>" +
+          '<div class="alert-meta">Time: ' +
+          formatTime(em.timestamp) +
+          "</div>" +
+          '<span class="alert-status ' +
+          em.status +
+          '">' +
+          em.status.replace(/_/g, " ") +
+          "</span>" +
+          '<div class="alert-actions">' +
+          (em.status === "pending_hospital" || em.status === "pending"
+            ? '<button type="button" class="btn-action btn-accept" data-id="' + em.id + '">Accept</button>' +
+              '<button type="button" class="btn-action btn-reject" data-id="' + em.id + '">Reject</button>'
+            : "") +
+          '<button type="button" class="btn-action btn-call" data-phone="' +
+          escapeHtml(em.phone || "") +
+          '">Call</button>' +
+          '<button type="button" class="btn-action btn-view" data-emergency="' +
+          escapeAttr(JSON.stringify(em)) +
+          '">View on Map</button>' +
+          '<button type="button" class="btn-action btn-view" data-route-id="' + em.id + '">Route</button>' +
+          '<button type="button" class="btn-action btn-arrived" data-id="' + em.id + '">Arrived</button>' +
+          '<button type="button" class="btn-action btn-reached" data-id="' + em.id + '">Reached</button>' +
+          "</div>";
+        return card;
+      }
+
+      function escapeHtml(str) {
+        const d = document.createElement("div");
+        d.textContent = str || "";
+        return d.innerHTML;
+      }
+
+      function escapeAttr(str) {
+        return String(str || "")
+          .replace(/&/g, "&amp;")
+          .replace(/"/g, "&quot;")
+          .replace(/</g, "&lt;");
+      }
+
+      function loadEmergencies() {
+        fetch("/api/get_emergencies?type=" + API_TYPE, { credentials: "same-origin" })
+          .then(function (res) {
+            return res.json();
+          })
+          .then(function (data) {
+            if (data.refresh_interval) REFRESH_MS = data.refresh_interval * 1000;
+            const list = data.emergencies || [];
+            const container = document.getElementById("alerts-container");
+            container.innerHTML = "";
+
+            if (list.length === 0) {
+              container.innerHTML =
+                '<div class="empty-alerts">No live medical alerts. Waiting for SOS requests...</div>';
+            } else {
+              list.forEach(function (em) {
+                container.appendChild(renderCard(em));
+              });
+            }
+
+            const today = list.filter(function (e) {
+              const d = new Date(e.timestamp);
+              const now = new Date();
+              return d.toDateString() === now.toDateString();
+            });
+            document.getElementById("stat-total").textContent = today.length || list.length;
+
+            document.getElementById("refresh-time").textContent =
+              "Last updated " + new Date().toLocaleTimeString();
+
+            bindActions();
+            if (window.EmergencyLocation && EmergencyLocation.initLiveDispatchMap) {
+              Promise.all(list.map(function (em) {
+                return fetch("/api/emergencies/" + em.id + "/tracking", { credentials: "same-origin" })
+                  .then(function (r) { return r.json(); })
+                  .then(function (d) {
+                    if (d.success && d.trail) {
+                      em.location_history = d.trail;
+                      em.tracking_active = d.tracking_active;
+                      if (d.latitude) { em.latitude = d.latitude; em.longitude = d.longitude; }
+                    }
+                    return em;
+                  })
+                  .catch(function () { return em; });
+              })).then(function (enriched) {
+                EmergencyLocation.initLiveDispatchMap("hospital-overview-map", enriched);
+              });
+            }
+          })
+          .catch(function () {
+            document.getElementById("alerts-container").innerHTML =
+              '<div class="empty-alerts">Could not load alerts. Retrying...</div>';
+          });
+      }
+
+      function loadNotifications() {
+        fetch("/api/notifications", { credentials: "same-origin" })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            var n = (d.notifications || []).length;
+            document.getElementById("notif-count").textContent = n;
+          });
+      }
+
+      function bindActions() {
+        document.querySelectorAll(".btn-accept").forEach(function (btn) {
+          btn.onclick = function () {
+            const id = parseInt(btn.getAttribute("data-id"), 10);
+            fetch("/api/hospital/request/" + id + "/accept", {
+              method: "POST",
+              credentials: "same-origin",
+              headers: { "Content-Type": "application/json" }
+            }).then(function () {
+              loadEmergencies();
+              loadNotifications();
+            });
+          };
+        });
+
+        document.querySelectorAll(".btn-reject").forEach(function (btn) {
+          btn.onclick = function () {
+            if (!confirm("Reject and forward to next nearest hospital?")) return;
+            const id = parseInt(btn.getAttribute("data-id"), 10);
+            fetch("/api/hospital/request/" + id + "/reject", {
+              method: "POST",
+              credentials: "same-origin",
+              headers: { "Content-Type": "application/json" }
+            }).then(function () {
+              loadEmergencies();
+              loadNotifications();
+            });
+          };
+        });
+
+        document.querySelectorAll(".btn-call").forEach(function (btn) {
+          btn.onclick = function () {
+            const phone = btn.getAttribute("data-phone");
+            if (phone && phone !== "Not provided") {
+              window.location.href = "tel:" + phone.replace(/\s/g, "");
+            } else {
+              alert("No phone number provided for this caller.");
+            }
+          };
+        });
+
+        document.querySelectorAll(".btn-view[data-emergency]").forEach(function (btn) {
+          btn.onclick = function () {
+            try {
+              var em = JSON.parse(btn.getAttribute("data-emergency"));
+              EmergencyLocation.showEmergencyOnMap(em);
+            } catch (e) {
+              alert("Could not open map.");
+            }
+          };
+        });
+        document.querySelectorAll("[data-route-id]").forEach(function (btn) {
+          btn.onclick = function () {
+            var id = btn.getAttribute("data-route-id");
+            fetch("/api/emergencies/" + id + "/route", { credentials: "same-origin" })
+              .then(function (r) { return r.json(); })
+              .then(function (d) {
+                if (d.success) {
+                  var text = d.instructions.map(function (s) { return s.step + ". " + s.text; }).join("\n");
+                  alert("Navigation to " + d.victim.label + ":\n\n" + text);
+                  EmergencyLocation.showMapModal(d.victim.lat, d.victim.lng, "Route to emergency #" + id, d.victim.label);
+                }
+              });
+          };
+        });
+        document.querySelectorAll(".btn-arrived, .btn-reached").forEach(function (btn) {
+          btn.onclick = function () {
+            var id = parseInt(btn.getAttribute("data-id"), 10);
+            var action = btn.classList.contains("btn-arrived") ? "arrived_at_scene" : "reached_victim";
+            fetch("/api/emergencies/" + id + "/responder", {
+              method: "POST",
+              credentials: "same-origin",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: action })
+            }).then(function () { loadEmergencies(); });
+          };
+        });
+      }
+
+      document.querySelectorAll(".sidebar nav a").forEach(function (link) {
+        link.addEventListener("click", function (e) {
+          e.preventDefault();
+          document.querySelectorAll(".sidebar nav a").forEach(function (a) {
+            a.classList.remove("active");
+          });
+          link.classList.add("active");
+          const panel = link.getAttribute("data-panel");
+          document.getElementById("panel-live").style.display =
+            panel === "live" ? "block" : "none";
+          document.getElementById("panel-history").classList.toggle(
+            "hidden-panel",
+            panel !== "history"
+          );
+          document.getElementById("panel-profile").classList.toggle(
+            "hidden-panel",
+            panel !== "profile"
+          );
+          if (panel === "history") {
+            loadHistory();
+          }
+          if (panel === "profile" && window.HospitalApp) {
+            HospitalApp.initProfileForm(HOSPITAL_DATA);
+          }
+        });
+      });
+
+      function loadHistory() {
+        fetch("/api/get_emergencies?type=" + API_TYPE + "&status=resolved")
+          .then(function (res) {
+            return res.json();
+          })
+          .then(function (data) {
+            const container = document.getElementById("history-container");
+            container.innerHTML = "";
+            const list = data.emergencies || [];
+            if (list.length === 0) {
+              container.innerHTML =
+                '<div class="empty-alerts">No resolved requests in history yet.</div>';
+            } else {
+              list.forEach(function (em) {
+                container.appendChild(renderCard(em));
+              });
+            }
+          });
+      }
+
+      document.getElementById("sidebar-toggle").addEventListener("click", function () {
+        document.getElementById("sidebar").classList.toggle("open");
+      });
+
+      loadEmergencies();
+      loadNotifications();
+      setInterval(loadEmergencies, REFRESH_MS);
+      setInterval(loadNotifications, REFRESH_MS);
+    })();
+  </script>
+</body>
+</html>

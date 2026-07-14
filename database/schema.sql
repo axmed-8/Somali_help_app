@@ -1,0 +1,259 @@
+-- GurmadNet AI — MySQL Schema
+-- Run: python scripts/init_mysql.py
+
+CREATE DATABASE IF NOT EXISTS gurmad CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE gurmad;
+
+CREATE TABLE IF NOT EXISTS hospitals (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(180) NOT NULL,
+  city VARCHAR(80) DEFAULT '',
+  region VARCHAR(80) DEFAULT '',
+  district VARCHAR(80) DEFAULT '',
+  address VARCHAR(255) DEFAULT '',
+  latitude DOUBLE NOT NULL,
+  longitude DOUBLE NOT NULL,
+  phone VARCHAR(40) DEFAULT '',
+  emergency_contacts JSON,
+  services JSON,
+  specialties JSON,
+  ambulance_available TINYINT(1) DEFAULT 0,
+  ambulance_count INT DEFAULT 0,
+  emergency_capacity INT DEFAULT 10,
+  rating DOUBLE DEFAULT 4.0,
+  operating_status ENUM('open','limited','closed') NOT NULL DEFAULT 'open',
+  contact_email VARCHAR(180) DEFAULT '',
+  owner_user_id INT NULL,
+  location_verified TINYINT(1) DEFAULT 0,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  INDEX idx_hospitals_region (region),
+  INDEX idx_hospitals_city (city),
+  INDEX idx_hospitals_status (operating_status)
+);
+
+CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(80) DEFAULT '',
+  name VARCHAR(120) NOT NULL,
+  email VARCHAR(180) NOT NULL UNIQUE,
+  phone VARCHAR(40) DEFAULT '',
+  password_hash VARCHAR(255) NOT NULL,
+  role ENUM('citizen','hospital','police','fire','admin','call_center') NOT NULL DEFAULT 'citizen',
+  status ENUM('active','blocked') NOT NULL DEFAULT 'active',
+  profile_photo MEDIUMTEXT,
+  emergency_contact_name VARCHAR(120) DEFAULT '',
+  emergency_contact_phone VARCHAR(40) DEFAULT '',
+  emergency_contact_relation VARCHAR(60) DEFAULT '',
+  address VARCHAR(255) DEFAULT '',
+  city VARCHAR(80) DEFAULT '',
+  date_of_birth VARCHAR(20) DEFAULT '',
+  blood_type VARCHAR(10) DEFAULT '',
+  medical_notes TEXT,
+  saved_locations JSON,
+  hospital_id INT NULL,
+  reset_token VARCHAR(64) NULL,
+  reset_expires DATETIME NULL,
+  created_at DATETIME NOT NULL,
+  last_login DATETIME NULL,
+  last_seen_call_center DATETIME NULL,
+  activity JSON,
+  INDEX idx_users_email (email),
+  INDEX idx_users_role (role),
+  INDEX idx_users_hospital (hospital_id),
+  CONSTRAINT fk_users_hospital FOREIGN KEY (hospital_id) REFERENCES hospitals(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS emergencies (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NULL,
+  type VARCHAR(40) NOT NULL,
+  status VARCHAR(40) NOT NULL DEFAULT 'pending',
+  location TEXT,
+  district VARCHAR(120) DEFAULT '',
+  latitude DOUBLE NULL,
+  longitude DOUBLE NULL,
+  notes TEXT,
+  caller_name VARCHAR(120) DEFAULT '',
+  phone VARCHAR(40) DEFAULT '',
+  assigned_to VARCHAR(40) DEFAULT 'hospital',
+  assigned_team_label VARCHAR(120) DEFAULT '',
+  assigned_hospital_id INT NULL,
+  assigned_hospital_name VARCHAR(180) DEFAULT '',
+  hospital_distance_km DOUBLE NULL,
+  tracking_active TINYINT(1) DEFAULT 0,
+  last_location_update DATETIME NULL,
+  accepted_at DATETIME NULL,
+  timestamp DATETIME NOT NULL,
+  payload JSON,
+  INDEX idx_emergencies_user (user_id),
+  INDEX idx_emergencies_status (status),
+  INDEX idx_emergencies_hospital (assigned_hospital_id),
+  INDEX idx_emergencies_timestamp (timestamp),
+  CONSTRAINT fk_emergencies_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+  CONSTRAINT fk_emergencies_hospital FOREIGN KEY (assigned_hospital_id) REFERENCES hospitals(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  target_type VARCHAR(20) NOT NULL,
+  target_id INT NOT NULL,
+  message TEXT NOT NULL,
+  ntype VARCHAR(40) DEFAULT 'system_alert',
+  request_id INT NULL,
+  is_read TINYINT(1) DEFAULT 0,
+  timestamp DATETIME NOT NULL,
+  INDEX idx_notif_target (target_type, target_id),
+  INDEX idx_notif_request (request_id),
+  INDEX idx_notif_read (is_read)
+);
+
+CREATE TABLE IF NOT EXISTS messages (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  request_id INT NOT NULL,
+  sender_role VARCHAR(20) NOT NULL,
+  sender_id INT NOT NULL,
+  text MEDIUMTEXT NOT NULL,
+  msg_type VARCHAR(20) DEFAULT 'text',
+  status VARCHAR(20) DEFAULT 'sent',
+  timestamp DATETIME NOT NULL,
+  delivered_at DATETIME NULL,
+  seen_at DATETIME NULL,
+  INDEX idx_messages_request (request_id),
+  INDEX idx_messages_sender (sender_id)
+);
+
+CREATE TABLE IF NOT EXISTS announcements (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  body TEXT NOT NULL,
+  priority VARCHAR(20) DEFAULT 'info',
+  timestamp DATETIME NOT NULL,
+  INDEX idx_announcements_timestamp (timestamp)
+);
+
+CREATE TABLE IF NOT EXISTS settings (
+  id INT PRIMARY KEY DEFAULT 1,
+  payload JSON NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS system_content (
+  id INT PRIMARY KEY DEFAULT 1,
+  payload JSON NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  action VARCHAR(80) NOT NULL,
+  entity_type VARCHAR(40) NOT NULL,
+  entity_id INT NULL,
+  user_id INT NULL,
+  details JSON,
+  timestamp DATETIME NOT NULL,
+  INDEX idx_audit_action (action),
+  INDEX idx_audit_entity (entity_type, entity_id),
+  INDEX idx_audit_timestamp (timestamp)
+);
+
+-- Call Center Emergency Dispatch (Method 2)
+CREATE TABLE IF NOT EXISTS call_center_calls (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NULL,
+  caller_name VARCHAR(120) NOT NULL,
+  phone VARCHAR(40) DEFAULT '',
+  latitude DOUBLE NULL,
+  longitude DOUBLE NULL,
+  address TEXT,
+  district VARCHAR(120) DEFAULT '',
+  status VARCHAR(40) NOT NULL DEFAULT 'ringing',
+  operator_id INT NULL,
+  operator_name VARCHAR(120) DEFAULT '',
+  emergency_type VARCHAR(40) DEFAULT '',
+  emergency_types JSON,
+  dispatched_to JSON,
+  emergency_ids JSON,
+  nearest JSON,
+  device_info JSON,
+  notes TEXT,
+  accuracy_m DOUBLE NULL,
+  start_time DATETIME NOT NULL,
+  answered_at DATETIME NULL,
+  dispatched_at DATETIME NULL,
+  end_time DATETIME NULL,
+  duration_sec INT DEFAULT 0,
+  final_status VARCHAR(40) DEFAULT '',
+  source VARCHAR(40) DEFAULT 'call_center',
+  INDEX idx_cc_status (status),
+  INDEX idx_cc_operator (operator_id),
+  INDEX idx_cc_user (user_id),
+  INDEX idx_cc_start (start_time),
+  CONSTRAINT fk_cc_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- AI Emergency Engine (Phase 1) — analysis, recommendations, dispatch log, memory
+CREATE TABLE IF NOT EXISTS ai_analysis (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  emergency_id INT NULL,
+  call_id INT NULL,
+  category VARCHAR(40) DEFAULT '',
+  gurmad_type VARCHAR(40) DEFAULT '',
+  priority VARCHAR(20) DEFAULT '',
+  risk_level VARCHAR(20) DEFAULT '',
+  confidence DOUBLE DEFAULT 0,
+  provider VARCHAR(40) DEFAULT 'rule_based',
+  source VARCHAR(40) DEFAULT '',
+  payload JSON,
+  created_at DATETIME NOT NULL,
+  INDEX idx_ai_analysis_emergency (emergency_id),
+  INDEX idx_ai_analysis_call (call_id),
+  INDEX idx_ai_analysis_created (created_at)
+);
+
+CREATE TABLE IF NOT EXISTS ai_recommendation (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  analysis_id INT NULL,
+  emergency_id INT NULL,
+  call_id INT NULL,
+  status VARCHAR(20) DEFAULT 'pending',
+  confidence DOUBLE DEFAULT 0,
+  estimated_arrival_minutes INT NULL,
+  provider VARCHAR(40) DEFAULT 'rule_based',
+  human_decision VARCHAR(40) DEFAULT '',
+  operator_id INT NULL,
+  payload JSON,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NULL,
+  INDEX idx_ai_rec_emergency (emergency_id),
+  INDEX idx_ai_rec_call (call_id),
+  INDEX idx_ai_rec_status (status),
+  INDEX idx_ai_rec_created (created_at)
+);
+
+CREATE TABLE IF NOT EXISTS ai_dispatch_log (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  emergency_id INT NULL,
+  call_id INT NULL,
+  recommendation_id INT NULL,
+  analysis_id INT NULL,
+  human_decision VARCHAR(40) DEFAULT '',
+  operator_id INT NULL,
+  payload JSON,
+  created_at DATETIME NOT NULL,
+  INDEX idx_ai_dlog_emergency (emergency_id),
+  INDEX idx_ai_dlog_created (created_at)
+);
+
+CREATE TABLE IF NOT EXISTS ai_memory (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  event_type VARCHAR(40) NOT NULL,
+  emergency_id INT NULL,
+  call_id INT NULL,
+  analysis_id INT NULL,
+  recommendation_id INT NULL,
+  dispatch_log_id INT NULL,
+  payload JSON,
+  timestamp DATETIME NOT NULL,
+  INDEX idx_ai_mem_type (event_type),
+  INDEX idx_ai_mem_emergency (emergency_id),
+  INDEX idx_ai_mem_ts (timestamp)
+);

@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ content.admin_dashboard_title }}</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="dashboard-admin">
+  <div class="dashboard-container">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <h2>Admin Panel</h2>
+        <span>Emergency Help App</span>
+      </div>
+      <nav class="admin-nav">
+        <a href="#" class="active" data-section="overview">📊 Overview</a>
+        <a href="#" data-section="content">✏️ Edit Content</a>
+        <a href="#" data-section="users">👥 Users</a>
+        <a href="#" data-section="settings">⚙️ Settings</a>
+        <a href="#" data-section="emergencies">📋 Emergencies</a>
+        <a href="#" data-section="callcenter">📞 Call Center</a>
+        <a href="#" data-section="reports">📈 Reports</a>
+        <a href="#" data-section="appearance">🎨 Appearance</a>
+      </nav>
+      <div class="dashboard-links">
+        <span>{{ user.name }} (admin)</span>
+      </div>
+    </aside>
+
+    <div class="main-content">
+      <header class="top-bar">
+        <button type="button" class="sidebar-toggle" id="sidebar-toggle">☰</button>
+        <h1>{{ content.admin_dashboard_title }}</h1>
+        <div class="top-bar-actions">
+          <span class="status-badge online">System Online</span>
+          <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
+        </div>
+      </header>
+
+      <div class="content-area admin-content">
+        <!-- Section 1: Overview -->
+        <section id="sec-overview" class="admin-section active">
+          <div class="stats" id="overview-stats">
+            <div class="stat-card"><div class="stat-value" id="st-users">—</div><div class="stat-label">Total users</div></div>
+            <div class="stat-card"><div class="stat-value" id="st-today">—</div><div class="stat-label">Emergencies today</div></div>
+            <div class="stat-card"><div class="stat-value" id="st-week">—</div><div class="stat-label">This week</div></div>
+            <div class="stat-card"><div class="stat-value" id="st-avg">—</div><div class="stat-label">Avg response (min)</div></div>
+          </div>
+          <div class="panel-section">
+            <h2 class="section-title">Users by role</h2>
+            <div class="role-breakdown" id="role-breakdown"></div>
+          </div>
+          <div class="panel-section">
+            <h2 class="section-title">All-time emergencies</h2>
+            <p><strong id="st-total">—</strong> total · <span id="st-blocked">—</span> blocked users</p>
+          </div>
+        </section>
+
+        <!-- Section 2: Content -->
+        <section id="sec-content" class="admin-section">
+          <h2 class="section-title">Edit system text</h2>
+          <p class="hint">Changes apply immediately on all pages after save.</p>
+          <div id="content-editor" class="content-editor"></div>
+        </section>
+
+        <!-- Section 3: Users -->
+        <section id="sec-users" class="admin-section">
+          <div class="admin-toolbar">
+            <input type="search" id="user-search" placeholder="Search name or email...">
+            <select id="user-role-filter">
+              <option value="">All roles</option>
+              <option value="citizen">Citizen</option>
+              <option value="hospital">Hospital</option>
+              <option value="police">Police</option>
+              <option value="fire">Fire</option>
+              <option value="call_center">Call Center</option>
+              <option value="admin">Admin</option>
+            </select>
+            <button type="button" class="btn-action btn-admin-primary" id="btn-add-user">+ Add user</button>
+          </div>
+          <div class="table-wrap">
+            <table class="admin-table" id="users-table">
+              <thead>
+                <tr>
+                  <th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Status</th><th>Registered</th><th>Last login</th><th>Actions</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Section 4: Settings -->
+        <section id="sec-settings" class="admin-section">
+          <h2 class="section-title">System settings</h2>
+          <form id="settings-form" class="settings-form">
+            <label class="toggle-row"><input type="checkbox" name="sos_enabled" id="sos_enabled"> Enable SOS system</label>
+            <label class="toggle-row"><input type="checkbox" name="maintenance_mode" id="maintenance_mode"> Maintenance mode (only admin access)</label>
+            <label class="toggle-row"><input type="checkbox" name="sms_notifications" id="sms_notifications"> SMS/WhatsApp notifications</label>
+            <div class="form-row"><label>Ambulance response (min)</label><input type="number" name="ambulance_response_time" id="ambulance_response_time" min="1"></div>
+            <div class="form-row"><label>Police response (min)</label><input type="number" name="police_response_time" id="police_response_time" min="1"></div>
+            <div class="form-row"><label>Fire response (min)</label><input type="number" name="fire_response_time" id="fire_response_time" min="1"></div>
+            <div class="form-row"><label>Dashboard refresh (sec)</label><input type="number" name="refresh_interval" id="refresh_interval" min="3"></div>
+            <div class="form-row"><label>Max emergencies / day</label><input type="number" name="max_emergencies_per_day" id="max_emergencies_per_day" min="1"></div>
+            <button type="submit" class="btn-action btn-admin-primary">Save settings</button>
+          </form>
+        </section>
+
+        <!-- Section 5: Emergencies -->
+        <section id="sec-emergencies" class="admin-section">
+          <div class="admin-toolbar">
+            <a href="/api/admin/emergencies/export" class="btn-action btn-admin-primary" download>Export CSV</a>
+          </div>
+          <div class="table-wrap">
+            <table class="admin-table" id="emergencies-table">
+              <thead>
+                <tr>
+                  <th>ID</th><th>Type</th><th>Location</th><th>Caller</th><th>Phone</th><th>Time</th><th>Status</th><th>Assigned</th><th>Actions</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Section: Call Center -->
+        <section id="sec-callcenter" class="admin-section">
+          <h2 class="section-title">Call Center Management</h2>
+          <div class="stats" id="cc-admin-stats">
+            <div class="stat-card"><div class="stat-value" id="cc-st-online">—</div><div class="stat-label">Operators Online</div></div>
+            <div class="stat-card"><div class="stat-value" id="cc-st-incoming">—</div><div class="stat-label">Incoming</div></div>
+            <div class="stat-card"><div class="stat-value" id="cc-st-waiting">—</div><div class="stat-label">Waiting</div></div>
+            <div class="stat-card"><div class="stat-value" id="cc-st-progress">—</div><div class="stat-label">In Progress</div></div>
+            <div class="stat-card"><div class="stat-value" id="cc-st-resolved">—</div><div class="stat-label">Resolved Today</div></div>
+            <div class="stat-card"><div class="stat-value" id="cc-st-avg">—</div><div class="stat-label">Avg Response (min)</div></div>
+          </div>
+          <form id="cc-settings-form" class="settings-form" style="margin-top:16px;">
+            <label class="toggle-row"><input type="checkbox" id="cc_enabled"> Enable Call Center</label>
+            <div class="form-row"><label>Primary phone</label><input type="tel" id="cc_phone_primary" placeholder="+252612000999"></div>
+            <div class="form-row"><label>Secondary phone</label><input type="tel" id="cc_phone_secondary"></div>
+            <div class="form-row"><label>Priority Medical (1=highest)</label><input type="number" id="cc_pri_medical" min="1" max="5" value="1"></div>
+            <div class="form-row"><label>Priority Fire</label><input type="number" id="cc_pri_fire" min="1" max="5" value="1"></div>
+            <div class="form-row"><label>Priority Police</label><input type="number" id="cc_pri_police" min="1" max="5" value="1"></div>
+            <button type="submit" class="btn-action btn-admin-primary">Save Call Center settings</button>
+          </form>
+          <div class="panel-section" style="margin-top:20px;">
+            <h3>Operators</h3>
+            <div id="cc-operators-list"></div>
+            <p class="hint">Create operators via Users → Add user → role <strong>call_center</strong>. Dedicated login: <code>/call-center/login</code></p>
+          </div>
+          <div class="panel-section">
+            <h3>Recent calls</h3>
+            <div class="table-wrap">
+              <table class="admin-table" id="cc-recent-table">
+                <thead>
+                  <tr><th>ID</th><th>Caller</th><th>Phone</th><th>Type</th><th>Operator</th><th>Status</th><th>Start</th></tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Section 6: Reports -->
+        <section id="sec-reports" class="admin-section">
+          <div class="charts-grid">
+            <div class="panel-section">
+              <h3>Emergencies by type</h3>
+              <div class="bar-chart" id="chart-type"></div>
+            </div>
+            <div class="panel-section">
+              <h3>Top locations</h3>
+              <div class="bar-chart" id="chart-location"></div>
+            </div>
+          </div>
+          <div class="panel-section">
+            <h3>Summary</h3>
+            <p id="reports-summary">Loading...</p>
+          </div>
+        </section>
+
+        <!-- Section 7: Appearance -->
+        <section id="sec-appearance" class="admin-section">
+          <form id="appearance-form" class="settings-form">
+            <div class="form-row"><label>Hospital color</label><input type="color" name="color_hospital" id="color_hospital"></div>
+            <div class="form-row"><label>Police color</label><input type="color" name="color_police" id="color_police"></div>
+            <div class="form-row"><label>Fire color</label><input type="color" name="color_fire" id="color_fire"></div>
+            <label class="toggle-row"><input type="checkbox" name="dark_mode" id="dark_mode"> Dark mode (stored setting)</label>
+            <button type="submit" class="btn-action btn-admin-primary">Save appearance</button>
+          </form>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-box">
+      <h3 id="modal-title">Edit</h3>
+      <div id="modal-body"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn-action" id="modal-cancel">Cancel</button>
+        <button type="button" class="btn-action btn-admin-primary" id="modal-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="{{ url_for('static', filename='js/location.js') }}"></script>
+  <script>
+    (function () {
+      const DEFAULTS = {{ content | tojson }};
+      var emergenciesCache = {};
+
+      function api(url, opts) {
+        return fetch(url, Object.assign({ headers: { "Content-Type": "application/json" } }, opts || {}))
+          .then(function (r) { return r.json(); });
+      }
+
+      function fmtTime(iso) {
+        if (!iso) return "—";
+        try { return new Date(iso).toLocaleString(); } catch (e) { return iso; }
+      }
+
+      function showSection(name) {
+        document.querySelectorAll(".admin-section").forEach(function (s) {
+          s.classList.toggle("active", s.id === "sec-" + name);
+        });
+        document.querySelectorAll(".admin-nav a").forEach(function (a) {
+          a.classList.toggle("active", a.getAttribute("data-section") === name);
+        });
+      }
+
+      document.querySelectorAll(".admin-nav a").forEach(function (a) {
+        a.addEventListener("click", function (e) {
+          e.preventDefault();
+          showSection(a.getAttribute("data-section"));
+          if (a.getAttribute("data-section") === "overview") loadStats();
+          if (a.getAttribute("data-section") === "content") loadContentEditor();
+          if (a.getAttribute("data-section") === "users") loadUsers();
+          if (a.getAttribute("data-section") === "settings") loadSettingsForm();
+          if (a.getAttribute("data-section") === "emergencies") loadEmergencies();
+          if (a.getAttribute("data-section") === "callcenter") loadCallCenter();
+          if (a.getAttribute("data-section") === "reports") loadReports();
+          if (a.getAttribute("data-section") === "appearance") loadAppearance();
+        });
+      });
+
+      function loadCallCenter() {
+        api("/api/admin/call-center/stats").then(function (d) {
+          if (!d.success) return;
+          var s = d.stats || {};
+          document.getElementById("cc-st-online").textContent = s.operators_online;
+          document.getElementById("cc-st-incoming").textContent = s.incoming_calls;
+          document.getElementById("cc-st-waiting").textContent = s.calls_waiting;
+          document.getElementById("cc-st-progress").textContent = s.calls_in_progress;
+          document.getElementById("cc-st-resolved").textContent = s.resolved_today;
+          document.getElementById("cc-st-avg").textContent = s.avg_response_minutes;
+          var st = d.settings || {};
+          document.getElementById("cc_enabled").checked = !!st.enabled;
+          document.getElementById("cc_phone_primary").value = st.phone_primary || "";
+          document.getElementById("cc_phone_secondary").value = st.phone_secondary || "";
+          var ops = document.getElementById("cc-operators-list");
+          ops.innerHTML = (d.operators || []).map(function (o) {
+            return "<span class='role-pill'>" + o.name + " · " + o.email + " · " + o.status + "</span>";
+          }).join(" ") || "<p>No operators yet.</p>";
+          var tbody = document.querySelector("#cc-recent-table tbody");
+          tbody.innerHTML = "";
+          (d.recent_calls || []).forEach(function (c) {
+            var tr = document.createElement("tr");
+            tr.innerHTML =
+              "<td>#" + c.id + "</td><td>" + (c.caller_name || "") + "</td><td>" + (c.phone || "") + "</td>" +
+              "<td>" + ((c.emergency_types || []).join(", ") || c.emergency_type || "—") + "</td>" +
+              "<td>" + (c.operator_name || "—") + "</td><td>" + (c.status || "") + "</td><td>" + fmtTime(c.start_time) + "</td>";
+            tbody.appendChild(tr);
+          });
+        });
+        api("/api/admin/settings").then(function (s) {
+          if (s.call_center_priority_medical != null) document.getElementById("cc_pri_medical").value = s.call_center_priority_medical;
+          if (s.call_center_priority_fire != null) document.getElementById("cc_pri_fire").value = s.call_center_priority_fire;
+          if (s.call_center_priority_police != null) document.getElementById("cc_pri_police").value = s.call_center_priority_police;
+        });
+      }
+
+      document.getElementById("cc-settings-form").onsubmit = function (e) {
+        e.preventDefault();
+        api("/api/admin/call-center/settings", {
+          method: "POST",
+          body: JSON.stringify({
+            enabled: document.getElementById("cc_enabled").checked,
+            phone_primary: document.getElementById("cc_phone_primary").value,
+            phone_secondary: document.getElementById("cc_phone_secondary").value,
+            priority_medical: parseInt(document.getElementById("cc_pri_medical").value, 10),
+            priority_fire: parseInt(document.getElementById("cc_pri_fire").value, 10),
+            priority_police: parseInt(document.getElementById("cc_pri_police").value, 10)
+          })
+        }).then(function () { alert("Call Center settings saved."); loadCallCenter(); });
+      };
+      function loadStats() {
+        api("/api/admin/stats").then(function (d) {
+          document.getElementById("st-users").textContent = d.total_users;
+          document.getElementById("st-today").textContent = d.emergencies_today;
+          document.getElementById("st-week").textContent = d.emergencies_week;
+          document.getElementById("st-total").textContent = d.emergencies_total;
+          document.getElementById("st-avg").textContent = d.avg_response_time + " min";
+          document.getElementById("st-blocked").textContent = d.blocked_users;
+          var rb = document.getElementById("role-breakdown");
+          rb.innerHTML = "";
+          Object.keys(d.users_by_role || {}).forEach(function (role) {
+            var span = document.createElement("span");
+            span.className = "role-pill";
+            span.textContent = role + ": " + d.users_by_role[role];
+            rb.appendChild(span);
+          });
+        });
+      }
+
+      function loadContentEditor() {
+        api("/api/admin/content").then(function (content) {
+          var box = document.getElementById("content-editor");
+          box.innerHTML = "";
+          Object.keys(content).forEach(function (key) {
+            var row = document.createElement("div");
+            row.className = "content-row";
+            row.innerHTML =
+              '<label>' + key + '</label>' +
+              '<input type="text" data-key="' + key + '" value="' + (content[key] || "").replace(/"/g, "&quot;") + '">' +
+              '<button type="button" class="btn-sm btn-save-content" data-key="' + key + '">Save</button>' +
+              '<button type="button" class="btn-sm btn-reset-content" data-key="' + key + '">Reset</button>';
+            box.appendChild(row);
+          });
+          box.querySelectorAll(".btn-save-content").forEach(function (btn) {
+            btn.onclick = function () {
+              var key = btn.getAttribute("data-key");
+              var val = box.querySelector('input[data-key="' + key + '"]').value;
+              api("/api/admin/content/update", {
+                method: "POST",
+                body: JSON.stringify({ key: key, value: val })
+              }).then(function () { alert("Saved: " + key); });
+            };
+          });
+          box.querySelectorAll(".btn-reset-content").forEach(function (btn) {
+            btn.onclick = function () {
+              var key = btn.getAttribute("data-key");
+              api("/api/admin/content/reset", {
+                method: "POST",
+                body: JSON.stringify({ key: key })
+              }).then(function (r) {
+                box.querySelector('input[data-key="' + key + '"]').value = r.content[key] || DEFAULTS[key] || "";
+              });
+            };
+          });
+        });
+      }
+
+      function loadUsers() {
+        var q = document.getElementById("user-search").value;
+        var role = document.getElementById("user-role-filter").value;
+        var url = "/api/admin/users?q=" + encodeURIComponent(q) + "&role=" + encodeURIComponent(role);
+        fetch(url).then(function (r) { return r.json(); }).then(function (data) {
+          var tbody = document.querySelector("#users-table tbody");
+          tbody.innerHTML = "";
+          (data.users || []).forEach(function (u) {
+            var tr = document.createElement("tr");
+            tr.innerHTML =
+              "<td>" + u.id + "</td><td>" + u.name + "</td><td>" + u.email + "</td><td>" + u.phone + "</td>" +
+              "<td>" + u.role + "</td><td>" + u.status + "</td><td>" + fmtTime(u.created_at) + "</td><td>" + fmtTime(u.last_login) + "</td>" +
+              '<td class="actions-cell">' +
+              '<button class="btn-sm" data-act="edit" data-id="' + u.id + '">Edit</button>' +
+              '<button class="btn-sm" data-act="block" data-id="' + u.id + '">Block</button>' +
+              '<button class="btn-sm" data-act="delete" data-id="' + u.id + '">Delete</button>' +
+              '<button class="btn-sm" data-act="activity" data-id="' + u.id + '">History</button>' +
+              "</td>";
+            tbody.appendChild(tr);
+          });
+          bindUserActions(data.users || []);
+        });
+      }
+
+      function bindUserActions(users) {
+        document.querySelectorAll("#users-table [data-act]").forEach(function (btn) {
+          btn.onclick = function () {
+            var id = parseInt(btn.getAttribute("data-id"), 10);
+            var act = btn.getAttribute("data-act");
+            var u = users.find(function (x) { return x.id === id; });
+            if (act === "block") {
+              api("/api/admin/users/block", { method: "POST", body: JSON.stringify({ id: id }) })
+                .then(function () { loadUsers(); });
+            } else if (act === "delete") {
+              if (confirm("Delete user permanently?")) {
+                api("/api/admin/users/delete", { method: "POST", body: JSON.stringify({ id: id }) })
+                  .then(function () { loadUsers(); });
+              }
+            } else if (act === "activity" && u) {
+              var html = (u.activity || []).map(function (a) {
+                return "<li>" + a.action + " — " + fmtTime(a.timestamp) + "</li>";
+              }).join("") || "<li>No activity</li>";
+              openModal("Activity: " + u.name, "<ul>" + html + "</ul>");
+            } else if (act === "edit" && u) {
+              openModal("Edit user", 
+                '<input id="eu-name" value="' + u.name + '" placeholder="Name"><br>' +
+                '<input id="eu-email" value="' + u.email + '" placeholder="Email"><br>' +
+                '<input id="eu-phone" value="' + u.phone + '" placeholder="Phone"><br>' +
+                '<select id="eu-role"><option value="citizen">citizen</option><option value="hospital">hospital</option><option value="police">police</option><option value="fire">fire</option><option value="call_center">call_center</option><option value="admin">admin</option></select>'
+              );
+              document.getElementById("eu-role").value = u.role;
+              document.getElementById("modal-save").onclick = function () {
+                api("/api/admin/users/edit", {
+                  method: "POST",
+                  body: JSON.stringify({
+                    id: id,
+                    name: document.getElementById("eu-name").value,
+                    email: document.getElementById("eu-email").value,
+                    phone: document.getElementById("eu-phone").value,
+                    role: document.getElementById("eu-role").value
+                  })
+                }).then(function () { closeModal(); loadUsers(); });
+              };
+            }
+          };
+        });
+      }
+
+      document.getElementById("user-search").addEventListener("input", loadUsers);
+      document.getElementById("user-role-filter").addEventListener("change", loadUsers);
+
+      document.getElementById("btn-add-user").onclick = function () {
+        openModal("Add user",
+          '<input id="nu-name" placeholder="Full name"><br>' +
+          '<input id="nu-email" placeholder="Email"><br>' +
+          '<input id="nu-phone" placeholder="Phone (0612345678)"><br>' +
+          '<input id="nu-pass" placeholder="Password" value="123456"><br>' +
+          '<select id="nu-role"><option value="citizen">citizen</option><option value="hospital">hospital</option><option value="police">police</option><option value="fire">fire</option><option value="call_center">call_center</option></select>'
+        );
+        document.getElementById("modal-save").onclick = function () {
+          api("/api/admin/users/create", {
+            method: "POST",
+            body: JSON.stringify({
+              name: document.getElementById("nu-name").value,
+              email: document.getElementById("nu-email").value,
+              phone: document.getElementById("nu-phone").value,
+              password: document.getElementById("nu-pass").value,
+              role: document.getElementById("nu-role").value
+            })
+          }).then(function () { closeModal(); loadUsers(); });
+        };
+      };
+
+      function loadSettingsForm() {
+        api("/api/admin/settings").then(function (s) {
+          ["sos_enabled", "maintenance_mode", "sms_notifications"].forEach(function (k) {
+            document.getElementById(k).checked = !!s[k];
+          });
+          ["ambulance_response_time", "police_response_time", "fire_response_time", "refresh_interval", "max_emergencies_per_day"].forEach(function (k) {
+            document.getElementById(k).value = s[k];
+          });
+        });
+      }
+
+      document.getElementById("settings-form").onsubmit = function (e) {
+        e.preventDefault();
+        var payload = {
+          sos_enabled: document.getElementById("sos_enabled").checked,
+          maintenance_mode: document.getElementById("maintenance_mode").checked,
+          sms_notifications: document.getElementById("sms_notifications").checked,
+          ambulance_response_time: parseInt(document.getElementById("ambulance_response_time").value, 10),
+          police_response_time: parseInt(document.getElementById("police_response_time").value, 10),
+          fire_response_time: parseInt(document.getElementById("fire_response_time").value, 10),
+          refresh_interval: parseInt(document.getElementById("refresh_interval").value, 10),
+          max_emergencies_per_day: parseInt(document.getElementById("max_emergencies_per_day").value, 10)
+        };
+        api("/api/admin/settings/update", { method: "POST", body: JSON.stringify(payload) })
+          .then(function () { alert("Settings saved."); });
+      };
+
+      function loadEmergencies() {
+        api("/api/admin/emergencies").then(function (data) {
+          var tbody = document.querySelector("#emergencies-table tbody");
+          tbody.innerHTML = "";
+          (data.emergencies || []).forEach(function (em) {
+            emergenciesCache[em.id] = em;
+            var tr = document.createElement("tr");
+            tr.innerHTML =
+              "<td>" + em.id + "</td><td>" + em.type + "</td><td>" + em.location + "</td>" +
+              "<td>" + (em.caller_name || "") + "</td><td>" + (em.phone || "") + "</td><td>" + fmtTime(em.timestamp) + "</td>" +
+              '<td><select data-id="' + em.id + '" class="em-status">' +
+              ["pending","dispatched","in_progress","completed","cancelled","resolved"].map(function (s) {
+                return '<option value="' + s + '"' + (em.status === s ? " selected" : "") + ">" + s + "</option>";
+              }).join("") + "</select></td>" +
+              '<td><select data-id="' + em.id + '" class="em-assign">' +
+              ["hospital","police","fire"].map(function (s) {
+                return '<option value="' + s + '"' + ((em.assigned_to || "") === s ? " selected" : "") + ">" + s + "</option>";
+              }).join("") + "</select></td>" +
+              '<td class="actions-cell">' +
+              '<button class="btn-sm" data-call="' + (em.phone || "") + '">Call</button>' +
+              '<button class="btn-sm btn-em-map" data-id="' + em.id + '">Map</button>' +
+              '<button class="btn-sm em-del" data-id="' + em.id + '">Delete</button>' +
+              "</td>";
+            tbody.appendChild(tr);
+          });
+          tbody.querySelectorAll(".em-status, .em-assign").forEach(function (sel) {
+            sel.onchange = function () {
+              var id = parseInt(sel.getAttribute("data-id"), 10);
+              var row = sel.closest("tr");
+              api("/api/admin/emergencies/update", {
+                method: "POST",
+                body: JSON.stringify({
+                  id: id,
+                  status: row.querySelector(".em-status").value,
+                  assigned_to: row.querySelector(".em-assign").value
+                })
+              });
+            };
+          });
+          tbody.querySelectorAll("[data-call]").forEach(function (b) {
+            b.onclick = function () {
+              var p = b.getAttribute("data-call");
+              if (p && p !== "Not provided") window.location.href = "tel:" + p.replace(/\s/g, "");
+            };
+          });
+          tbody.querySelectorAll(".btn-em-map").forEach(function (b) {
+            b.onclick = function () {
+              var em = emergenciesCache[b.getAttribute("data-id")];
+              if (em && window.EmergencyLocation) EmergencyLocation.showEmergencyOnMap(em);
+            };
+          });
+          tbody.querySelectorAll(".em-del").forEach(function (b) {
+            b.onclick = function () {
+              if (confirm("Delete emergency?")) {
+                api("/api/admin/emergencies/delete", { method: "POST", body: JSON.stringify({ id: parseInt(b.getAttribute("data-id"), 10) }) })
+                  .then(loadEmergencies);
+              }
+            };
+          });
+        });
+      }
+
+      function renderBarChart(containerId, dataObj) {
+        var el = document.getElementById(containerId);
+        el.innerHTML = "";
+        var max = Math.max.apply(null, Object.values(dataObj).concat([1]));
+        Object.keys(dataObj).forEach(function (label) {
+          var row = document.createElement("div");
+          row.className = "chart-row";
+          var pct = Math.round((dataObj[label] / max) * 100);
+          row.innerHTML = '<span class="chart-label">' + label + '</span><div class="chart-bar-wrap"><div class="chart-bar" style="width:' + pct + '%"></div></div><span class="chart-val">' + dataObj[label] + "</span>";
+          el.appendChild(row);
+        });
+      }
+
+      function loadReports() {
+        api("/api/admin/stats").then(function (d) {
+          renderBarChart("chart-type", d.by_type || {});
+          renderBarChart("chart-location", d.by_location || {});
+          document.getElementById("reports-summary").textContent =
+            "Total emergencies: " + d.emergencies_total + ". This week: " + d.emergencies_week + ". Today: " + d.emergencies_today + ".";
+        });
+      }
+
+      function loadAppearance() {
+        api("/api/admin/settings").then(function (s) {
+          document.getElementById("color_hospital").value = s.color_hospital || "#2E7D32";
+          document.getElementById("color_police").value = s.color_police || "#1565C0";
+          document.getElementById("color_fire").value = s.color_fire || "#C62828";
+          document.getElementById("dark_mode").checked = !!s.dark_mode;
+        });
+      }
+
+      document.getElementById("appearance-form").onsubmit = function (e) {
+        e.preventDefault();
+        api("/api/admin/settings/update", {
+          method: "POST",
+          body: JSON.stringify({
+            color_hospital: document.getElementById("color_hospital").value,
+            color_police: document.getElementById("color_police").value,
+            color_fire: document.getElementById("color_fire").value,
+            dark_mode: document.getElementById("dark_mode").checked
+          })
+        }).then(function () { alert("Appearance saved."); });
+      };
+
+      function openModal(title, body) {
+        document.getElementById("modal-title").textContent = title;
+        document.getElementById("modal-body").innerHTML = body;
+        document.getElementById("modal").classList.remove("hidden");
+      }
+      function closeModal() {
+        document.getElementById("modal").classList.add("hidden");
+      }
+      document.getElementById("modal-cancel").onclick = closeModal;
+
+      document.getElementById("sidebar-toggle").onclick = function () {
+        document.getElementById("sidebar").classList.toggle("open");
+      };
+
+      loadStats();
+    })();
+  </script>
+</body>
+</html>

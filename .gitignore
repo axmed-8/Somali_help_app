@@ -1,0 +1,65 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Environment & secrets (never commit credentials)
+.env
+.env.*
+!.env.example
+database/db_config.env
+*.pem
+*.key
+secrets/
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs & temp
+*.log
+*.tmp
+*.temp
+*.bak
+*.orig
+tmp/
+temp/
+logs/
+
+# OS / local tooling
+*.stackdump
+.cursor/
+.claude/
+
+# Local runtime data (optional overrides)
+data/*
+!data/.gitkeep
+
+# Test / coverage artifacts
+.coverage.*
+coverage.xml
+nosetests.xml

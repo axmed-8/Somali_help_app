@@ -1,0 +1,1 @@
+"""GurmadNet AI database package."""

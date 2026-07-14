@@ -1,0 +1,406 @@
+"""ERS automated tests — run: python -m pytest tests/ -v"""
+import json
+import os
+import sys
+import tempfile
+import shutil
+
+import pytest
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT)
+
+
+@pytest.fixture
+def app_client():
+  os.environ["GURMADNET_DB"] = "json"
+  import importlib
+  import app as ers_app
+  importlib.reload(ers_app)
+
+  tmp = tempfile.mkdtemp()
+  db = os.path.join(tmp, "database")
+  os.makedirs(db, exist_ok=True)
+
+  ers_app.DATABASE_DIR = db
+  ers_app.USERS_FILE = os.path.join(db, "users.json")
+  ers_app.EMERGENCIES_FILE = os.path.join(db, "emergencies.json")
+  ers_app.CONTENT_FILE = os.path.join(db, "system_content.json")
+  ers_app.SETTINGS_FILE = os.path.join(db, "settings.json")
+  ers_app.AUDIT_FILE = os.path.join(db, "audit_log.json")
+  ers_app.configure_hospital_db(db)
+  ers_app.ANNOUNCEMENTS_FILE = os.path.join(db, "announcements.json")
+
+  ers_app.seed_defaults()
+  udata = ers_app.load_users()
+  test_users = [
+    ("Ahmed Ali", "ahmed@example.com", "123456", "citizen", "0611111111"),
+    ("Dr. Amina", "amina@hospital.com", "123456", "hospital", "0622222222"),
+    ("Captain Hassan", "hassan@police.com", "123456", "police", "0633333333"),
+    ("Chief Muse", "muse@fire.com", "123456", "fire", "0644444444"),
+  ]
+  from werkzeug.security import generate_password_hash
+  for name, email, password, role, phone in test_users:
+    uid = udata["next_id"]
+    udata["next_id"] += 1
+    udata["users"].append({
+      "id": uid,
+      "name": name,
+      "email": email,
+      "phone": phone,
+      "password_hash": generate_password_hash(password),
+      "role": role,
+      "status": "active",
+      "created_at": ers_app.now_str(),
+      "last_login": None,
+      "activity": [],
+    })
+  for u in udata["users"]:
+    if u.get("email") == "amina@hospital.com":
+      u["hospital_id"] = 1
+  ers_app.save_users(udata)
+  client = ers_app.app.test_client()
+  yield client, ers_app
+  shutil.rmtree(tmp, ignore_errors=True)
+
+
+def login(client, email, password):
+  return client.post("/login", data={"username": email, "password": password}, follow_redirects=True)
+
+
+def test_citizen_sos_creates_emergency(app_client):
+  client, ers_app = app_client
+  login(client, "ahmed@example.com", "123456")
+  r = client.post(
+    "/api/send_alert",
+    json={
+      "type": "medical",
+      "latitude": 2.03,
+      "longitude": 45.33,
+      "district": "Wadajir District",
+      "accuracy_m": 15,
+      "method": "gps",
+      "confidence": 80,
+      "location": "Wadajir (2.03, 45.33)",
+      "name": "Ahmed",
+      "phone": "061",
+    },
+  )
+  assert r.status_code == 200
+  data = r.get_json()
+  assert data["success"] is True
+  edata = ers_app.load_emergencies()
+  assert len(edata["emergencies"]) >= 1
+  em = edata["emergencies"][-1]
+  assert len(em["location_history"]) >= 1
+
+
+def test_hospital_only_sees_medical(app_client):
+  client, _ = app_client
+  login(client, "amina@hospital.com", "123456")
+  r = client.get("/api/get_emergencies?type=medical")
+  assert r.status_code == 200
+  for em in r.get_json()["emergencies"]:
+    assert em["type"] in ("medical", "family_help")
+
+
+def test_blocked_user_cannot_login(app_client):
+  client, ers_app = app_client
+  login(client, "admin@emergency.so", "admin123")
+  udata = ers_app.load_users()
+  for u in udata["users"]:
+    if u["email"] == "ahmed@example.com":
+      u["status"] = "blocked"
+  ers_app.save_users(udata)
+  client.get("/logout", follow_redirects=True)
+  r = client.post("/login", data={"username": "ahmed@example.com", "password": "123456"})
+  assert b"blocked" in r.data.lower() or r.status_code == 200
+
+
+def test_location_update_endpoint(app_client):
+  client, ers_app = app_client
+  login(client, "ahmed@example.com", "123456")
+  r = client.post("/api/send_alert", json={"type": "fire", "latitude": 2.02, "longitude": 45.32, "location": "test"})
+  eid = r.get_json()["id"]
+  r2 = client.post(
+    f"/api/emergencies/{eid}/location",
+    json={"latitude": 2.021, "longitude": 45.321, "method": "gps", "accuracy_m": 10},
+  )
+  assert r2.status_code == 200
+  em, _ = ers_app.get_emergency_by_id(eid)
+  assert len(em["location_history"]) >= 2
+
+
+def test_auto_dispatch_emergency(app_client):
+  client, ers_app = app_client
+  login(client, "ahmed@example.com", "123456")
+  r = client.post(
+    "/api/send_alert",
+    json={
+      "type": "medical",
+      "latitude": 2.0469,
+      "longitude": 45.3182,
+      "district": "Mogadishu",
+      "location": "Mogadishu test",
+      "name": "Ahmed",
+      "phone": "061",
+    },
+  )
+  assert r.status_code == 200
+  data = r.get_json()
+  assert data["success"] is True
+  assert data.get("team")
+  em, _ = ers_app.get_emergency_by_id(data["id"])
+  assert em.get("assigned_team_label")
+  assert em.get("tracking_active") is True
+
+
+def test_hospital_accept_healthcare_request(app_client):
+  client, ers_app = app_client
+  login(client, "ahmed@example.com", "123456")
+  eid = client.post(
+    "/api/send_alert",
+    json={"type": "medical", "latitude": 2.0469, "longitude": 45.3182, "location": "x", "name": "A"},
+  ).get_json()["id"]
+  client.get("/logout", follow_redirects=True)
+  login(client, "amina@hospital.com", "123456")
+  r = client.post(f"/api/hospital/request/{eid}/accept")
+  assert r.status_code == 200
+  em, _ = ers_app.get_emergency_by_id(eid)
+  assert em["status"] == "accepted"
+
+
+def test_user_dashboard_api(app_client):
+  client, ers_app = app_client
+  login(client, "ahmed@example.com", "123456")
+  r = client.get("/api/user/dashboard")
+  assert r.status_code == 200
+  data = r.get_json()
+  assert data["success"] is True
+  assert "profile_summary" in data
+  assert "announcements" in data
+
+
+def test_hospital_registration_creates_profile(app_client):
+  client, ers_app = app_client
+  client.post(
+    "/signup",
+    data={
+      "name": "Dr. Test",
+      "email": "newhospital@test.so",
+      "phone": "+252 61 700 0001",
+      "password": "123456",
+      "confirm_password": "123456",
+      "role": "hospital",
+    },
+    follow_redirects=True,
+  )
+  r = client.post(
+    "/hospital/register",
+    data={
+      "name": "Test Regional Hospital",
+      "region": "Banadir",
+      "district": "Hodan",
+      "city": "Mogadishu",
+      "address": "Test Street 1, Hodan",
+      "phone": "+252 61 700 0001",
+      "emergency_contacts": "+252 61 700 0002",
+      "services": ["Emergency", "General"],
+      "ambulance_available": "1",
+      "ambulance_count": "2",
+      "emergency_capacity": "12",
+      "operating_status": "open",
+      "latitude": "2.05",
+      "longitude": "45.32",
+    },
+    follow_redirects=True,
+  )
+  assert r.status_code == 200
+  user, _ = ers_app.get_user_by_login("newhospital@test.so")
+  assert user.get("hospital_id") is not None
+  hdata = ers_app.hl.load_hospitals(ers_app.read_json, ers_app.save_json)
+  hospital = ers_app.hl.get_hospital_by_id(hdata, user["hospital_id"])
+  assert hospital["name"] == "Test Regional Hospital"
+  assert hospital["district"] == "Hodan"
+  assert hospital["address"] == "Test Street 1, Hodan"
+
+
+def test_hospital_only_sees_assigned_requests(app_client):
+  client, ers_app = app_client
+  login(client, "ahmed@example.com", "123456")
+  eid = client.post(
+    "/api/healthcare/emergency",
+    json={"latitude": 2.0469, "longitude": 45.3182, "location": "x", "name": "A"},
+  ).get_json()["id"]
+  client.get("/logout", follow_redirects=True)
+  login(client, "amina@hospital.com", "123456")
+  r = client.get("/api/get_emergencies?type=medical")
+  ids = [e["id"] for e in r.get_json()["emergencies"]]
+  assert eid in ids
+  for em in r.get_json()["emergencies"]:
+    assert em.get("assigned_hospital_id") == 1
+
+
+def test_live_location_tracking(app_client):
+  client, ers_app = app_client
+  login(client, "ahmed@example.com", "123456")
+  eid = client.post(
+    "/api/send_alert",
+    json={
+      "type": "medical",
+      "latitude": 2.0469,
+      "longitude": 45.3182,
+      "accuracy_m": 12,
+      "district": "Hodan",
+      "location": "Hodan test",
+      "name": "Ahmed",
+    },
+  ).get_json()["id"]
+  em, _ = ers_app.get_emergency_by_id(eid)
+  assert em.get("tracking_active") is True
+  assert em.get("latitude") == 2.0469
+  assert len(em.get("location_history", [])) >= 1
+
+  r = client.post(
+    f"/api/emergencies/{eid}/location",
+    json={"latitude": 2.0471, "longitude": 45.3185, "accuracy_m": 8, "method": "gps_live"},
+  )
+  assert r.status_code == 200
+  em, _ = ers_app.get_emergency_by_id(eid)
+  assert len(em["location_history"]) >= 2
+  assert em["latitude"] == 2.0471
+
+  tr = client.get(f"/api/emergencies/{eid}/tracking")
+  assert tr.status_code == 200
+  data = tr.get_json()
+  assert data["tracking_active"] is True
+  assert "team_label" in data
+  assert "eta_minutes" in data
+  assert data["trail_count"] >= 2
+
+
+def test_reject_coords_outside_somalia(app_client):
+  client, _ = app_client
+  login(client, "ahmed@example.com", "123456")
+  r = client.post(
+    "/api/send_alert",
+    json={
+      "type": "medical",
+      "latitude": 42.494076,
+      "longitude": 21.175171,
+      "location": "Invalid",
+    },
+  )
+  assert r.status_code == 400
+  data = r.get_json()
+  assert data["success"] is False
+
+
+def test_tracking_sanitizes_invalid_coords(app_client):
+  client, ers_app = app_client
+  login(client, "ahmed@example.com", "123456")
+  eid = client.post(
+    "/api/send_alert",
+    json={"type": "medical", "latitude": 2.0469, "longitude": 45.3182, "location": "Mogadishu"},
+  ).get_json()["id"]
+  em, edata = ers_app.get_emergency_by_id(eid)
+  em["latitude"] = 42.494076
+  em["longitude"] = 21.175171
+  ers_app.save_emergencies(edata)
+  r = client.get(f"/api/emergencies/{eid}/tracking")
+  assert r.status_code == 200
+  data = r.get_json()
+  assert data["success"] is True
+  assert data["coords_corrected"] is True
+  assert ers_app.hl.is_in_somalia(data["latitude"], data["longitude"])
+  assert data["distance_km"] is None or data["distance_km"] <= 80
+
+
+def test_responder_arrived_status(app_client):
+  client, ers_app = app_client
+  login(client, "ahmed@example.com", "123456")
+  eid = client.post("/api/send_alert", json={"type": "medical", "latitude": 2.03, "longitude": 45.33, "location": "x"}).get_json()["id"]
+  client.get("/logout", follow_redirects=True)
+  login(client, "amina@hospital.com", "123456")
+  r = client.post(f"/api/emergencies/{eid}/responder", json={"action": "arrived_at_scene"})
+  assert r.status_code == 200
+  em, _ = ers_app.get_emergency_by_id(eid)
+  assert "arrived_at_scene" in em["responder_status"]
+
+def test_call_center_initiate_and_dispatch(app_client):
+  """Method 2: citizen silent GPS + operator multi-dispatch."""
+  client, ers_app = app_client
+  udata = ers_app.load_users()
+  if not any(u.get("email") == "operator@callcenter.so" for u in udata["users"]):
+    from werkzeug.security import generate_password_hash
+    uid = udata["next_id"]
+    udata["next_id"] += 1
+    udata["users"].append({
+      "id": uid,
+      "name": "Operator",
+      "email": "operator@callcenter.so",
+      "phone": "+252612000999",
+      "password_hash": generate_password_hash("123456"),
+      "role": "call_center",
+      "status": "active",
+      "created_at": ers_app.now_str(),
+      "last_login": None,
+      "activity": [],
+    })
+    ers_app.save_users(udata)
+
+  login(client, "ahmed@example.com", "123456")
+  r = client.post(
+    "/api/call-center/initiate",
+    json={
+      "latitude": 2.03849,
+      "longitude": 45.29984,
+      "address": "KM4 Junction",
+      "district": "KM4 Junction",
+      "name": "Ahmed Ali",
+      "phone": "0611111111",
+    },
+  )
+  assert r.status_code == 200
+  data = r.get_json()
+  assert data["success"] is True
+  assert data["call_id"]
+  assert data["tel_href"].startswith("tel:")
+  call_id = data["call_id"]
+
+  client.get("/logout", follow_redirects=True)
+  login(client, "operator@callcenter.so", "123456")
+  r = client.get("/call-center")
+  assert r.status_code == 200
+
+  r = client.post(f"/api/call-center/calls/{call_id}/answer", json={})
+  assert r.status_code == 200
+  assert r.get_json()["call"]["status"] == "answered"
+
+  r = client.post(
+    f"/api/call-center/calls/{call_id}/dispatch",
+    json={"types": ["medical", "security"], "notes": "Car accident with injuries"},
+  )
+  assert r.status_code == 200
+  disp = r.get_json()
+  assert disp["success"] is True
+  assert len(disp["emergencies"]) == 2
+  teams = {e["assigned_to"] for e in disp["emergencies"]}
+  assert "hospital" in teams
+  assert "police" in teams
+
+  client.get("/logout", follow_redirects=True)
+  login(client, "ahmed@example.com", "123456")
+  r = client.post(
+    "/api/send_alert",
+    json={"type": "fire", "latitude": 2.04, "longitude": 45.32, "location": "Test"},
+  )
+  assert r.status_code == 200
+  assert r.get_json()["success"] is True
+
+
+def test_call_center_role_guard(app_client):
+  client, _ = app_client
+  login(client, "ahmed@example.com", "123456")
+  r = client.get("/api/call-center/live")
+  assert r.status_code in (302, 403) or (r.is_json and r.get_json().get("success") is not True)

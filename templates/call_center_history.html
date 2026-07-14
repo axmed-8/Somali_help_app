@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Call History — {{ content.app_name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/gurmadnet.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/call_center.css') }}">
+</head>
+<body class="dashboard-admin gn-call-center">
+  <div class="dashboard-container">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <h2>Call Center</h2>
+        <span>History</span>
+      </div>
+      <nav class="admin-nav">
+        <a href="{{ url_for('call_center_dashboard') }}">📞 Live Calls</a>
+        <a href="{{ url_for('call_center_history_page') }}" class="active">📋 Call History</a>
+      </nav>
+      <div class="dashboard-links">
+        <span>{{ user.name }}</span>
+        <a href="{{ url_for('logout') }}" class="btn-logout" style="display:inline-block;margin-top:8px;">Logout</a>
+      </div>
+    </aside>
+    <div class="main-content">
+      <header class="top-bar">
+        <button type="button" class="sidebar-toggle" id="sidebar-toggle">☰</button>
+        <h1>Call History</h1>
+        <div class="top-bar-actions">
+          <a href="{{ url_for('call_center_dashboard') }}" class="btn-logout">← Live</a>
+        </div>
+      </header>
+      <div class="content-area">
+        <div class="table-wrap">
+          <table class="admin-table" id="history-table">
+            <thead>
+              <tr>
+                <th>ID</th><th>Caller</th><th>Phone</th><th>GPS</th><th>Address</th>
+                <th>Type</th><th>Operator</th><th>Responders</th>
+                <th>Start</th><th>End</th><th>Duration</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      document.getElementById("sidebar-toggle").onclick = function () {
+        document.getElementById("sidebar").classList.toggle("open");
+      };
+      fetch("/api/call-center/history?limit=200", { credentials: "same-origin" })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          var tbody = document.querySelector("#history-table tbody");
+          tbody.innerHTML = "";
+          (d.calls || []).forEach(function (c) {
+            var tr = document.createElement("tr");
+            var gps = (c.latitude != null) ? (c.latitude + ", " + c.longitude) : "—";
+            var dur = c.duration_sec ? Math.round(c.duration_sec / 60) + " min" : "—";
+            tr.innerHTML =
+              "<td>#" + c.id + "</td>" +
+              "<td>" + (c.caller_name || "") + "</td>" +
+              "<td>" + (c.phone || "") + "</td>" +
+              "<td>" + gps + "</td>" +
+              "<td>" + (c.address || "") + "</td>" +
+              "<td>" + ((c.emergency_types || []).join(", ") || c.emergency_type || "—") + "</td>" +
+              "<td>" + (c.operator_name || "—") + "</td>" +
+              "<td>" + ((c.dispatched_to || []).join(", ") || "—") + "</td>" +
+              "<td>" + (c.start_time || "") + "</td>" +
+              "<td>" + (c.end_time || "—") + "</td>" +
+              "<td>" + dur + "</td>" +
+              "<td>" + (c.final_status || c.status) + "</td>";
+            tbody.appendChild(tr);
+          });
+        });
+    })();
+  </script>
+</body>
+</html>

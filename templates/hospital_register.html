@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hospital Registration — {{ content.app_name }}</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% if google_maps_key %}
+  <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_key }}&libraries=places"></script>
+  {% endif %}
+</head>
+<body class="hospital-register-page">
+  <div class="reg-page-bg"></div>
+
+  <div class="reg-wrapper">
+    <header class="reg-hero">
+      <div class="reg-hero-icon">🏥</div>
+      <h1>Register Your Hospital</h1>
+      <p>Join Somalia's emergency network — pin your exact location for accurate patient routing.</p>
+      <div class="reg-steps" aria-hidden="true">
+        <span class="reg-step active">1. Identity</span>
+        <span class="reg-step-line"></span>
+        <span class="reg-step">2. Contact</span>
+        <span class="reg-step-line"></span>
+        <span class="reg-step">3. Services</span>
+        <span class="reg-step-line"></span>
+        <span class="reg-step">4. Map location</span>
+      </div>
+    </header>
+
+    <div class="reg-card">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="reg-flash reg-flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form id="hospital-register-form" class="hospital-form" method="post">
+        <section class="reg-section">
+          <div class="reg-section-head">
+            <span class="reg-section-num">01</span>
+            <div>
+              <h2>Hospital identity</h2>
+              <p>How patients and dispatch will recognize your facility</p>
+            </div>
+          </div>
+          <div class="reg-fields">
+            <div class="reg-field full">
+              <label for="name">Hospital name <span class="req">*</span></label>
+              <input type="text" id="name" name="name" required placeholder="e.g. Banadir Hospital, Aamin Ambulance">
+            </div>
+            <div class="reg-field">
+              <label for="region">Region / State <span class="req">*</span></label>
+              <select id="region" name="region" required>
+                <option value="">Choose region</option>
+                <option value="Banadir">Banadir</option>
+                <option value="Maroodi Jeex">Maroodi Jeex</option>
+                <option value="Bari">Bari</option>
+                <option value="Bay">Bay</option>
+                <option value="Lower Juba">Lower Juba</option>
+                <option value="Middle Shabelle">Middle Shabelle</option>
+                <option value="Lower Shabelle">Lower Shabelle</option>
+                <option value="Galguduud">Galguduud</option>
+                <option value="Hiiraan">Hiiraan</option>
+              </select>
+            </div>
+            <div class="reg-field">
+              <label for="district">District <span class="req">*</span></label>
+              <input type="text" id="district" name="district" required placeholder="Hodan, Wadajir, Hamar Weyne…">
+            </div>
+            <div class="reg-field">
+              <label for="city">City <span class="req">*</span></label>
+              <input type="text" id="city" name="city" required placeholder="Mogadishu">
+            </div>
+            <div class="reg-field full">
+              <label for="address">Full street address <span class="req">*</span></label>
+              <textarea id="address" name="address" rows="2" required placeholder="Auto-filled from map or enter manually"></textarea>
+              <span class="reg-hint">Filled automatically when you pick a location on the map</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="reg-section">
+          <div class="reg-section-head">
+            <span class="reg-section-num">02</span>
+            <div>
+              <h2>Contact information</h2>
+              <p>Lines dispatch and patients can reach you 24/7</p>
+            </div>
+          </div>
+          <div class="reg-fields">
+            <div class="reg-field full">
+              <label for="phone">Main hospital phone <span class="req">*</span></label>
+              <input type="tel" id="phone" name="phone" required value="{{ user.phone or '' }}" placeholder="+252 61 500 1001">
+            </div>
+            <div class="reg-field full">
+              <label for="emergency_contacts">Emergency hotlines <span class="req">*</span></label>
+              <textarea id="emergency_contacts" name="emergency_contacts" rows="2" required placeholder="+252 61 999 0001&#10;+252 61 999 0002"></textarea>
+              <span class="reg-hint">One number per line — used for urgent dispatch alerts</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="reg-section">
+          <div class="reg-section-head">
+            <span class="reg-section-num">03</span>
+            <div>
+              <h2>Services &amp; capacity</h2>
+              <p>What your hospital can handle during an emergency</p>
+            </div>
+          </div>
+          <div class="reg-fields">
+            <div class="reg-field full">
+              <label>Medical services you offer <span class="req">*</span></label>
+              <div class="service-chips">
+                {% for svc in service_options %}
+                <label class="service-chip">
+                  <input type="checkbox" name="services" value="{{ svc }}">
+                  <span>{{ svc }}</span>
+                </label>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="reg-field">
+              <label for="emergency_capacity">Emergency beds <span class="req">*</span></label>
+              <input type="number" id="emergency_capacity" name="emergency_capacity" min="1" value="10" required>
+            </div>
+            <div class="reg-field">
+              <label for="operating_status">Current status <span class="req">*</span></label>
+              <select id="operating_status" name="operating_status" required>
+                <option value="open">🟢 Open — accepting emergencies</option>
+                <option value="limited">🟡 Limited capacity</option>
+                <option value="closed">🔴 Temporarily closed</option>
+              </select>
+            </div>
+            <div class="reg-field full">
+              <div class="ambulance-card">
+                <label class="ambulance-toggle">
+                  <input type="checkbox" id="ambulance_available" name="ambulance_available" value="1" checked>
+                  <span class="ambulance-toggle-ui"></span>
+                  <span class="ambulance-toggle-text">
+                    <strong>🚑 Ambulance service available</strong>
+                    <small>Enable if you can dispatch ambulances to patients</small>
+                  </span>
+                </label>
+                <div class="ambulance-count-wrap">
+                  <label for="ambulance_count">Fleet size</label>
+                  <input type="number" id="ambulance_count" name="ambulance_count" min="0" value="2">
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="reg-section reg-section-map">
+          <div class="reg-section-head">
+            <span class="reg-section-num">04</span>
+            <div>
+              <h2>Pin your hospital on the map</h2>
+              <p>Search by name or address — no manual coordinates needed</p>
+            </div>
+          </div>
+
+          <div class="reg-search-bar">
+            <span class="reg-search-icon" aria-hidden="true">🔍</span>
+            <input type="search" id="location-search" autocomplete="off"
+              placeholder="Search hospital or address (e.g. Banadir Hospital, Mogadishu)">
+            <button type="button" class="reg-btn-gps reg-btn-gps-inline" id="btn-use-gps">
+              <span>◎</span> My GPS
+            </button>
+          </div>
+          <p class="reg-search-hint">Results are limited to Somalia. Select one address from the list below.</p>
+          <div id="location-error" class="reg-location-error hidden" role="alert"></div>
+          <ul id="location-suggestions" class="reg-suggestions hidden" role="listbox"></ul>
+          <div id="location-distance-warning" class="reg-location-warning hidden" role="status"></div>
+
+          <p class="reg-map-tip">📍 Tap the map or drag the pin to your hospital entrance. Address fields update automatically.</p>
+          <div id="register-map" class="reg-map"></div>
+
+          <input type="hidden" id="latitude" name="latitude" required>
+          <input type="hidden" id="longitude" name="longitude" required>
+
+          <div id="location-preview" class="reg-location-preview hidden">
+            <div class="reg-preview-head">
+              <h3>📌 Location confirmation</h3>
+              <span class="reg-preview-badge">GPS locked</span>
+            </div>
+            <div id="preview-map" class="reg-preview-map"></div>
+            <dl class="reg-preview-details">
+              <div><dt>Hospital</dt><dd id="preview-name">—</dd></div>
+              <div><dt>Address</dt><dd id="preview-address">—</dd></div>
+              <div><dt>City / District</dt><dd id="preview-city">—</dd></div>
+              <div><dt>Coordinates</dt><dd id="preview-coords">—</dd></div>
+            </dl>
+          </div>
+        </section>
+
+        <div class="reg-submit-wrap">
+          <button type="submit" class="reg-submit" id="btn-register-submit">
+            Review location &amp; complete registration →
+          </button>
+          <p class="reg-submit-note">Logged in as <strong>{{ user.name }}</strong> · {{ user.email }}</p>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="reg-confirm-modal" class="reg-modal hidden" role="dialog" aria-modal="true">
+    <div class="reg-modal-backdrop"></div>
+    <div class="reg-modal-card">
+      <h3>Confirm hospital registration</h3>
+      <p class="reg-modal-sub">Your location will be saved permanently for emergency dispatch.</p>
+      <ul class="reg-modal-list">
+        <li><strong>Name:</strong> <span id="confirm-name">—</span></li>
+        <li><strong>Address:</strong> <span id="confirm-address">—</span></li>
+        <li><strong>Coordinates:</strong> <span id="confirm-coords">—</span></li>
+      </ul>
+      <div id="confirm-map" class="reg-preview-map reg-modal-map"></div>
+      <div class="reg-modal-actions">
+        <button type="button" class="reg-modal-cancel" id="btn-confirm-cancel">Go back</button>
+        <button type="button" class="reg-submit reg-modal-confirm" id="btn-confirm-submit">Confirm &amp; register</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="{{ url_for('static', filename='js/location.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/hospital.js') }}"></script>
+  <script>
+    HospitalApp.initRegistration({
+      googleMapsKey: {{ google_maps_key|tojson }},
+      defaultLat: 2.0469,
+      defaultLng: 45.3182
+    });
+  </script>
+</body>
+</html>

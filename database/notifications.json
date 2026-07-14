@@ -1,0 +1,1445 @@
+{
+  "notifications": [
+    {
+      "id": 1,
+      "timestamp": "2026-07-12 17:12:46",
+      "target_type": "admin",
+      "target_id": 1,
+      "message": "Incoming Call Center call #1 from naima (61391919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 2,
+      "timestamp": "2026-07-12 17:12:48",
+      "target_type": "admin",
+      "target_id": 1,
+      "message": "Incoming Call Center call #2 from naima (61391919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 3,
+      "timestamp": "2026-07-12 17:24:33",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Your Call Center session #1 was cancelled by the operator.",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 4,
+      "timestamp": "2026-07-12 17:26:28",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Your emergency request has been received.",
+      "request_id": 5,
+      "type": "request_received",
+      "read": false
+    },
+    {
+      "id": 5,
+      "timestamp": "2026-07-12 17:26:28",
+      "target_type": "admin",
+      "target_id": 1,
+      "message": "New emergency #5 (medical) — auto-dispatch initiated.",
+      "request_id": 5,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 6,
+      "timestamp": "2026-07-12 17:26:28",
+      "target_type": "hospital",
+      "target_id": 2,
+      "message": "URGENT: Emergency #5 — respond now",
+      "request_id": 5,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 7,
+      "timestamp": "2026-07-12 17:26:28",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Nearest hospital Medina Hospital (0.54 km) has been assigned to your request.",
+      "request_id": 5,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 8,
+      "timestamp": "2026-07-12 17:26:28",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Call Center dispatched Medical help for your call #2.",
+      "request_id": 5,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 9,
+      "timestamp": "2026-07-12 17:26:28",
+      "target_type": "hospital",
+      "target_id": 2,
+      "message": "CALL CENTER: naima — GPS 2.039914, 45.344894 — KM4 Junction, Mogadishu",
+      "request_id": 5,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 10,
+      "timestamp": "2026-07-12 17:26:28",
+      "target_type": "admin",
+      "target_id": 1,
+      "message": "Call Center dispatched emergency #5 (medical) from call #2.",
+      "request_id": 5,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 11,
+      "timestamp": "2026-07-12 17:26:28",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Your emergency request has been received.",
+      "request_id": 6,
+      "type": "request_received",
+      "read": false
+    },
+    {
+      "id": 12,
+      "timestamp": "2026-07-12 17:26:28",
+      "target_type": "admin",
+      "target_id": 1,
+      "message": "New emergency #6 (security) — auto-dispatch initiated.",
+      "request_id": 6,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 13,
+      "timestamp": "2026-07-12 17:26:28",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Police Emergency Team notified.",
+      "request_id": 6,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 14,
+      "timestamp": "2026-07-12 17:26:28",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Call Center dispatched Security help for your call #2.",
+      "request_id": 6,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 15,
+      "timestamp": "2026-07-12 17:26:28",
+      "target_type": "admin",
+      "target_id": 1,
+      "message": "Call Center dispatched emergency #6 (security) from call #2.",
+      "request_id": 6,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 16,
+      "timestamp": "2026-07-12 17:26:28",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Your emergency request has been received.",
+      "request_id": 7,
+      "type": "request_received",
+      "read": false
+    },
+    {
+      "id": 17,
+      "timestamp": "2026-07-12 17:26:28",
+      "target_type": "admin",
+      "target_id": 1,
+      "message": "New emergency #7 (fire) — auto-dispatch initiated.",
+      "request_id": 7,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 18,
+      "timestamp": "2026-07-12 17:26:28",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Fire & Rescue Team notified.",
+      "request_id": 7,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 19,
+      "timestamp": "2026-07-12 17:26:28",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Call Center dispatched Fire help for your call #2.",
+      "request_id": 7,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 20,
+      "timestamp": "2026-07-12 17:26:28",
+      "target_type": "admin",
+      "target_id": 1,
+      "message": "Call Center dispatched emergency #7 (fire) from call #2.",
+      "request_id": 7,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 21,
+      "timestamp": "2026-07-12 17:27:39",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Your emergency request has been received.",
+      "request_id": 8,
+      "type": "request_received",
+      "read": false
+    },
+    {
+      "id": 22,
+      "timestamp": "2026-07-12 17:27:39",
+      "target_type": "admin",
+      "target_id": 1,
+      "message": "New emergency #8 (medical) — auto-dispatch initiated.",
+      "request_id": 8,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 23,
+      "timestamp": "2026-07-12 17:27:39",
+      "target_type": "hospital",
+      "target_id": 2,
+      "message": "URGENT: Emergency #8 — respond now",
+      "request_id": 8,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 24,
+      "timestamp": "2026-07-12 17:27:39",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Nearest hospital Medina Hospital (0.54 km) has been assigned to your request.",
+      "request_id": 8,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 25,
+      "timestamp": "2026-07-12 17:27:39",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Call Center dispatched Medical help for your call #2.",
+      "request_id": 8,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 26,
+      "timestamp": "2026-07-12 17:27:39",
+      "target_type": "hospital",
+      "target_id": 2,
+      "message": "CALL CENTER: naima — GPS 2.039914, 45.344894 — KM4 Junction, Mogadishu",
+      "request_id": 8,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 27,
+      "timestamp": "2026-07-12 17:27:39",
+      "target_type": "admin",
+      "target_id": 1,
+      "message": "Call Center dispatched emergency #8 (medical) from call #2.",
+      "request_id": 8,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 28,
+      "timestamp": "2026-07-12 17:28:53",
+      "target_type": "hospital",
+      "target_id": 2,
+      "message": "Request #5 escalated (no response in time)",
+      "request_id": 5,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 29,
+      "timestamp": "2026-07-12 17:28:53",
+      "target_type": "hospital",
+      "target_id": 4,
+      "message": "NEW emergency request #5 — respond now",
+      "request_id": 5,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 30,
+      "timestamp": "2026-07-12 17:28:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Digfer Hospital (1.12 km)",
+      "request_id": 5,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 31,
+      "timestamp": "2026-07-12 17:29:53",
+      "target_type": "hospital",
+      "target_id": 2,
+      "message": "Request #8 escalated (no response in time)",
+      "request_id": 8,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 32,
+      "timestamp": "2026-07-12 17:29:53",
+      "target_type": "hospital",
+      "target_id": 4,
+      "message": "NEW emergency request #8 — respond now",
+      "request_id": 8,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 33,
+      "timestamp": "2026-07-12 17:29:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Digfer Hospital (1.12 km)",
+      "request_id": 8,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 34,
+      "timestamp": "2026-07-12 17:30:53",
+      "target_type": "hospital",
+      "target_id": 4,
+      "message": "Request #5 escalated (no response in time)",
+      "request_id": 5,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 35,
+      "timestamp": "2026-07-12 17:30:53",
+      "target_type": "hospital",
+      "target_id": 3,
+      "message": "NEW emergency request #5 — respond now",
+      "request_id": 5,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 36,
+      "timestamp": "2026-07-12 17:30:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Banadir Hospital (2.59 km)",
+      "request_id": 5,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 37,
+      "timestamp": "2026-07-12 17:31:53",
+      "target_type": "hospital",
+      "target_id": 4,
+      "message": "Request #8 escalated (no response in time)",
+      "request_id": 8,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 38,
+      "timestamp": "2026-07-12 17:31:53",
+      "target_type": "hospital",
+      "target_id": 3,
+      "message": "NEW emergency request #8 — respond now",
+      "request_id": 8,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 39,
+      "timestamp": "2026-07-12 17:31:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Banadir Hospital (2.59 km)",
+      "request_id": 8,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 40,
+      "timestamp": "2026-07-12 17:32:53",
+      "target_type": "hospital",
+      "target_id": 3,
+      "message": "Request #5 escalated (no response in time)",
+      "request_id": 5,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 41,
+      "timestamp": "2026-07-12 17:32:53",
+      "target_type": "hospital",
+      "target_id": 1,
+      "message": "NEW emergency request #5 — respond now",
+      "request_id": 5,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 42,
+      "timestamp": "2026-07-12 17:32:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Aamin Ambulance Hospital (3.07 km)",
+      "request_id": 5,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 43,
+      "timestamp": "2026-07-12 17:33:53",
+      "target_type": "hospital",
+      "target_id": 3,
+      "message": "Request #8 escalated (no response in time)",
+      "request_id": 8,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 44,
+      "timestamp": "2026-07-12 17:33:53",
+      "target_type": "hospital",
+      "target_id": 1,
+      "message": "NEW emergency request #8 — respond now",
+      "request_id": 8,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 45,
+      "timestamp": "2026-07-12 17:33:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Aamin Ambulance Hospital (3.07 km)",
+      "request_id": 8,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 46,
+      "timestamp": "2026-07-12 17:34:53",
+      "target_type": "hospital",
+      "target_id": 1,
+      "message": "Request #5 escalated (no response in time)",
+      "request_id": 5,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 47,
+      "timestamp": "2026-07-12 17:34:53",
+      "target_type": "hospital",
+      "target_id": 8,
+      "message": "NEW emergency request #5 — respond now",
+      "request_id": 5,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 48,
+      "timestamp": "2026-07-12 17:34:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Baidoa Regional Hospital (223.12 km)",
+      "request_id": 5,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 49,
+      "timestamp": "2026-07-12 17:35:53",
+      "target_type": "hospital",
+      "target_id": 1,
+      "message": "Request #8 escalated (no response in time)",
+      "request_id": 8,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 50,
+      "timestamp": "2026-07-12 17:35:53",
+      "target_type": "hospital",
+      "target_id": 8,
+      "message": "NEW emergency request #8 — respond now",
+      "request_id": 8,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 51,
+      "timestamp": "2026-07-12 17:35:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Baidoa Regional Hospital (223.12 km)",
+      "request_id": 8,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 52,
+      "timestamp": "2026-07-12 17:36:53",
+      "target_type": "hospital",
+      "target_id": 8,
+      "message": "Request #5 escalated (no response in time)",
+      "request_id": 5,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 53,
+      "timestamp": "2026-07-12 17:36:53",
+      "target_type": "hospital",
+      "target_id": 7,
+      "message": "NEW emergency request #5 — respond now",
+      "request_id": 5,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 54,
+      "timestamp": "2026-07-12 17:36:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Kismayo General Hospital (409.84 km)",
+      "request_id": 5,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 55,
+      "timestamp": "2026-07-12 17:37:53",
+      "target_type": "hospital",
+      "target_id": 8,
+      "message": "Request #8 escalated (no response in time)",
+      "request_id": 8,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 56,
+      "timestamp": "2026-07-12 17:37:53",
+      "target_type": "hospital",
+      "target_id": 7,
+      "message": "NEW emergency request #8 — respond now",
+      "request_id": 8,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 57,
+      "timestamp": "2026-07-12 17:37:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Kismayo General Hospital (409.84 km)",
+      "request_id": 8,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 58,
+      "timestamp": "2026-07-12 17:38:53",
+      "target_type": "hospital",
+      "target_id": 7,
+      "message": "Request #5 escalated (no response in time)",
+      "request_id": 5,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 59,
+      "timestamp": "2026-07-12 17:38:53",
+      "target_type": "hospital",
+      "target_id": 5,
+      "message": "NEW emergency request #5 — respond now",
+      "request_id": 5,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 60,
+      "timestamp": "2026-07-12 17:38:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Hargeisa Group Hospital (848.39 km)",
+      "request_id": 5,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 61,
+      "timestamp": "2026-07-12 17:39:53",
+      "target_type": "hospital",
+      "target_id": 7,
+      "message": "Request #8 escalated (no response in time)",
+      "request_id": 8,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 62,
+      "timestamp": "2026-07-12 17:39:53",
+      "target_type": "hospital",
+      "target_id": 5,
+      "message": "NEW emergency request #8 — respond now",
+      "request_id": 8,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 63,
+      "timestamp": "2026-07-12 17:39:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Hargeisa Group Hospital (848.39 km)",
+      "request_id": 8,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 64,
+      "timestamp": "2026-07-12 17:39:53",
+      "target_type": "admin",
+      "target_id": 1,
+      "message": "Incoming Call Center call #3 from naima (61391919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 65,
+      "timestamp": "2026-07-12 17:39:56",
+      "target_type": "admin",
+      "target_id": 1,
+      "message": "Incoming Call Center call #4 from naima (61391919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 66,
+      "timestamp": "2026-07-12 17:39:57",
+      "target_type": "admin",
+      "target_id": 1,
+      "message": "Incoming Call Center call #5 from naima (61391919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 67,
+      "timestamp": "2026-07-12 17:40:16",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Your Call Center session #2 was cancelled by the operator.",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 68,
+      "timestamp": "2026-07-12 17:40:30",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Your emergency request has been received.",
+      "request_id": 9,
+      "type": "request_received",
+      "read": false
+    },
+    {
+      "id": 69,
+      "timestamp": "2026-07-12 17:40:30",
+      "target_type": "admin",
+      "target_id": 1,
+      "message": "New emergency #9 (medical) — auto-dispatch initiated.",
+      "request_id": 9,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 70,
+      "timestamp": "2026-07-12 17:40:30",
+      "target_type": "hospital",
+      "target_id": 2,
+      "message": "URGENT: Emergency #9 — respond now",
+      "request_id": 9,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 71,
+      "timestamp": "2026-07-12 17:40:30",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Nearest hospital Medina Hospital (0.54 km) has been assigned to your request.",
+      "request_id": 9,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 72,
+      "timestamp": "2026-07-12 17:40:30",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Call Center dispatched Medical help for your call #3.",
+      "request_id": 9,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 73,
+      "timestamp": "2026-07-12 17:40:30",
+      "target_type": "hospital",
+      "target_id": 2,
+      "message": "CALL CENTER: naima — GPS 2.039914, 45.344894 — KM4 Junction, Mogadishu",
+      "request_id": 9,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 74,
+      "timestamp": "2026-07-12 17:40:30",
+      "target_type": "admin",
+      "target_id": 1,
+      "message": "Call Center dispatched emergency #9 (medical) from call #3.",
+      "request_id": 9,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 75,
+      "timestamp": "2026-07-12 17:40:30",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Your emergency request has been received.",
+      "request_id": 10,
+      "type": "request_received",
+      "read": false
+    },
+    {
+      "id": 76,
+      "timestamp": "2026-07-12 17:40:30",
+      "target_type": "admin",
+      "target_id": 1,
+      "message": "New emergency #10 (security) — auto-dispatch initiated.",
+      "request_id": 10,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 77,
+      "timestamp": "2026-07-12 17:40:30",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Police Emergency Team notified.",
+      "request_id": 10,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 78,
+      "timestamp": "2026-07-12 17:40:30",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Call Center dispatched Security help for your call #3.",
+      "request_id": 10,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 79,
+      "timestamp": "2026-07-12 17:40:30",
+      "target_type": "admin",
+      "target_id": 1,
+      "message": "Call Center dispatched emergency #10 (security) from call #3.",
+      "request_id": 10,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 80,
+      "timestamp": "2026-07-12 17:40:30",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Your emergency request has been received.",
+      "request_id": 11,
+      "type": "request_received",
+      "read": false
+    },
+    {
+      "id": 81,
+      "timestamp": "2026-07-12 17:40:30",
+      "target_type": "admin",
+      "target_id": 1,
+      "message": "New emergency #11 (fire) — auto-dispatch initiated.",
+      "request_id": 11,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 82,
+      "timestamp": "2026-07-12 17:40:30",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Fire & Rescue Team notified.",
+      "request_id": 11,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 83,
+      "timestamp": "2026-07-12 17:40:30",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Call Center dispatched Fire help for your call #3.",
+      "request_id": 11,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 84,
+      "timestamp": "2026-07-12 17:40:30",
+      "target_type": "admin",
+      "target_id": 1,
+      "message": "Call Center dispatched emergency #11 (fire) from call #3.",
+      "request_id": 11,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 85,
+      "timestamp": "2026-07-12 17:40:53",
+      "target_type": "hospital",
+      "target_id": 5,
+      "message": "Request #5 escalated (no response in time)",
+      "request_id": 5,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 86,
+      "timestamp": "2026-07-12 17:40:53",
+      "target_type": "hospital",
+      "target_id": 6,
+      "message": "NEW emergency request #5 — respond now",
+      "request_id": 5,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 87,
+      "timestamp": "2026-07-12 17:40:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Bosaso General Hospital (1111.65 km)",
+      "request_id": 5,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 88,
+      "timestamp": "2026-07-12 17:40:57",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Your emergency request has been received.",
+      "request_id": 12,
+      "type": "request_received",
+      "read": false
+    },
+    {
+      "id": 89,
+      "timestamp": "2026-07-12 17:40:57",
+      "target_type": "admin",
+      "target_id": 1,
+      "message": "New emergency #12 (medical) — auto-dispatch initiated.",
+      "request_id": 12,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 90,
+      "timestamp": "2026-07-12 17:40:57",
+      "target_type": "hospital",
+      "target_id": 2,
+      "message": "URGENT: Emergency #12 — respond now",
+      "request_id": 12,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 91,
+      "timestamp": "2026-07-12 17:40:57",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Nearest hospital Medina Hospital (0.54 km) has been assigned to your request.",
+      "request_id": 12,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 92,
+      "timestamp": "2026-07-12 17:40:57",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Call Center dispatched Medical help for your call #3.",
+      "request_id": 12,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 93,
+      "timestamp": "2026-07-12 17:40:57",
+      "target_type": "hospital",
+      "target_id": 2,
+      "message": "CALL CENTER: naima — GPS 2.039914, 45.344894 — KM4 Junction, Mogadishu",
+      "request_id": 12,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 94,
+      "timestamp": "2026-07-12 17:40:57",
+      "target_type": "admin",
+      "target_id": 1,
+      "message": "Call Center dispatched emergency #12 (medical) from call #3.",
+      "request_id": 12,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 95,
+      "timestamp": "2026-07-12 17:41:53",
+      "target_type": "hospital",
+      "target_id": 5,
+      "message": "Request #8 escalated (no response in time)",
+      "request_id": 8,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 96,
+      "timestamp": "2026-07-12 17:41:53",
+      "target_type": "hospital",
+      "target_id": 6,
+      "message": "NEW emergency request #8 — respond now",
+      "request_id": 8,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 97,
+      "timestamp": "2026-07-12 17:41:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Bosaso General Hospital (1111.65 km)",
+      "request_id": 8,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 98,
+      "timestamp": "2026-07-12 17:42:53",
+      "target_type": "hospital",
+      "target_id": 6,
+      "message": "Request #5 escalated (no response in time)",
+      "request_id": 5,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 99,
+      "timestamp": "2026-07-12 17:42:53",
+      "target_type": "hospital",
+      "target_id": 2,
+      "message": "Request #9 escalated (no response in time)",
+      "request_id": 9,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 100,
+      "timestamp": "2026-07-12 17:42:53",
+      "target_type": "hospital",
+      "target_id": 4,
+      "message": "NEW emergency request #9 — respond now",
+      "request_id": 9,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 101,
+      "timestamp": "2026-07-12 17:42:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Digfer Hospital (1.12 km)",
+      "request_id": 9,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 102,
+      "timestamp": "2026-07-12 17:43:53",
+      "target_type": "hospital",
+      "target_id": 6,
+      "message": "Request #8 escalated (no response in time)",
+      "request_id": 8,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 103,
+      "timestamp": "2026-07-12 17:43:53",
+      "target_type": "hospital",
+      "target_id": 2,
+      "message": "Request #12 escalated (no response in time)",
+      "request_id": 12,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 104,
+      "timestamp": "2026-07-12 17:43:53",
+      "target_type": "hospital",
+      "target_id": 4,
+      "message": "NEW emergency request #12 — respond now",
+      "request_id": 12,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 105,
+      "timestamp": "2026-07-12 17:43:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Digfer Hospital (1.12 km)",
+      "request_id": 12,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 106,
+      "timestamp": "2026-07-12 17:44:53",
+      "target_type": "hospital",
+      "target_id": 4,
+      "message": "Request #9 escalated (no response in time)",
+      "request_id": 9,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 107,
+      "timestamp": "2026-07-12 17:44:53",
+      "target_type": "hospital",
+      "target_id": 3,
+      "message": "NEW emergency request #9 — respond now",
+      "request_id": 9,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 108,
+      "timestamp": "2026-07-12 17:44:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Banadir Hospital (2.59 km)",
+      "request_id": 9,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 109,
+      "timestamp": "2026-07-12 17:45:53",
+      "target_type": "hospital",
+      "target_id": 4,
+      "message": "Request #12 escalated (no response in time)",
+      "request_id": 12,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 110,
+      "timestamp": "2026-07-12 17:45:53",
+      "target_type": "hospital",
+      "target_id": 3,
+      "message": "NEW emergency request #12 — respond now",
+      "request_id": 12,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 111,
+      "timestamp": "2026-07-12 17:45:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Banadir Hospital (2.59 km)",
+      "request_id": 12,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 112,
+      "timestamp": "2026-07-12 17:46:53",
+      "target_type": "hospital",
+      "target_id": 3,
+      "message": "Request #9 escalated (no response in time)",
+      "request_id": 9,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 113,
+      "timestamp": "2026-07-12 17:46:53",
+      "target_type": "hospital",
+      "target_id": 1,
+      "message": "NEW emergency request #9 — respond now",
+      "request_id": 9,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 114,
+      "timestamp": "2026-07-12 17:46:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Aamin Ambulance Hospital (3.07 km)",
+      "request_id": 9,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 115,
+      "timestamp": "2026-07-12 17:47:53",
+      "target_type": "hospital",
+      "target_id": 3,
+      "message": "Request #12 escalated (no response in time)",
+      "request_id": 12,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 116,
+      "timestamp": "2026-07-12 17:47:53",
+      "target_type": "hospital",
+      "target_id": 1,
+      "message": "NEW emergency request #12 — respond now",
+      "request_id": 12,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 117,
+      "timestamp": "2026-07-12 17:47:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Aamin Ambulance Hospital (3.07 km)",
+      "request_id": 12,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 118,
+      "timestamp": "2026-07-12 17:48:53",
+      "target_type": "hospital",
+      "target_id": 1,
+      "message": "Request #9 escalated (no response in time)",
+      "request_id": 9,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 119,
+      "timestamp": "2026-07-12 17:48:53",
+      "target_type": "hospital",
+      "target_id": 8,
+      "message": "NEW emergency request #9 — respond now",
+      "request_id": 9,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 120,
+      "timestamp": "2026-07-12 17:48:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Baidoa Regional Hospital (223.12 km)",
+      "request_id": 9,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 121,
+      "timestamp": "2026-07-12 17:49:53",
+      "target_type": "hospital",
+      "target_id": 1,
+      "message": "Request #12 escalated (no response in time)",
+      "request_id": 12,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 122,
+      "timestamp": "2026-07-12 17:49:53",
+      "target_type": "hospital",
+      "target_id": 8,
+      "message": "NEW emergency request #12 — respond now",
+      "request_id": 12,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 123,
+      "timestamp": "2026-07-12 17:49:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Baidoa Regional Hospital (223.12 km)",
+      "request_id": 12,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 124,
+      "timestamp": "2026-07-12 17:50:53",
+      "target_type": "hospital",
+      "target_id": 8,
+      "message": "Request #9 escalated (no response in time)",
+      "request_id": 9,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 125,
+      "timestamp": "2026-07-12 17:50:53",
+      "target_type": "hospital",
+      "target_id": 7,
+      "message": "NEW emergency request #9 — respond now",
+      "request_id": 9,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 126,
+      "timestamp": "2026-07-12 17:50:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Kismayo General Hospital (409.84 km)",
+      "request_id": 9,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 127,
+      "timestamp": "2026-07-12 17:51:53",
+      "target_type": "hospital",
+      "target_id": 8,
+      "message": "Request #12 escalated (no response in time)",
+      "request_id": 12,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 128,
+      "timestamp": "2026-07-12 17:51:53",
+      "target_type": "hospital",
+      "target_id": 7,
+      "message": "NEW emergency request #12 — respond now",
+      "request_id": 12,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 129,
+      "timestamp": "2026-07-12 17:51:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Kismayo General Hospital (409.84 km)",
+      "request_id": 12,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 130,
+      "timestamp": "2026-07-12 17:52:53",
+      "target_type": "hospital",
+      "target_id": 7,
+      "message": "Request #9 escalated (no response in time)",
+      "request_id": 9,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 131,
+      "timestamp": "2026-07-12 17:52:53",
+      "target_type": "hospital",
+      "target_id": 5,
+      "message": "NEW emergency request #9 — respond now",
+      "request_id": 9,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 132,
+      "timestamp": "2026-07-12 17:52:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Hargeisa Group Hospital (848.39 km)",
+      "request_id": 9,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 133,
+      "timestamp": "2026-07-12 17:53:53",
+      "target_type": "hospital",
+      "target_id": 7,
+      "message": "Request #12 escalated (no response in time)",
+      "request_id": 12,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 134,
+      "timestamp": "2026-07-12 17:53:53",
+      "target_type": "hospital",
+      "target_id": 5,
+      "message": "NEW emergency request #12 — respond now",
+      "request_id": 12,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 135,
+      "timestamp": "2026-07-12 17:53:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Hargeisa Group Hospital (848.39 km)",
+      "request_id": 12,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 136,
+      "timestamp": "2026-07-12 17:54:53",
+      "target_type": "hospital",
+      "target_id": 5,
+      "message": "Request #9 escalated (no response in time)",
+      "request_id": 9,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 137,
+      "timestamp": "2026-07-12 17:54:53",
+      "target_type": "hospital",
+      "target_id": 6,
+      "message": "NEW emergency request #9 — respond now",
+      "request_id": 9,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 138,
+      "timestamp": "2026-07-12 17:54:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Bosaso General Hospital (1111.65 km)",
+      "request_id": 9,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 139,
+      "timestamp": "2026-07-12 17:55:53",
+      "target_type": "hospital",
+      "target_id": 5,
+      "message": "Request #12 escalated (no response in time)",
+      "request_id": 12,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 140,
+      "timestamp": "2026-07-12 17:55:53",
+      "target_type": "hospital",
+      "target_id": 6,
+      "message": "NEW emergency request #12 — respond now",
+      "request_id": 12,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 141,
+      "timestamp": "2026-07-12 17:55:53",
+      "target_type": "patient",
+      "target_id": 3,
+      "message": "Request sent to Bosaso General Hospital (1111.65 km)",
+      "request_id": 12,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 142,
+      "timestamp": "2026-07-12 17:56:53",
+      "target_type": "hospital",
+      "target_id": 6,
+      "message": "Request #9 escalated (no response in time)",
+      "request_id": 9,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 143,
+      "timestamp": "2026-07-12 17:57:53",
+      "target_type": "hospital",
+      "target_id": 6,
+      "message": "Request #12 escalated (no response in time)",
+      "request_id": 12,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 144,
+      "timestamp": "2026-07-12 21:00:31",
+      "target_type": "admin",
+      "target_id": 1,
+      "message": "Incoming Call Center call #6 from naima (61391919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    }
+  ],
+  "next_id": 145
+}

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>{{ content.app_name }} — Somalia</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/gurmadnet.css') }}">
+  {% if google_maps_key %}
+  <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_key }}"></script>
+  {% endif %}
+</head>
+<body class="gn-user user-app" data-user-name="{{ user.name }}" data-user-phone="{{ user.phone or '' }}">
+  <header class="app-header-red">
+    <div class="app-header-text">
+      <h1>{{ content.app_name }}</h1>
+      <p>Somalia Emergency Response</p>
+    </div>
+    <a href="{{ url_for('user_dashboard') }}" class="btn-header-dash" title="Dashboard">📊</a>
+    <a href="{{ url_for('logout') }}" class="btn-logout-header" aria-label="Logout">
+      <span class="logout-icon">⏻</span>
+    </a>
+  </header>
+
+  <div class="user-container">
+    <section id="page-home" class="user-page active">
+      <p class="sos-hint">{{ content.sos_subtitle }}</p>
+      <p class="dispatch-note">Help is dispatched automatically — no hospital selection needed.</p>
+
+      <div class="sos-wrap">
+        <span class="sos-ring sos-ring-3"></span>
+        <span class="sos-ring sos-ring-2"></span>
+        <span class="sos-ring sos-ring-1"></span>
+        <button type="button" class="sos-button" id="btn-sos" aria-label="SOS Emergency">
+          <span class="sos-icon">!</span>
+          <span class="sos-label">{{ content.sos_button_text }}</span>
+        </button>
+      </div>
+
+      <div class="cc-call-center-wrap" style="margin:16px 0 8px;text-align:center;">
+        <button type="button" class="btn-primary" id="btn-call-center"
+          style="width:100%;max-width:360px;background:linear-gradient(135deg,#0D47A1,#1565C0);border:none;padding:14px 20px;border-radius:16px;font-weight:700;font-size:1rem;">
+          📞 {{ content.call_center_button_text or 'Call Emergency Center' }}
+        </button>
+        <p class="hint-text" style="margin-top:8px;">{{ content.call_center_hint or 'Speak with an operator — your GPS is shared automatically' }}</p>
+        <p id="call-center-status" class="hint-text hidden" style="color:#2E7D32;"></p>
+      </div>
+
+      <div class="service-grid">
+        <button type="button" class="service-btn" data-type="medical">
+          <span class="service-icon ambulance">🚑</span><span>Ambulance</span>
+        </button>
+        <button type="button" class="service-btn" data-type="security">
+          <span class="service-icon police">🛡</span><span>Police</span>
+        </button>
+        <button type="button" class="service-btn" data-type="fire">
+          <span class="service-icon fire">🔥</span><span>Fire</span>
+        </button>
+        <button type="button" class="service-btn" data-type="family_help">
+          <span class="service-icon family">🏠</span><span>Family</span>
+        </button>
+      </div>
+
+      <div id="home-active-banner" class="home-active-banner hidden"></div>
+
+      <div class="recent-block">
+        <h3 class="recent-title">Recent Requests</h3>
+        <div id="recent-list" class="recent-list">
+          <p class="recent-empty">No recent requests yet.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="page-type" class="user-page">
+      <h2 class="page-heading">What type of emergency?</h2>
+      <div class="emergency-types">
+        <button type="button" class="type-btn" data-type="medical"><span class="type-icon">🚑</span> {{ content.emergency_type_medical }}</button>
+        <button type="button" class="type-btn" data-type="accident"><span class="type-icon">🚗</span> {{ content.emergency_type_accident }}</button>
+        <button type="button" class="type-btn" data-type="fire"><span class="type-icon">🔥</span> {{ content.emergency_type_fire }}</button>
+        <button type="button" class="type-btn" data-type="security"><span class="type-icon">🛡</span> {{ content.emergency_type_security }}</button>
+        <button type="button" class="type-btn" data-type="family_help"><span class="type-icon">🏠</span> {{ content.emergency_type_family }}</button>
+      </div>
+      <button type="button" class="btn-secondary" id="btn-back-home-1">Back</button>
+    </section>
+
+    <section id="page-location" class="user-page">
+      <h2 class="page-heading" id="location-heading">Confirm your location</h2>
+      <p class="hint-text">GPS is required. Your location is sent to the emergency dispatch center.</p>
+      <div class="location-box">
+        <p class="location-status" id="location-status">Requesting GPS permission...</p>
+        <p class="location-coords" id="location-coords"></p>
+        <p class="location-accuracy hidden" id="location-accuracy"></p>
+        <span class="live-gps-badge hidden" id="live-gps-badge">● Live GPS tracking</span>
+      </div>
+      <div id="user-location-map" class="leaflet-map-container user-map"></div>
+      <div class="location-notes-wrap" style="text-align:left;margin:12px 0;">
+        <label for="emergency-notes" style="font-size:0.78rem;font-weight:600;color:#64748B;display:block;margin-bottom:6px;">Additional notes (optional)</label>
+        <textarea id="emergency-notes" rows="2" placeholder="Describe your emergency, injuries, landmarks…" style="width:100%;padding:12px;border-radius:14px;border:1.5px solid rgba(13,71,161,0.1);font-family:inherit;font-size:0.9rem;resize:vertical;"></textarea>
+      </div>
+      <button type="button" class="btn-primary" id="btn-send-alert" disabled>Send Emergency — Auto Dispatch</button>
+      <button type="button" class="btn-secondary" id="btn-back-type">Back</button>
+    </section>
+
+    <section id="page-status" class="user-page">
+      <h2 class="page-heading">Emergency Status</h2>
+      <div id="status-panel" class="status-panel"></div>
+      <span class="live-gps-badge hidden" id="status-live-badge">● Sharing live location with response team</span>
+      <div id="status-map" class="leaflet-map-container user-map"></div>
+      <div id="chat-box" class="chat-box">
+        <h3>Chat with Response Team</h3>
+        <div class="chat-quick-replies" id="chat-quick">
+          <button type="button" class="quick-reply" data-text="I need help now">Need help now</button>
+          <button type="button" class="quick-reply" data-text="My condition is worsening">Worsening</button>
+          <button type="button" class="quick-reply" data-text="I am at the location shown">At location</button>
+        </div>
+        <div id="chat-messages" class="chat-messages"></div>
+        <div class="chat-input-row">
+          <input type="text" id="chat-text" placeholder="Message response team...">
+          <button type="button" id="btn-send-chat" class="btn-primary btn-chat-send">Send</button>
+        </div>
+      </div>
+      <a href="{{ url_for('user_dashboard') }}" class="btn-primary" style="display:block;text-align:center;text-decoration:none;margin-top:12px;">Open Full Dashboard</a>
+      <button type="button" class="btn-secondary" id="btn-back-home-4">Back to Home</button>
+    </section>
+  </div>
+
+  <nav class="gn-bottom-nav gn-user-nav" aria-label="Main navigation">
+    <button type="button" class="gn-bnav-item active" data-nav="home"><span>🏠</span><small>Home</small></button>
+    <button type="button" class="gn-bnav-item" data-nav="type"><span>!</span><small>Emergency</small></button>
+    <button type="button" class="gn-bnav-sos" data-nav="type" aria-label="SOS"><span>!</span></button>
+    <a href="{{ url_for('user_dashboard') }}" class="gn-bnav-item"><span>🗺</span><small>Track</small></a>
+    <button type="button" class="gn-bnav-item" data-nav="status"><span>💬</span><small>Status</small></button>
+  </nav>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="{{ url_for('static', filename='js/location.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/patient.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fire Emergency Dashboard - KM4 Fire Station</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="dashboard-fire">
+  <div class="dashboard-container">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <h2>KM4 Fire Station</h2>
+        <span>Fire &amp; Rescue</span>
+      </div>
+      <nav>
+        <a href="#" class="active" data-panel="live">Live Alerts</a>
+        <a href="#" data-panel="history">History</a>
+        <a href="#" data-panel="settings">Settings</a>
+      </nav>
+      <div class="dashboard-links">
+        <span>Logged in as <strong>{{ user.name }}</strong> (fire)</span>
+      </div>
+    </aside>
+
+    <div class="main-content">
+      <header class="top-bar">
+        <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="Menu">☰</button>
+        <h1>{{ content.fire_dashboard_title }}</h1>
+        <div class="top-bar-actions">
+          <span class="user-badge">{{ user.name }}</span>
+          <span class="status-badge online">Online</span>
+          <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <div id="panel-live">
+          <div class="stats">
+            <div class="stat-card">
+              <div class="stat-value" id="stat-calls">0</div>
+              <div class="stat-label">Fire calls today</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">{{ settings.fire_response_time }} min</div>
+              <div class="stat-label">Average arrival time</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="stat-trucks">2</div>
+              <div class="stat-label">Available trucks</div>
+            </div>
+          </div>
+
+          <h2 class="section-title">
+            Active fire alerts
+            <span class="refresh-indicator" id="refresh-time">Updating...</span>
+          </h2>
+          <div class="alerts-grid" id="alerts-container"></div>
+
+          <h2 class="section-title">Fire trucks status</h2>
+          <div class="trucks-grid">
+            <div class="truck-item available">
+              <strong>Truck 1</strong>
+              <p>Available — KM4 Station</p>
+            </div>
+            <div class="truck-item available">
+              <strong>Truck 2</strong>
+              <p>Available — Hodan</p>
+            </div>
+            <div class="truck-item busy">
+              <strong>Truck 3</strong>
+              <p>En route — Bakaro Market</p>
+            </div>
+            <div class="truck-item available">
+              <strong>Truck 4</strong>
+              <p>Available — Wadajir</p>
+            </div>
+          </div>
+
+          <h2 class="section-title" style="margin-top: 24px;">Fire incidents map</h2>
+          <div id="fire-overview-map" class="leaflet-map-container dashboard-map"></div>
+        </div>
+
+        <div id="panel-history" class="hidden-panel panel-section">
+          <h2 class="section-title">Call history</h2>
+          <div class="alerts-grid" id="history-container"></div>
+        </div>
+
+        <div id="panel-settings" class="hidden-panel panel-section">
+          <h2 class="section-title">Settings</h2>
+          <p><strong>Station:</strong> KM4 Fire Station, Mogadishu</p>
+          <p><strong>Response zones:</strong> Banadir region</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="{{ url_for('static', filename='js/location.js') }}"></script>
+  <script>
+    (function () {
+      const API_TYPE = "fire";
+      let REFRESH_MS = {{ settings.refresh_interval * 1000 }};
+
+      function formatTime(iso) {
+        try {
+          return new Date(iso).toLocaleString("en-GB", {
+            hour: "2-digit",
+            minute: "2-digit",
+            day: "numeric",
+            month: "short"
+          });
+        } catch (e) {
+          return iso;
+        }
+      }
+
+      function escapeHtml(str) {
+        const d = document.createElement("div");
+        d.textContent = str || "";
+        return d.innerHTML;
+      }
+
+      function escapeAttr(str) {
+        return String(str || "")
+          .replace(/&/g, "&amp;")
+          .replace(/"/g, "&quot;")
+          .replace(/</g, "&lt;");
+      }
+
+      function renderCard(em) {
+        const card = document.createElement("div");
+        card.className = "alert-card";
+        card.innerHTML =
+          '<div class="alert-type">FIRE EMERGENCY' +
+          (em.source === "call_center" ? " · CALL CENTER" : "") +
+          "</div>" +
+          '<div class="alert-location">' +
+          escapeHtml(em.location) +
+          "</div>" +
+          '<div class="alert-meta">Caller: ' +
+          escapeHtml(em.caller_name || "Unknown") +
+          " · " +
+          escapeHtml(em.phone || "N/A") +
+          "</div>" +
+          '<div class="alert-meta">Time: ' +
+          formatTime(em.timestamp) +
+          "</div>" +
+          '<p class="severity-high">Severity: High</p>' +
+          '<span class="alert-status ' +
+          em.status +
+          '">' +
+          em.status +
+          "</span>" +
+          '<div class="alert-actions">' +
+          '<button type="button" class="btn-action btn-dispatch" data-id="' +
+          em.id +
+          '">Dispatch</button>' +
+          '<button type="button" class="btn-action btn-view" data-emergency="' +
+          escapeAttr(JSON.stringify(em)) +
+          '">View on Map</button>' +
+          "</div>";
+        return card;
+      }
+
+      function loadEmergencies() {
+        fetch("/api/get_emergencies?type=" + API_TYPE, { credentials: "same-origin" })
+          .then(function (res) {
+            return res.json();
+          })
+          .then(function (data) {
+            if (data.refresh_interval) REFRESH_MS = data.refresh_interval * 1000;
+            const list = data.emergencies || [];
+            const container = document.getElementById("alerts-container");
+            container.innerHTML = "";
+
+            if (list.length === 0) {
+              container.innerHTML =
+                '<div class="empty-alerts">No active fire alerts. Trucks ready at KM4 station.</div>';
+            } else {
+              list.forEach(function (em) {
+                container.appendChild(renderCard(em));
+              });
+            }
+
+            const today = list.filter(function (e) {
+              const d = new Date(e.timestamp);
+              const now = new Date();
+              return d.toDateString() === now.toDateString();
+            });
+            document.getElementById("stat-calls").textContent = today.length || list.length;
+
+            const available = list.filter(function (e) {
+              return e.status === "pending";
+            }).length;
+            document.getElementById("stat-trucks").textContent = Math.max(
+              2,
+              4 - Math.min(2, available)
+            );
+
+            document.getElementById("refresh-time").textContent =
+              "Last updated " + new Date().toLocaleTimeString();
+
+            bindActions();
+            if (window.EmergencyLocation) {
+              EmergencyLocation.initOverviewMap("fire-overview-map", list);
+            }
+          })
+          .catch(function () {
+            document.getElementById("alerts-container").innerHTML =
+              '<div class="empty-alerts">Could not load alerts. Retrying...</div>';
+          });
+      }
+
+      function bindActions() {
+        document.querySelectorAll(".btn-dispatch").forEach(function (btn) {
+          btn.onclick = function () {
+            const id = parseInt(btn.getAttribute("data-id"), 10);
+            fetch("/api/update_status", {
+              method: "POST",
+              credentials: "same-origin",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: id, status: "dispatched" })
+            }).then(function () {
+              alert("Fire truck dispatched to incident #" + id);
+              loadEmergencies();
+            });
+          };
+        });
+
+        document.querySelectorAll(".btn-view").forEach(function (btn) {
+          btn.onclick = function () {
+            try {
+              var em = JSON.parse(btn.getAttribute("data-emergency"));
+              EmergencyLocation.showEmergencyOnMap(em);
+            } catch (e) {
+              alert("Could not open map.");
+            }
+          };
+        });
+      }
+
+      document.querySelectorAll(".sidebar nav a").forEach(function (link) {
+        link.addEventListener("click", function (e) {
+          e.preventDefault();
+          document.querySelectorAll(".sidebar nav a").forEach(function (a) {
+            a.classList.remove("active");
+          });
+          link.classList.add("active");
+          const panel = link.getAttribute("data-panel");
+          document.getElementById("panel-live").style.display =
+            panel === "live" ? "block" : "none";
+          document.getElementById("panel-history").classList.toggle(
+            "hidden-panel",
+            panel !== "history"
+          );
+          document.getElementById("panel-settings").classList.toggle(
+            "hidden-panel",
+            panel !== "settings"
+          );
+        });
+      });
+
+      document.getElementById("sidebar-toggle").addEventListener("click", function () {
+        document.getElementById("sidebar").classList.toggle("open");
+      });
+
+      loadEmergencies();
+      setInterval(loadEmergencies, REFRESH_MS);
+    })();
+  </script>
+</body>
+</html>

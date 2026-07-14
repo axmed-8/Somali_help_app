@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Call Center Login — {{ content.app_name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/gurmadnet.css') }}">
+</head>
+<body class="gn-auth auth-page">
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
+        <span class="auth-logo">📞</span>
+        <h1>Emergency Call Center</h1>
+        <p>Operator secure sign-in</p>
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="post" action="{{ url_for('call_center_login') }}" class="auth-form">
+        <div class="form-group">
+          <label for="username">Operator email</label>
+          <input type="email" id="username" name="username" required autocomplete="email"
+            placeholder="operator@callcenter.so">
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn-auth btn-primary-auth">Enter Call Center</button>
+      </form>
+
+      <p class="auth-footer" style="margin-top:12px;">
+        <a href="{{ url_for('login') }}">← Main login</a>
+      </p>
+      <div class="demo-users">
+        <p class="demo-title">Demo operator</p>
+        <table class="demo-table">
+          <tr><td>operator@callcenter.so</td><td>123456</td><td>Call Center</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

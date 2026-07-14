@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Police Emergency Dashboard - Hamar Police</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="dashboard-police">
+  <div class="dashboard-container">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <h2>Hamar Police</h2>
+        <span>Security Operations</span>
+      </div>
+      <nav>
+        <a href="#" class="active" data-panel="live">Live Alerts</a>
+        <a href="#" data-panel="history">History</a>
+        <a href="#" data-panel="settings">Settings</a>
+      </nav>
+      <div class="dashboard-links">
+        <span>Logged in as <strong>{{ user.name }}</strong> (police)</span>
+      </div>
+    </aside>
+
+    <div class="main-content">
+      <header class="top-bar">
+        <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="Menu">☰</button>
+        <h1>{{ content.police_dashboard_title }}</h1>
+        <div class="top-bar-actions">
+          <span class="user-badge">{{ user.name }}</span>
+          <span class="status-badge online">Online</span>
+          <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <div id="panel-live">
+          <button type="button" class="btn-broadcast" id="btn-broadcast">
+            📢 Broadcast Alert to All Units
+          </button>
+
+          <div class="stats">
+            <div class="stat-card">
+              <div class="stat-value" id="stat-active">0</div>
+              <div class="stat-label">Active incidents</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">8</div>
+              <div class="stat-label">Available officers</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">{{ settings.police_response_time }} min</div>
+              <div class="stat-label">Average response time</div>
+            </div>
+          </div>
+
+          <h2 class="section-title">
+            Live security alerts
+            <span class="refresh-indicator" id="refresh-time">Updating...</span>
+          </h2>
+          <div class="alerts-grid" id="alerts-container"></div>
+
+          <h2 class="section-title">Incidents map</h2>
+          <div id="police-overview-map" class="leaflet-map-container dashboard-map"></div>
+
+          <div class="panel-section">
+            <h2 class="section-title">Patrol coverage</h2>
+            <p class="officers-note">
+              Units active in: Wadajir · KM4 · Bakaro Market · Howlwadaag · Boondheere
+            </p>
+          </div>
+        </div>
+
+        <div id="panel-history" class="hidden-panel panel-section">
+          <h2 class="section-title">Incident history</h2>
+          <div class="alerts-grid" id="history-container"></div>
+        </div>
+
+        <div id="panel-settings" class="hidden-panel panel-section">
+          <h2 class="section-title">Settings</h2>
+          <p><strong>Station:</strong> Hamar Police HQ</p>
+          <p><strong>District:</strong> Banadir</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="{{ url_for('static', filename='js/location.js') }}"></script>
+  <script>
+    (function () {
+      const API_TYPE = "police";
+      let REFRESH_MS = {{ settings.refresh_interval * 1000 }};
+
+      function formatTime(iso) {
+        try {
+          return new Date(iso).toLocaleString("en-GB", {
+            hour: "2-digit",
+            minute: "2-digit",
+            day: "numeric",
+            month: "short"
+          });
+        } catch (e) {
+          return iso;
+        }
+      }
+
+      function formatType(type) {
+        return (type || "security").replace(/_/g, " ").toUpperCase();
+      }
+
+      function escapeHtml(str) {
+        const d = document.createElement("div");
+        d.textContent = str || "";
+        return d.innerHTML;
+      }
+
+      function escapeAttr(str) {
+        return String(str || "")
+          .replace(/&/g, "&amp;")
+          .replace(/"/g, "&quot;")
+          .replace(/</g, "&lt;");
+      }
+
+      function renderCard(em) {
+        const card = document.createElement("div");
+        card.className = "alert-card";
+        card.innerHTML =
+          '<div class="alert-type">' +
+          formatType(em.type) +
+          (em.source === "call_center" ? " · CALL CENTER" : "") +
+          "</div>" +
+          '<div class="alert-location">' +
+          escapeHtml(em.location) +
+          "</div>" +
+          '<div class="alert-meta">Caller: ' +
+          escapeHtml(em.caller_name || "Unknown") +
+          " · " +
+          escapeHtml(em.phone || "N/A") +
+          "</div>" +
+          '<div class="alert-meta">Time: ' +
+          formatTime(em.timestamp) +
+          "</div>" +
+          '<span class="alert-status ' +
+          em.status +
+          '">' +
+          em.status +
+          "</span>" +
+          '<div class="alert-actions">' +
+          '<button type="button" class="btn-action btn-assign" data-id="' +
+          em.id +
+          '">Assign Officer</button>' +
+          '<button type="button" class="btn-action btn-view" data-emergency="' +
+          escapeAttr(JSON.stringify(em)) +
+          '">View on Map</button>' +
+          "</div>";
+        return card;
+      }
+
+      function loadEmergencies() {
+        fetch("/api/get_emergencies?type=" + API_TYPE, { credentials: "same-origin" })
+          .then(function (res) {
+            return res.json();
+          })
+          .then(function (data) {
+            if (data.refresh_interval) REFRESH_MS = data.refresh_interval * 1000;
+            const list = data.emergencies || [];
+            const container = document.getElementById("alerts-container");
+            container.innerHTML = "";
+
+            if (list.length === 0) {
+              container.innerHTML =
+                '<div class="empty-alerts">No active security incidents. Monitoring Wadajir, KM4, Bakaro...</div>';
+            } else {
+              list.forEach(function (em) {
+                container.appendChild(renderCard(em));
+              });
+            }
+
+            const active = list.filter(function (e) {
+              return e.status === "pending" || e.status === "dispatched";
+            });
+            document.getElementById("stat-active").textContent = active.length;
+
+            document.getElementById("refresh-time").textContent =
+              "Last updated " + new Date().toLocaleTimeString();
+
+            bindActions();
+            if (window.EmergencyLocation) {
+              EmergencyLocation.initOverviewMap("police-overview-map", list);
+            }
+          })
+          .catch(function () {
+            document.getElementById("alerts-container").innerHTML =
+              '<div class="empty-alerts">Could not load alerts. Retrying...</div>';
+          });
+      }
+
+      function bindActions() {
+        document.querySelectorAll(".btn-assign").forEach(function (btn) {
+          btn.onclick = function () {
+            const id = parseInt(btn.getAttribute("data-id"), 10);
+            fetch("/api/update_status", {
+              method: "POST",
+              credentials: "same-origin",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: id, status: "dispatched" })
+            }).then(function () {
+              alert("Officer assigned to incident #" + id);
+              loadEmergencies();
+            });
+          };
+        });
+
+        document.querySelectorAll(".btn-view").forEach(function (btn) {
+          btn.onclick = function () {
+            try {
+              var em = JSON.parse(btn.getAttribute("data-emergency"));
+              EmergencyLocation.showEmergencyOnMap(em);
+            } catch (e) {
+              alert("Could not open map.");
+            }
+          };
+        });
+      }
+
+      document.getElementById("btn-broadcast").addEventListener("click", function () {
+        alert(
+          "Broadcast sent to all Hamar Police units:\n\n" +
+            "Priority alert — respond to assigned districts immediately."
+        );
+      });
+
+      document.querySelectorAll(".sidebar nav a").forEach(function (link) {
+        link.addEventListener("click", function (e) {
+          e.preventDefault();
+          document.querySelectorAll(".sidebar nav a").forEach(function (a) {
+            a.classList.remove("active");
+          });
+          link.classList.add("active");
+          const panel = link.getAttribute("data-panel");
+          document.getElementById("panel-live").style.display =
+            panel === "live" ? "block" : "none";
+          document.getElementById("panel-history").classList.toggle(
+            "hidden-panel",
+            panel !== "history"
+          );
+          document.getElementById("panel-settings").classList.toggle(
+            "hidden-panel",
+            panel !== "settings"
+          );
+        });
+      });
+
+      document.getElementById("sidebar-toggle").addEventListener("click", function () {
+        document.getElementById("sidebar").classList.toggle("open");
+      });
+
+      loadEmergencies();
+      setInterval(loadEmergencies, REFRESH_MS);
+    })();
+  </script>
+</body>
+</html>

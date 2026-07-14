@@ -1,0 +1,175 @@
+{
+  "entries": [
+    {
+      "id": 14,
+      "timestamp": "2026-07-12 21:00:31",
+      "action": "call_center_incoming",
+      "entity_type": "call",
+      "entity_id": 6,
+      "user_id": 3,
+      "details": {
+        "user_id": 3
+      }
+    },
+    {
+      "id": 13,
+      "timestamp": "2026-07-12 17:40:57",
+      "action": "call_center_dispatch",
+      "entity_type": "emergency",
+      "entity_id": 12,
+      "user_id": 2,
+      "details": {
+        "call_id": 3,
+        "type": "medical",
+        "team": "hospital"
+      }
+    },
+    {
+      "id": 12,
+      "timestamp": "2026-07-12 17:40:30",
+      "action": "call_center_dispatch",
+      "entity_type": "emergency",
+      "entity_id": 11,
+      "user_id": 2,
+      "details": {
+        "call_id": 3,
+        "type": "fire",
+        "team": "fire"
+      }
+    },
+    {
+      "id": 11,
+      "timestamp": "2026-07-12 17:40:30",
+      "action": "call_center_dispatch",
+      "entity_type": "emergency",
+      "entity_id": 10,
+      "user_id": 2,
+      "details": {
+        "call_id": 3,
+        "type": "security",
+        "team": "police"
+      }
+    },
+    {
+      "id": 10,
+      "timestamp": "2026-07-12 17:40:30",
+      "action": "call_center_dispatch",
+      "entity_type": "emergency",
+      "entity_id": 9,
+      "user_id": 2,
+      "details": {
+        "call_id": 3,
+        "type": "medical",
+        "team": "hospital"
+      }
+    },
+    {
+      "id": 9,
+      "timestamp": "2026-07-12 17:39:57",
+      "action": "call_center_incoming",
+      "entity_type": "call",
+      "entity_id": 5,
+      "user_id": 3,
+      "details": {
+        "user_id": 3
+      }
+    },
+    {
+      "id": 8,
+      "timestamp": "2026-07-12 17:39:56",
+      "action": "call_center_incoming",
+      "entity_type": "call",
+      "entity_id": 4,
+      "user_id": 3,
+      "details": {
+        "user_id": 3
+      }
+    },
+    {
+      "id": 7,
+      "timestamp": "2026-07-12 17:39:53",
+      "action": "call_center_incoming",
+      "entity_type": "call",
+      "entity_id": 3,
+      "user_id": 3,
+      "details": {
+        "user_id": 3
+      }
+    },
+    {
+      "id": 6,
+      "timestamp": "2026-07-12 17:27:39",
+      "action": "call_center_dispatch",
+      "entity_type": "emergency",
+      "entity_id": 8,
+      "user_id": 2,
+      "details": {
+        "call_id": 2,
+        "type": "medical",
+        "team": "hospital"
+      }
+    },
+    {
+      "id": 5,
+      "timestamp": "2026-07-12 17:26:28",
+      "action": "call_center_dispatch",
+      "entity_type": "emergency",
+      "entity_id": 7,
+      "user_id": 2,
+      "details": {
+        "call_id": 2,
+        "type": "fire",
+        "team": "fire"
+      }
+    },
+    {
+      "id": 4,
+      "timestamp": "2026-07-12 17:26:28",
+      "action": "call_center_dispatch",
+      "entity_type": "emergency",
+      "entity_id": 6,
+      "user_id": 2,
+      "details": {
+        "call_id": 2,
+        "type": "security",
+        "team": "police"
+      }
+    },
+    {
+      "id": 3,
+      "timestamp": "2026-07-12 17:26:28",
+      "action": "call_center_dispatch",
+      "entity_type": "emergency",
+      "entity_id": 5,
+      "user_id": 2,
+      "details": {
+        "call_id": 2,
+        "type": "medical",
+        "team": "hospital"
+      }
+    },
+    {
+      "id": 2,
+      "timestamp": "2026-07-12 17:12:48",
+      "action": "call_center_incoming",
+      "entity_type": "call",
+      "entity_id": 2,
+      "user_id": 3,
+      "details": {
+        "user_id": 3
+      }
+    },
+    {
+      "id": 1,
+      "timestamp": "2026-07-12 17:12:46",
+      "action": "call_center_incoming",
+      "entity_type": "call",
+      "entity_id": 1,
+      "user_id": 3,
+      "details": {
+        "user_id": 3
+      }
+    }
+  ],
+  "next_id": 15
+}

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>{{ content.app_name }} — Dashboard</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/gurmadnet.css') }}">
+  {% if google_maps_key %}
+  <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_key }}&libraries=geometry"></script>
+  {% endif %}
+</head>
+<body class="gn-app">
+  <div class="gn-shell">
+    <!-- Sidebar (desktop) -->
+    <aside class="gn-sidebar" aria-label="Main navigation">
+      <div class="gn-sidebar-brand">
+        <span class="gn-brand-icon">GN</span>
+        <div>
+          <strong>GurmadNet</strong>
+          <small>AI Emergency</small>
+        </div>
+      </div>
+      <nav class="gn-sidebar-nav">
+        <button type="button" class="gn-nav-item active" data-panel="overview"><span class="gn-nav-ico">▣</span> Overview</button>
+        <button type="button" class="gn-nav-item" data-panel="map"><span class="gn-nav-ico">🗺</span> Live Map</button>
+        <button type="button" class="gn-nav-item" data-panel="chat"><span class="gn-nav-ico">💬</span> Chat <span id="chat-nav-badge" class="gn-nav-badge hidden">•</span></button>
+        <button type="button" class="gn-nav-item" data-panel="notifications"><span class="gn-nav-ico">🔔</span> Notifications</button>
+        <button type="button" class="gn-nav-item" data-panel="history"><span class="gn-nav-ico">📋</span> History</button>
+        <button type="button" class="gn-nav-item" data-panel="profile"><span class="gn-nav-ico">👤</span> Profile</button>
+        <button type="button" class="gn-nav-item" data-panel="settings"><span class="gn-nav-ico">⚙</span> Settings</button>
+      </nav>
+      <a href="{{ url_for('index') }}" class="gn-sidebar-sos">
+        <span class="gn-sos-pulse"></span>
+        <strong>SOS</strong>
+        <small>Emergency — Tap to Call</small>
+      </a>
+    </aside>
+
+    <div class="gn-content">
+      <!-- OVERVIEW -->
+      <section id="panel-overview" class="gn-panel active">
+        <header class="gn-welcome">
+          <div class="gn-welcome-photo" id="top-avatar">{{ user.name[:1] if user.name else 'U' }}</div>
+          <div class="gn-welcome-info">
+            <div class="gn-welcome-greeting">Welcome back</div>
+            <h1 class="gn-welcome-name" id="welcome-name">{{ user.name }}</h1>
+            <span class="gn-user-id" id="welcome-user-id">ID: GN-{{ user.id if user.id else '—' }}</span>
+          </div>
+          <div class="gn-welcome-actions">
+            <button type="button" class="gn-notif-btn" id="btn-scroll-notif" aria-label="Notifications">🔔
+              <span id="notif-badge" class="gn-notif-dot hidden">0</span>
+            </button>
+            <span id="header-status-chip" class="gn-status-chip idle">All clear</span>
+          </div>
+        </header>
+
+        <section id="ers-idle" class="gn-idle-hero">
+          <h2>You're all set</h2>
+          <p>No active emergency. Help is one tap away.</p>
+          <div class="gn-card gn-card-pad">
+            <a href="{{ url_for('index') }}" class="gn-btn-alert">🚨 Report Emergency</a>
+            <a href="{{ url_for('index') }}#call-center" class="gn-btn-outline" id="dash-btn-call-center"
+              style="display:block;text-align:center;margin-top:10px;text-decoration:none;padding:12px;">
+              📞 Call Emergency Center
+            </a>
+          </div>
+        </section>
+
+        <div id="ers-active-wrap" class="hidden">
+          <!-- Status hero with ETA ring -->
+          <div class="gn-status-hero">
+            <div class="gn-status-hero-text">
+              <span class="gn-status-hero-label">Current Status</span>
+              <h2 id="ers-status-title">Request Received</h2>
+              <p>Ref <strong id="ers-ref-num">#—</strong> · <span id="ers-last-update">—</span></p>
+              <button type="button" class="gn-btn-hero" id="btn-view-timeline">View Details</button>
+            </div>
+            <div class="gn-eta-ring-wrap">
+              <svg class="gn-eta-ring" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" class="gn-eta-ring-bg"/>
+                <circle cx="50" cy="50" r="42" class="gn-eta-ring-progress" id="eta-ring-progress"/>
+              </svg>
+              <div class="gn-eta-ring-center">
+                <span class="gn-eta-ring-num" id="eta-ring-num">—</span>
+                <span class="gn-eta-ring-unit">min</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Map -->
+          <div class="gn-map-wrap">
+            <div class="gn-map-card">
+              <div class="gn-map-card-head"><h3>Live Emergency Map</h3><span id="map-live-badge" class="gn-live-badge">● Live</span></div>
+              <div id="dash-tracking-map" class="gn-map-inner"></div>
+              <div class="gn-map-details" id="map-details-list">
+                <div><span class="gn-leg-you">Your location</span><span id="map-detail-you">Detecting…</span></div>
+                <div><span class="gn-leg-emergency">Emergency</span><span id="map-detail-em">—</span></div>
+                <div><span class="gn-leg-hospital">Hospital</span><span id="map-detail-hospital">—</span></div>
+                <div><span class="gn-leg-team">Ambulance</span><span id="map-detail-team">—</span></div>
+                <div><strong>Status</strong><span id="map-detail-status">—</span></div>
+                <div><strong>Distance</strong><span id="info-distance">—</span></div>
+                <div><strong>ETA</strong><span id="info-eta">—</span></div>
+              </div>
+            </div>
+            <div class="gn-map-controls">
+              <button type="button" class="gn-map-fab" id="btn-map-recenter" title="Recenter">◎</button>
+            </div>
+            <p id="dash-map-permission" class="gn-map-hint"></p>
+          </div>
+
+          <!-- Stats -->
+          <div class="gn-stats-row gn-stats-4">
+            <div class="gn-stat-card"><div class="num" id="stat-total">0</div><div class="lbl">Total</div></div>
+            <div class="gn-stat-card accent"><div class="num" id="stat-active">0</div><div class="lbl">Active</div></div>
+            <div class="gn-stat-card success"><div class="num" id="stat-completed">0</div><div class="lbl">Completed</div></div>
+            <div class="gn-stat-card muted"><div class="num" id="stat-cancelled">0</div><div class="lbl">Cancelled</div></div>
+          </div>
+
+          <!-- Quick actions -->
+          <div class="gn-quick-actions">
+            <a href="#" class="gn-action-btn call" id="btn-call-team"><span class="gn-action-icon">📞</span><span class="gn-action-label">Call Team</span></a>
+            <button type="button" class="gn-action-btn chat" id="btn-open-chat"><span class="gn-action-icon">💬</span><span class="gn-action-label">Chat</span></button>
+            <button type="button" class="gn-action-btn share" id="btn-share-loc"><span class="gn-action-icon">📍</span><span class="gn-action-label">Share</span></button>
+            <button type="button" class="gn-action-btn history" id="btn-open-history"><span class="gn-action-icon">📋</span><span class="gn-action-label">History</span></button>
+          </div>
+
+          <!-- Notif + Chat preview row -->
+          <div class="gn-split-row">
+            <div class="gn-card gn-card-pad gn-split-col" id="gn-notif-section">
+              <div class="gn-section-head"><h3 class="gn-card-title" style="margin:0;">Recent Notifications</h3></div>
+              <div id="ers-notifications-preview" class="gn-notif-list"></div>
+            </div>
+            <div class="gn-card gn-card-pad gn-split-col gn-chat-preview" id="gn-chat-preview">
+              <div class="gn-section-head"><h3 class="gn-card-title" style="margin:0;">Active Chat</h3><span class="gn-chat-live">Live</span></div>
+              <div id="chat-preview-msgs" class="gn-chat-preview-msgs"></div>
+              <button type="button" class="gn-btn-outline" id="btn-open-chat-2">Open Chat</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MAP PANEL -->
+      <section id="panel-map" class="gn-panel">
+        <h2 class="gn-panel-title">Live Tracking</h2>
+        <div class="gn-map-card gn-map-full">
+          <div id="dash-tracking-map-full" class="gn-map-inner gn-map-inner-tall"></div>
+          <div class="gn-map-sheet" id="map-bottom-sheet">
+            <strong id="sheet-team-name">Response Team</strong>
+            <div class="gn-sheet-stats">
+              <span>ETA: <b id="sheet-eta">—</b></span>
+              <span>Distance: <b id="sheet-dist">—</b></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CHAT PANEL -->
+      <section id="panel-chat" class="gn-panel">
+        <div class="gn-chat-section gn-card" id="ers-chat-section">
+          <div class="gn-chat-head">
+            <div>
+              <h2 class="gn-card-title" style="margin:0;">Rescue Team</h2>
+              <small id="chat-team-sub" style="color:var(--gn-text-muted);">Emergency communication</small>
+            </div>
+            <a href="#" id="btn-call-chat" class="gn-call-icon" title="Call team">📞</a>
+          </div>
+          <div id="ers-chat-active">
+            <div class="gn-chat-quick" id="ers-chat-quick">
+              <button type="button" class="gn-quick-chip" data-text="I'm at the location">I'm at the location</button>
+              <button type="button" class="gn-quick-chip" data-text="I need help now">Need help</button>
+              <button type="button" class="gn-quick-chip" data-text="Please hurry">Please hurry</button>
+            </div>
+            <div id="dash-chat-messages" class="gn-chat-msgs gn-chat-msgs-tall"></div>
+            <div id="ers-typing" class="gn-typing"></div>
+            <div class="gn-chat-input-row">
+              <button type="button" id="ers-voice-btn" class="gn-voice-btn" title="Voice">🎤</button>
+              <input type="text" id="dash-chat-input" class="gn-chat-input" placeholder="Type a message…" autocomplete="off">
+              <button type="button" id="dash-chat-send" class="gn-chat-send">➤</button>
+            </div>
+          </div>
+          <div id="ers-chat-idle" class="gn-chat-idle-msg hidden">Report an emergency to start chatting.</div>
+        </div>
+      </section>
+
+      <!-- NOTIFICATIONS PANEL -->
+      <section id="panel-notifications" class="gn-panel">
+        <div class="gn-section-head gn-panel-title-row">
+          <h2 class="gn-panel-title" style="margin:0;">Notifications</h2>
+          <button type="button" id="btn-mark-all-read" class="gn-mark-read">Mark all read</button>
+        </div>
+        <div class="gn-notif-tabs">
+          <button type="button" class="gn-notif-tab active" data-filter="all">All</button>
+          <button type="button" class="gn-notif-tab" data-filter="unread">Unread</button>
+        </div>
+        <div id="ers-notifications" class="gn-notif-list"></div>
+      </section>
+
+      <!-- HISTORY PANEL -->
+      <section id="panel-history" class="gn-panel">
+        <h2 class="gn-panel-title">Emergency History</h2>
+        <div id="ers-history-list" class="gn-history-cards"></div>
+      </section>
+
+      <!-- PROFILE PANEL -->
+      <section id="panel-profile" class="gn-panel">
+        <div class="gn-profile-hero">
+          <div class="gn-profile-hero-inner">
+            <div class="gn-profile-avatar-lg" id="profile-avatar">{{ user.name[:1] if user.name else 'U' }}</div>
+            <div>
+              <h2 id="profile-display-name">{{ user.name }}</h2>
+              <p id="profile-display-phone">{{ user.phone or user.email }}</p>
+              <span class="gn-status-chip live" id="profile-account-status">Active</span>
+            </div>
+          </div>
+        </div>
+        <div class="gn-menu-list">
+          <button type="button" class="gn-menu-item" data-goto="settings">Personal Information</button>
+          <button type="button" class="gn-menu-item">Emergency Contacts</button>
+          <button type="button" class="gn-menu-item">Saved Locations</button>
+        </div>
+      </section>
+
+      <!-- SETTINGS PANEL -->
+      <section id="panel-settings" class="gn-panel">
+        <h2 class="gn-panel-title">Settings</h2>
+        <form id="profile-form" class="gn-card gn-card-pad">
+          <div class="gn-field-grid">
+            <div class="gn-field"><label>Full name</label><input type="text" id="pf-name" value="{{ user.name }}"></div>
+            <div class="gn-field"><label>Phone</label><input type="tel" id="pf-phone" value="{{ user.phone or '' }}"></div>
+            <div class="gn-field full"><label>Email</label><input type="email" value="{{ user.email }}" readonly></div>
+            <div class="gn-field"><label>Emergency contact</label><input type="text" id="pf-ec-name" placeholder="Name"></div>
+            <div class="gn-field"><label>Contact phone</label><input type="tel" id="pf-ec-phone" placeholder="Phone"></div>
+          </div>
+          <div style="margin-top:12px;">
+            <label class="gn-field-label">Saved locations</label>
+            <div id="saved-locations-list" class="gn-saved-list">No saved locations.</div>
+            <button type="button" id="btn-save-location" class="gn-btn-outline" style="width:100%;margin-top:8px;">+ Save current location</button>
+          </div>
+          <button type="submit" class="gn-btn-primary">Save Profile</button>
+        </form>
+        <label class="gn-photo-change">Change profile photo <input type="file" id="profile-photo-input" accept="image/*" hidden></label>
+        <a href="{{ url_for('logout') }}" class="gn-btn-outline gn-logout-btn">Log out</a>
+      </section>
+
+      <!-- Timeline (overview sub / details) -->
+      <section id="panel-timeline" class="gn-panel">
+        <h2 class="gn-panel-title">Emergency Details</h2>
+        <div class="gn-card gn-card-pad">
+          <div class="gn-timeline" id="ers-timeline"></div>
+          <a href="#" class="gn-btn-primary" id="btn-contact-team" style="display:block;text-align:center;text-decoration:none;margin-top:16px;">Contact Team</a>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Mobile bottom nav -->
+  <nav class="gn-bottom-nav" aria-label="Mobile navigation">
+    <button type="button" class="gn-bnav-item active" data-panel="overview"><span>🏠</span><small>Home</small></button>
+    <button type="button" class="gn-bnav-item" data-panel="map"><span>🗺</span><small>Map</small></button>
+    <a href="{{ url_for('index') }}" class="gn-bnav-sos" aria-label="SOS Emergency"><span>!</span></a>
+    <button type="button" class="gn-bnav-item" data-panel="chat"><span>💬</span><small>Chat</small></button>
+    <button type="button" class="gn-bnav-item" data-panel="profile"><span>👤</span><small>Profile</small></button>
+  </nav>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="{{ url_for('static', filename='js/location.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/user_dashboard.js') }}"></script>
+</body>
+</html>

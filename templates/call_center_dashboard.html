@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ content.call_center_dashboard_title }}</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/gurmadnet.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/call_center.css') }}">
+</head>
+<body class="dashboard-admin gn-call-center">
+  <div class="dashboard-container">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <h2>Call Center</h2>
+        <span>Emergency Dispatch</span>
+      </div>
+      <nav class="admin-nav">
+        <a href="#" class="active" data-panel="live">📞 Live Calls</a>
+        <a href="#" data-panel="active">🎙 In Progress</a>
+        <a href="{{ url_for('call_center_history_page') }}">📋 Call History</a>
+      </nav>
+      <div class="dashboard-links">
+        <span>{{ user.name }} (operator)</span>
+        <a href="{{ url_for('logout') }}" class="btn-logout" style="display:inline-block;margin-top:8px;">Logout</a>
+      </div>
+    </aside>
+
+    <div class="main-content">
+      <header class="top-bar">
+        <button type="button" class="sidebar-toggle" id="sidebar-toggle">☰</button>
+        <h1>{{ content.call_center_dashboard_title }}</h1>
+        <div class="top-bar-actions">
+          <span class="status-badge online" id="op-online">Operators: 0</span>
+          <span class="user-badge">{{ user.name }}</span>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <div class="stats" id="cc-stats">
+          <div class="stat-card"><div class="stat-value" id="st-online">0</div><div class="stat-label">Operators Online</div></div>
+          <div class="stat-card"><div class="stat-value" id="st-incoming">0</div><div class="stat-label">Incoming Calls</div></div>
+          <div class="stat-card"><div class="stat-value" id="st-waiting">0</div><div class="stat-label">Calls Waiting</div></div>
+          <div class="stat-card"><div class="stat-value" id="st-progress">0</div><div class="stat-label">In Progress</div></div>
+          <div class="stat-card"><div class="stat-value" id="st-resolved">0</div><div class="stat-label">Resolved Today</div></div>
+          <div class="stat-card"><div class="stat-value" id="st-avg">0</div><div class="stat-label">Avg Response (min)</div></div>
+        </div>
+
+        <p class="cc-operator-hint">Ask only: <strong>“What happened?”</strong> — GPS and address are already available. Never ask “Where are you?”</p>
+
+        <div id="panel-live">
+          <h2 class="section-title">Incoming / Live Calls <span class="refresh-indicator" id="refresh-time">Updating…</span></h2>
+          <div id="incoming-list" class="cc-call-grid"></div>
+        </div>
+
+        <div id="panel-active" class="hidden-panel">
+          <h2 class="section-title">Active Session</h2>
+          <div id="active-session" class="cc-session empty">
+            <p>Select an incoming call and press <strong>Answer</strong> to open the dispatch workspace.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="{{ url_for('static', filename='js/location.js') }}"></script>
+  <script>
+    window.CC_TYPE_OPTIONS = {{ type_options|tojson }};
+    window.CC_PHONE = {{ call_center_phone|tojson }};
+  </script>
+  <script src="{{ url_for('static', filename='js/call_center.js') }}"></script>
+</body>
+</html>

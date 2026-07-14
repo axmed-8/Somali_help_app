@@ -1,0 +1,41 @@
+{
+  "items": [
+    {
+      "id": 1,
+      "analysis_id": 1,
+      "emergency_id": 5,
+      "call_id": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Digfer Hospital",
+        "phone": "+252 61 500 4004",
+        "latitude": 2.038,
+        "longitude": 45.335,
+        "distance_km": 1.05,
+        "eta_minutes": 3,
+        "ambulance_available": false,
+        "emergency_capacity": null,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "recommended_police": null,
+      "recommended_fire": null,
+      "estimated_arrival_minutes": 3,
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "reason": "Digfer Hospital: closest suitable hospital, ETA 3 min.",
+      "confidence": 0.98,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "status": "pending",
+      "created_at": "2026-07-14 12:31:10"
+    }
+  ],
+  "next_id": 2
+}

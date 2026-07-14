@@ -1,0 +1,201 @@
+{
+  "items": [
+    {
+      "event_type": "analysis",
+      "emergency_id": 5,
+      "call_id": 1,
+      "analysis_id": 1,
+      "payload": {
+        "category": "medical",
+        "priority": "medium",
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ],
+        "confidence": 0.98,
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "provider": "rule_based",
+        "source": "call_center"
+      },
+      "timestamp": "2026-07-14 10:37:31",
+      "id": 1
+    },
+    {
+      "event_type": "recommendation",
+      "emergency_id": 5,
+      "call_id": 1,
+      "recommendation_id": 1,
+      "analysis_id": 1,
+      "payload": {
+        "hospital": "Aamin Ambulance Hospital",
+        "police": null,
+        "fire": null,
+        "eta_minutes": 3,
+        "confidence": 0.98,
+        "reason": "Aamin Ambulance Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-14 10:37:31",
+      "id": 2
+    },
+    {
+      "event_type": "dispatch_result",
+      "emergency_id": 5,
+      "call_id": 1,
+      "dispatch_log_id": 1,
+      "recommendation_id": 1,
+      "payload": {
+        "human_decision": "call_center_created",
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          5
+        ],
+        "assigned_hospital_name": "Aamin Ambulance Hospital"
+      },
+      "timestamp": "2026-07-14 10:37:31",
+      "id": 3
+    },
+    {
+      "event_type": "analysis",
+      "emergency_id": 6,
+      "call_id": 1,
+      "analysis_id": 2,
+      "payload": {
+        "category": "police",
+        "priority": "high",
+        "risk_level": "medium",
+        "required_services": [
+          "police"
+        ],
+        "confidence": 0.98,
+        "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+        "provider": "rule_based",
+        "source": "call_center"
+      },
+      "timestamp": "2026-07-14 10:37:31",
+      "id": 4
+    },
+    {
+      "event_type": "recommendation",
+      "emergency_id": 6,
+      "call_id": 1,
+      "recommendation_id": 2,
+      "analysis_id": 2,
+      "payload": {
+        "hospital": null,
+        "police": "Police Response Unit",
+        "fire": null,
+        "eta_minutes": 3,
+        "confidence": 0.98,
+        "reason": "Police: Police Response Unit (~1.69 km, ETA 3 min).",
+        "suggested_dispatch_types": [
+          "security"
+        ]
+      },
+      "timestamp": "2026-07-14 10:37:31",
+      "id": 5
+    },
+    {
+      "event_type": "dispatch_result",
+      "emergency_id": 6,
+      "call_id": 1,
+      "dispatch_log_id": 2,
+      "recommendation_id": 2,
+      "payload": {
+        "human_decision": "call_center_created",
+        "dispatched_to": [
+          "police"
+        ],
+        "emergency_ids": [
+          6
+        ],
+        "assigned_hospital_name": ""
+      },
+      "timestamp": "2026-07-14 10:37:31",
+      "id": 6
+    },
+    {
+      "event_type": "analysis",
+      "emergency_id": 7,
+      "call_id": null,
+      "analysis_id": 3,
+      "payload": {
+        "category": "fire",
+        "priority": "high",
+        "risk_level": "high",
+        "required_services": [
+          "fire"
+        ],
+        "confidence": 0.98,
+        "reason": "Classified as fire (declared type: fire). Required services: Fire only. Priority high, risk high.",
+        "provider": "rule_based",
+        "source": "sos"
+      },
+      "timestamp": "2026-07-14 10:37:32",
+      "id": 7
+    },
+    {
+      "event_type": "recommendation",
+      "emergency_id": 7,
+      "call_id": null,
+      "recommendation_id": 1,
+      "analysis_id": 3,
+      "payload": {
+        "hospital": null,
+        "police": null,
+        "fire": "Fire & Rescue Station",
+        "eta_minutes": 3,
+        "confidence": 0.98,
+        "reason": "Fire: Fire & Rescue Station (~1.6 km, ETA 3 min).",
+        "suggested_dispatch_types": [
+          "fire"
+        ]
+      },
+      "timestamp": "2026-07-14 10:37:32",
+      "id": 8
+    },
+    {
+      "event_type": "dispatch_result",
+      "emergency_id": 5,
+      "call_id": null,
+      "dispatch_log_id": 1,
+      "recommendation_id": 1,
+      "payload": {
+        "human_decision": "auto_sos",
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          5
+        ],
+        "assigned_hospital_name": "Aamin Ambulance Hospital"
+      },
+      "timestamp": "2026-07-14 12:31:04",
+      "id": 9
+    },
+    {
+      "event_type": "dispatch_result",
+      "emergency_id": 5,
+      "call_id": null,
+      "dispatch_log_id": 1,
+      "recommendation_id": 1,
+      "payload": {
+        "human_decision": "auto_sos",
+        "dispatched_to": [
+          "fire"
+        ],
+        "emergency_ids": [
+          5
+        ],
+        "assigned_hospital_name": ""
+      },
+      "timestamp": "2026-07-14 12:31:18",
+      "id": 10
+    }
+  ],
+  "next_id": 11
+}

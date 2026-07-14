@@ -1,0 +1,150 @@
+/* Call Center — extends GurmadNet dashboard styles */
+
+.gn-call-center .cc-operator-hint {
+  background: var(--gn-accent-soft, #E3F2FD);
+  border-left: 4px solid var(--gn-primary, #0D47A1);
+  padding: 12px 16px;
+  border-radius: 12px;
+  margin: 0 0 16px;
+  color: var(--gn-text, #0F172A);
+  font-size: 0.92rem;
+}
+
+.gn-call-center .cc-call-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.gn-call-center .cc-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(13, 71, 161, 0.1);
+  padding: 16px;
+  border: 1px solid rgba(13, 71, 161, 0.08);
+  animation: ccPulseIn 0.4s ease;
+}
+
+.gn-call-center .cc-card.ringing {
+  border-color: #E53935;
+  box-shadow: 0 0 0 2px rgba(229, 57, 53, 0.2);
+}
+
+.gn-call-center .cc-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.gn-call-center .cc-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: #FFEBEE;
+  color: #C62828;
+}
+
+.gn-call-center .cc-badge.answered,
+.gn-call-center .cc-badge.in_progress { background: #E3F2FD; color: #1565C0; }
+.gn-call-center .cc-badge.dispatched { background: #E8F5E9; color: #2E7D32; }
+
+.gn-call-center .cc-card dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 4px 8px;
+  font-size: 0.85rem;
+}
+
+.gn-call-center .cc-card dt { color: #64748B; font-weight: 600; }
+.gn-call-center .cc-card dd { margin: 0; word-break: break-word; }
+
+.gn-call-center .cc-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.gn-call-center .cc-session {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 8px 32px rgba(13, 71, 161, 0.1);
+}
+
+.gn-call-center .cc-session.empty {
+  color: #64748B;
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.gn-call-center .cc-type-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.gn-call-center .cc-type-btn {
+  border: 1.5px solid rgba(13, 71, 161, 0.2);
+  background: #F8FAFC;
+  border-radius: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.gn-call-center .cc-type-btn.active {
+  background: #0D47A1;
+  color: #fff;
+  border-color: #0D47A1;
+}
+
+.gn-call-center .cc-nearest {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.gn-call-center .cc-nearest-card {
+  background: #F8FAFC;
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid rgba(13, 71, 161, 0.08);
+  font-size: 0.85rem;
+}
+
+.gn-call-center .cc-nearest-card strong { display: block; margin-bottom: 4px; }
+
+.gn-call-center .cc-dispatch-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.gn-call-center .cc-map {
+  height: 220px;
+  border-radius: 14px;
+  margin: 12px 0;
+  background: #E3F2FD;
+}
+
+.gn-call-center #cc-stats .stat-card { min-width: 120px; }
+
+@keyframes ccPulseIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 768px) {
+  .gn-call-center .cc-call-grid { grid-template-columns: 1fr; }
+  .gn-call-center .cc-card dl { grid-template-columns: 80px 1fr; }
+}
