@@ -2,65 +2,28 @@
   "users": [
     {
       "id": 1,
-      "name": "Admin User",
-      "email": "admin@emergency.so",
-      "phone": "0612345678",
-      "password_hash": "scrypt:32768:8:1$AbFrCIfRGBS1ei2Z$6966056c94897a31394377b09f4acc9145e4078771008364dbdb25b39bd6f10987297a67767d9c62b10a766772be428b8abd5fbc3acc405fd5a3982bcf6d4a1f",
-      "role": "admin",
+      "name": "Login UI",
+      "email": "login.ui.test.1784279798662251400@test.so",
+      "phone": "061111",
+      "password_hash": "scrypt:32768:8:1$kyo9Btj6YVfBoRP7$b294ef66537e05d1b8d72c53f367b4b5b68b58f97e41e7742c970d0f2a2ffda285223c9cbb2368a27ab68de62c5111f2026d363a6654df9b7aaaea8c858a9468",
+      "role": "citizen",
       "status": "active",
-      "created_at": "2026-07-12 15:51:32",
-      "last_login": "2026-07-12 17:03:47",
+      "email_verified": true,
+      "email_verify_token": null,
+      "email_verify_expires": null,
+      "created_at": "2026-07-17 12:16:39",
+      "last_login": "2026-07-17 12:16:39",
       "activity": [
         {
           "action": "Logged in",
-          "timestamp": "2026-07-12 17:03:47"
+          "timestamp": "2026-07-17 12:16:39"
         },
         {
-          "action": "Logged in",
-          "timestamp": "2026-07-12 15:52:51"
+          "action": "Account created",
+          "timestamp": "2026-07-17 12:16:39"
         }
       ],
-      "username": "admin",
-      "profile_photo": "",
-      "emergency_contact_name": "",
-      "emergency_contact_phone": "",
-      "emergency_contact_relation": "",
-      "address": "",
-      "city": "",
-      "date_of_birth": "",
-      "blood_type": "",
-      "medical_notes": "",
-      "saved_locations": []
-    },
-    {
-      "id": 2,
-      "name": "Call Center Operator",
-      "email": "operator@callcenter.so",
-      "phone": "+252612000999",
-      "password_hash": "scrypt:32768:8:1$OpeFf980Pidl4yc6$db8d30b0731f87e71a3607f1fea6ea6dbc5f55c17ffff49d1138a39c2b0c968807ca62776129df9d93ead80475dfd6085c8b02abd560cdb940e0dbd9df983785",
-      "role": "call_center",
-      "status": "active",
-      "created_at": "2026-07-12 15:51:32",
-      "last_login": "2026-07-12 17:23:52",
-      "activity": [
-        {
-          "action": "Logged in",
-          "timestamp": "2026-07-12 17:23:52"
-        },
-        {
-          "action": "Logged in",
-          "timestamp": "2026-07-12 17:07:07"
-        },
-        {
-          "action": "Call Center login",
-          "timestamp": "2026-07-12 16:51:30"
-        },
-        {
-          "action": "Account seeded",
-          "timestamp": "2026-07-12 15:51:32"
-        }
-      ],
-      "username": "operator",
+      "username": "login.ui.test.1784279798662251400",
       "profile_photo": "",
       "emergency_contact_name": "",
       "emergency_contact_phone": "",
@@ -71,25 +34,33 @@
       "blood_type": "",
       "medical_notes": "",
       "saved_locations": [],
-      "last_seen_call_center": "2026-07-12 18:15:53"
+      "reset_token": "3ZqqbA5PU0tEZgwDwSw1PBDsCDDEtO-7_7MxY--ZCuE",
+      "reset_expires": "2026-07-17 12:31:39"
     },
     {
-      "id": 3,
-      "name": "naima",
-      "email": "naima@gnail.com",
-      "phone": "61391919191",
-      "password_hash": "scrypt:32768:8:1$3rl2y2jASFWk3Vad$1d5341b76c7b5c796ba62fcb42fb177e6bba44b7d2bb31abb677b567433343f27d50f586fea2ab5aafcde78a515d35f41851ff0509cb5cf29284eca7bb550e5c",
+      "id": 2,
+      "name": "Login UI",
+      "email": "login.ui.test.1784291785581571800@test.so",
+      "phone": "061111",
+      "password_hash": "scrypt:32768:8:1$Ri40POyGIe1KgiYX$351cfd2b3b2cf867ea4d0446807afe248b2a504304af860e103a2bec634ccd132beae20996a7d4f97c25919b22275d98269eab3246887aa261f081e631711000",
       "role": "citizen",
       "status": "active",
-      "created_at": "2026-07-12 17:12:12",
-      "last_login": "2026-07-12 17:12:12",
+      "email_verified": true,
+      "email_verify_token": null,
+      "email_verify_expires": null,
+      "created_at": "2026-07-17 15:36:25",
+      "last_login": "2026-07-17 15:36:25",
       "activity": [
         {
+          "action": "Logged in",
+          "timestamp": "2026-07-17 15:36:25"
+        },
+        {
           "action": "Account created",
-          "timestamp": "2026-07-12 17:12:12"
+          "timestamp": "2026-07-17 15:36:25"
         }
       ],
-      "username": "naima",
+      "username": "login.ui.test.1784291785581571800",
       "profile_photo": "",
       "emergency_contact_name": "",
       "emergency_contact_phone": "",
@@ -99,8 +70,10 @@
       "date_of_birth": "",
       "blood_type": "",
       "medical_notes": "",
-      "saved_locations": []
+      "saved_locations": [],
+      "reset_token": "Wm3zyOZ4vkH37x-drHM1nlt92x4o3MqNw3h34zCXuKY",
+      "reset_expires": "2026-07-17 15:51:26"
     }
   ],
-  "next_id": 4
+  "next_id": 3
 }

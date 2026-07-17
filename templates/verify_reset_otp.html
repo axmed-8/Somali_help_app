@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enter Reset Code — {{ content.app_name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/gurmadnet.css') }}">
+</head>
+<body class="gn-auth auth-page">
+  <div class="auth-container">
+    <div class="auth-card" role="main">
+      <div class="auth-header">
+        <span class="auth-logo" aria-hidden="true">AI</span>
+        <h1>Enter reset code</h1>
+        <p>
+          Check your email{% if email %} for <strong>{{ email }}</strong>{% endif %}
+          and enter the 6-digit code. Codes expire in a few minutes.
+        </p>
+      </div>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="auth-alerts" aria-live="polite">
+            {% for category, message in messages %}
+              <div class="flash flash-{{ category }}" role="{{ 'alert' if category in ['error', 'warning'] else 'status' }}">
+                {{ message }}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+      <form method="post" action="{{ url_for('verify_reset_otp') }}" class="auth-form" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="email" value="{{ email }}">
+        <div class="form-group">
+          <label for="otp">One-time code</label>
+          <input
+            type="text"
+            id="otp"
+            name="otp"
+            required
+            inputmode="numeric"
+            pattern="[0-9]{6}"
+            maxlength="6"
+            autocomplete="one-time-code"
+            placeholder="123456"
+            aria-describedby="otp-hint"
+          >
+          <p class="auth-hint" id="otp-hint">Enter the 6-digit code from your email.</p>
+        </div>
+        <button type="submit" class="btn-auth btn-primary-auth">Verify code</button>
+      </form>
+      <p class="auth-footer">
+        <a href="{{ url_for('forgot_password') }}">Resend code</a>
+        <span class="auth-links-sep" aria-hidden="true">·</span>
+        <a href="{{ url_for('login') }}">Back to login</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

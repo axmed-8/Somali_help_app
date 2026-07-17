@@ -11,7 +11,7 @@
   <div class="auth-container">
     <div class="auth-card">
       <div class="auth-header">
-        <span class="auth-logo">📞</span>
+        <span class="auth-logo" aria-hidden="true">AI</span>
         <h1>Emergency Call Center</h1>
         <p>Operator secure sign-in</p>
       </div>
@@ -25,10 +25,11 @@
       {% endwith %}
 
       <form method="post" action="{{ url_for('call_center_login') }}" class="auth-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
           <label for="username">Operator email</label>
           <input type="email" id="username" name="username" required autocomplete="email"
-            placeholder="operator@callcenter.so">
+            placeholder="operator@example.com">
         </div>
         <div class="form-group">
           <label for="password">Password</label>
@@ -40,12 +41,6 @@
       <p class="auth-footer" style="margin-top:12px;">
         <a href="{{ url_for('login') }}">← Main login</a>
       </p>
-      <div class="demo-users">
-        <p class="demo-title">Demo operator</p>
-        <table class="demo-table">
-          <tr><td>operator@callcenter.so</td><td>123456</td><td>Call Center</td></tr>
-        </table>
-      </div>
     </div>
   </div>
 </body>

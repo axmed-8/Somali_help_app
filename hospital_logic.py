@@ -352,7 +352,7 @@ def seed_hospitals_if_empty(read_fn, save_fn):
     samples = [
         ("Aamin Ambulance Hospital", "Mogadishu", "Banadir", "Hodan", "Hodan District, Afgooye Road, Mogadishu",
          2.0469, 45.3182, "+252 61 500 1001", ["+252 61 500 1001", "+252 61 999 0001"],
-         ["Emergency", "Trauma", "Ambulance"], True, 20, 4.8, "amina@hospital.com"),
+         ["Emergency", "Trauma", "Ambulance"], True, 20, 4.8, None),
         ("Medina Hospital", "Mogadishu", "Banadir", "Hamar Weyne", "Medina Street, Hamar Weyne, Mogadishu",
          2.0400, 45.3400, "+252 61 500 2002", ["+252 61 500 2002"],
          ["General", "Surgery", "ICU"], True, 15, 4.6, None),

@@ -20,5 +20,7 @@
   "call_center_priority_fire": 1,
   "call_center_priority_police": 1,
   "call_center_auto_nearest": true,
-  "call_center_heartbeat_sec": 45
+  "call_center_heartbeat_sec": 45,
+  "ai_enabled": true,
+  "ai_provider": "rule_based"
 }

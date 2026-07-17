@@ -108,15 +108,8 @@ python app.py
 
 ## Usage
 
-### Demo accounts
-
-| Email | Password | Role |
-|-------|----------|------|
-| `ahmed@example.com` | `123456` | Citizen |
-| `amina@hospital.com` | `123456` | Hospital / Medical |
-| `hassan@police.com` | `123456` | Police |
-| `admin@emergency.so` | `admin123` | Administrator |
-| `operator@callcenter.so` | `123456` | Call Center Operator |
+Register with a real email address on `/signup`, then sign in on `/login`.
+Call Center operators are created by an administrator (role: `call_center`).
 
 ### Important URLs
 

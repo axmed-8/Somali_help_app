@@ -9,55 +9,104 @@
 </head>
 <body class="gn-auth auth-page">
   <div class="auth-container">
-    <div class="auth-card">
+    <div class="auth-card" role="main">
       <div class="auth-header">
-        <span class="auth-logo">AI</span>
+        <span class="auth-logo" aria-hidden="true">AI</span>
         <h1>{{ content.app_name }}</h1>
         <p>Professional Emergency Response — Sign in</p>
       </div>
 
+      {% set pe = pending_email|default(request.args.get('pending_email', ''), true) %}
+
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-          {% for category, message in messages %}
-            <div class="flash flash-{{ category }}">{{ message }}</div>
-          {% endfor %}
+          <div class="auth-alerts" aria-live="polite">
+            {% for category, message in messages %}
+              <div class="flash flash-{{ category }}" role="{{ 'alert' if category in ['error', 'warning'] else 'status' }}">
+                {{ message }}
+              </div>
+            {% endfor %}
+          </div>
         {% endif %}
       {% endwith %}
 
-      <form method="post" action="{{ url_for('login') }}" class="auth-form">
-        <div class="form-group">
+      <form
+        method="post"
+        action="{{ url_for('login') }}"
+        class="auth-form"
+        id="login-form"
+        novalidate
+      >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group" id="group-username">
           <label for="username">Email</label>
-          <input type="email" id="username" name="username" required autocomplete="email" placeholder="admin@emergency.so">
+          <input
+            type="email"
+            id="username"
+            name="username"
+            required
+            autocomplete="username email"
+            inputmode="email"
+            placeholder="Email"
+            value="{{ pe }}"
+            aria-describedby="username-error"
+            aria-invalid="false"
+          >
+          <p class="field-error" id="username-error" hidden></p>
         </div>
-        <div class="form-group">
+        <div class="form-group" id="group-password">
           <label for="password">Password</label>
-          <input type="password" id="password" name="password" required autocomplete="current-password">
+          <div class="password-field">
+            <input
+              type="password"
+              id="password"
+              name="password"
+              required
+              minlength="6"
+              autocomplete="current-password"
+              placeholder="Enter your password"
+              aria-describedby="password-error"
+              aria-invalid="false"
+            >
+            <button
+              type="button"
+              class="password-toggle"
+              id="password-toggle"
+              aria-label="Show password"
+              aria-controls="password"
+              aria-pressed="false"
+            >
+              <svg class="icon-eye" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg class="icon-eye-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path>
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path>
+                <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            </button>
+          </div>
+          <p class="field-error" id="password-error" hidden></p>
         </div>
-        <button type="submit" class="btn-auth btn-primary-auth">Log In</button>
+        <button
+          type="submit"
+          class="btn-auth btn-primary-auth"
+          id="btn-login"
+          data-default-label="Log In"
+        >
+          Log In
+        </button>
       </form>
 
-      <p class="auth-footer" style="margin-top:12px;">
+      <div class="auth-links">
         <a href="{{ url_for('forgot_password') }}">Forgot password?</a>
-      </p>
-      <p class="auth-footer">
-        Don't have an account? <a href="{{ url_for('signup') }}">Sign up</a>
-      </p>
-
-      <div class="demo-users">
-        <p class="demo-title">Default test accounts (password in table)</p>
-        <table class="demo-table">
-          <tr><td>admin@emergency.so</td><td>admin123</td><td>Admin</td></tr>
-          <tr><td>ahmed@example.com</td><td>123456</td><td>Citizen</td></tr>
-          <tr><td>amina@hospital.com</td><td>123456</td><td>Hospital</td></tr>
-          <tr><td>hassan@police.com</td><td>123456</td><td>Police</td></tr>
-          <tr><td>muse@fire.com</td><td>123456</td><td>Fire</td></tr>
-          <tr><td>operator@callcenter.so</td><td>123456</td><td>Call Center</td></tr>
-        </table>
+        <span class="auth-links-sep" aria-hidden="true">·</span>
+        <a href="{{ url_for('signup') }}">Create an account</a>
       </div>
-      <p class="auth-footer" style="margin-top:8px;font-size:0.8rem;">
-        Operators: <a href="{{ url_for('call_center_login') }}">Call Center login</a>
-      </p>
     </div>
   </div>
+  <script src="{{ url_for('static', filename='js/auth_login.js') }}" defer></script>
 </body>
 </html>

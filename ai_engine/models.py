@@ -60,6 +60,7 @@ def empty_analysis(**overrides):
         "category": "other",
         "gurmad_type": "medical",
         "priority": "medium",
+        "severity": "medium",  # mirrors priority for panel / API clarity
         "risk_level": "medium",
         "required_services": ["medical"],
         "required_services_label": "Medical only",
@@ -72,6 +73,8 @@ def empty_analysis(**overrides):
         "created_at": now_str(),
     }
     base.update(overrides)
+    if "severity" not in overrides and "priority" in base:
+        base["severity"] = base["priority"]
     return base
 
 

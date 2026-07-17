@@ -10,6 +10,8 @@
   var sessionMap = null;
   var timerInterval = null;
   var callStartedAt = null;
+  var latestAiPanel = null;
+  var aiAnalyzeTimer = null;
 
   function api(url, opts) {
     opts = opts || {};
@@ -92,7 +94,7 @@
         var id = parseInt(btn.getAttribute("data-answer"), 10);
         api("/api/call-center/calls/" + id + "/answer", { method: "POST", body: {} })
           .then(function (d) {
-            if (d.success) openSession(d.call);
+            if (d.success) openSession(d.call, d);
             else alert(d.message || "Could not answer");
           });
       };
@@ -101,7 +103,7 @@
       btn.onclick = function () {
         var id = parseInt(btn.getAttribute("data-open"), 10);
         api("/api/call-center/calls/" + id).then(function (d) {
-          if (d.success) openSession(d.call);
+          if (d.success) openSession(d.call, d);
         });
       };
     });
@@ -149,11 +151,108 @@
     }).join("");
   }
 
-  function openSession(call) {
+  function historyHtml(history) {
+    if (!history || !history.length) {
+      return '<p class="cc-ai-muted">No previous emergencies on file.</p>';
+    }
+    return (
+      '<ul class="cc-history-list">' +
+      history.slice(0, 5).map(function (h) {
+        return (
+          "<li>#" + esc(h.id) + " · " + esc(h.type) + " · " + esc(h.status) +
+          (h.timestamp ? " · " + esc(h.timestamp) : "") +
+          "</li>"
+        );
+      }).join("") +
+      "</ul>"
+    );
+  }
+
+  function responderLine(label, obj, eta) {
+    if (!obj) return "<div><strong>" + label + ":</strong> —</div>";
+    var name = obj.name || obj.station_name || "Unit";
+    var dist = obj.distance_km != null ? obj.distance_km + " km" : "";
+    var why = obj.reason || obj.why || "";
+    return (
+      "<div><strong>" + label + ":</strong> " + esc(name) +
+      (dist ? " (" + esc(dist) + ")" : "") +
+      (eta != null ? " · ETA ~" + esc(eta) + " min" : "") +
+      (why ? "<br><span class='cc-ai-muted'>" + esc(why) + "</span>" : "") +
+      "</div>"
+    );
+  }
+
+  function renderAiPanel(panel) {
+    var box = document.getElementById("ai-panel-body");
+    if (!box) return;
+    latestAiPanel = panel || null;
+    if (!panel || (!panel.recommendation_id && !panel.category && !panel.emergency_type)) {
+      box.innerHTML = '<p class="cc-ai-muted">Waiting for AI analysis… Enter notes (“What happened?”) then Analyze.</p>';
+      return;
+    }
+    var conf = panel.confidence_pct != null
+      ? panel.confidence_pct
+      : Math.round((panel.confidence || 0) * 100);
+    box.innerHTML =
+      '<div class="cc-ai-grid">' +
+        "<div><span>Type</span><strong>" + esc(panel.emergency_type || panel.category || "—") + "</strong></div>" +
+        "<div><span>Priority</span><strong class='cc-ai-pri-" + esc(panel.priority || "medium") + "'>" + esc(panel.priority || "—") + "</strong></div>" +
+        "<div><span>Risk</span><strong>" + esc(panel.risk || "—") + "</strong></div>" +
+        "<div><span>Confidence</span><strong>" + esc(conf) + "%</strong></div>" +
+      "</div>" +
+      "<p><strong>Services:</strong> " + esc(
+        typeof panel.required_services === "string"
+          ? panel.required_services
+          : (panel.required_services || []).join(", ") || "—"
+      ) + "</p>" +
+      "<p><strong>Summary:</strong> " + esc(panel.summary || "—") + "</p>" +
+      responderLine("Hospital", panel.recommended_hospital, panel.eta_minutes) +
+      responderLine("Police", panel.recommended_police, null) +
+      responderLine("Fire", panel.recommended_fire, null) +
+      "<p><strong>Reason:</strong> " + esc(panel.reason || panel.dispatch_reason || "—") + "</p>" +
+      '<p class="cc-ai-status">Status: <strong id="ai-rec-status">' + esc(panel.status || "pending") + "</strong></p>";
+  }
+
+  function applySuggestedTypes(panel) {
+    selectedTypes = {};
+    var types = (panel && panel.suggested_dispatch_types) || [];
+    types.forEach(function (t) { selectedTypes[t] = true; });
+    document.querySelectorAll("#type-grid .cc-type-btn").forEach(function (btn) {
+      var t = btn.getAttribute("data-type");
+      btn.classList.toggle("active", !!selectedTypes[t]);
+    });
+  }
+
+  function runAiAnalyze() {
+    if (!activeCallId) return;
+    var notesEl = document.getElementById("session-notes");
+    var notes = notesEl ? notesEl.value : "";
+    var statusEl = document.getElementById("ai-panel-status");
+    if (statusEl) statusEl.textContent = "Analyzing…";
+    api("/api/call-center/calls/" + activeCallId + "/ai/analyze", {
+      method: "POST",
+      body: { notes: notes }
+    }).then(function (d) {
+      if (statusEl) statusEl.textContent = d.success ? "Updated" : (d.message || "Failed");
+      if (d.success) {
+        renderAiPanel(d.panel);
+        applySuggestedTypes(d.panel);
+        if (d.emergency_history) {
+          var h = document.getElementById("session-history");
+          if (h) h.innerHTML = historyHtml(d.emergency_history);
+        }
+      }
+    });
+  }
+
+  function openSession(call, payload) {
     activeCallId = call.id;
     selectedTypes = {};
+    latestAiPanel = null;
     callStartedAt = call.start_time ? new Date(call.start_time.replace(" ", "T")) : new Date();
     showPanel("active");
+    var history = (payload && payload.emergency_history) || call.emergency_history || [];
+    var ai = (payload && payload.ai) || {};
     var el = document.getElementById("active-session");
     el.classList.remove("empty");
     el.innerHTML =
@@ -161,15 +260,31 @@
       '<span class="cc-badge ' + esc(call.status) + '" id="session-status">' + esc(call.status) + "</span></div>" +
       "<p><strong>Ask:</strong> “What happened?” · GPS is already available.</p>" +
       "<dl>" +
+        "<dt>Citizen</dt><dd>" + esc(call.caller_name) + "</dd>" +
         "<dt>Phone</dt><dd>" + esc(call.phone) + "</dd>" +
         "<dt>User ID</dt><dd>GN-" + esc(call.user_id) + "</dd>" +
         "<dt>GPS</dt><dd>" + esc(call.latitude) + ", " + esc(call.longitude) + "</dd>" +
         "<dt>Address</dt><dd>" + esc(call.address) + "</dd>" +
         "<dt>Duration</dt><dd id=\"session-duration\">00:00</dd>" +
       "</dl>" +
+      "<h3>Emergency history</h3>" +
+      '<div id="session-history">' + historyHtml(history) + "</div>" +
       '<div id="session-map" class="cc-map"></div>' +
       "<h3>Nearest responders</h3>" +
       '<div id="session-nearest">' + nearestHtml(call.nearest) + "</div>" +
+      '<section class="cc-ai-panel" id="ai-panel">' +
+        '<div class="cc-ai-panel-head">' +
+          "<h3>AI Assistant Panel</h3>" +
+          '<span id="ai-panel-status" class="cc-ai-muted">Recommendation only — you approve dispatch</span>' +
+        "</div>" +
+        '<div id="ai-panel-body"></div>' +
+        '<div class="cc-ai-actions">' +
+          '<button type="button" class="btn-action btn-accept" id="btn-ai-approve">Approve Recommendation</button>' +
+          '<button type="button" class="btn-action btn-reject" id="btn-ai-reject">Reject Recommendation</button>' +
+          '<button type="button" class="btn-action btn-view" id="btn-ai-manual">Manual Selection</button>' +
+          '<button type="button" class="btn-action" id="btn-ai-analyze">Analyze Notes</button>' +
+        "</div>" +
+      "</section>" +
       "<h3>Emergency type (multi-select OK)</h3>" +
       '<div class="cc-type-grid" id="type-grid">' + typeButtonsHtml() + "</div>" +
       '<label style="font-size:0.85rem;font-weight:600;color:#64748B;">Operator notes (what happened)</label>' +
@@ -191,6 +306,11 @@
     initSessionMap(call);
     refreshNearest(call.id);
     startDurationTimer();
+    renderAiPanel(ai.panel || (ai.success && ai.panel) || null);
+    if (ai.panel) applySuggestedTypes(ai.panel);
+    if (!ai.panel && !ai.analysis) {
+      runAiAnalyze();
+    }
   }
 
   function bindSession(call) {
@@ -213,6 +333,92 @@
     setTel("btn-call-hospital", n.hospital && n.hospital.phone);
     setTel("btn-call-police", n.police && n.police.phone);
     setTel("btn-call-fire", n.fire && n.fire.phone);
+
+    var notesEl = document.getElementById("session-notes");
+    if (notesEl) {
+      notesEl.oninput = function () {
+        if (aiAnalyzeTimer) clearTimeout(aiAnalyzeTimer);
+        aiAnalyzeTimer = setTimeout(runAiAnalyze, 900);
+      };
+    }
+
+    var btnAnalyze = document.getElementById("btn-ai-analyze");
+    if (btnAnalyze) btnAnalyze.onclick = runAiAnalyze;
+
+    var btnApprove = document.getElementById("btn-ai-approve");
+    if (btnApprove) {
+      btnApprove.onclick = function () {
+        if (!latestAiPanel || !latestAiPanel.recommendation_id) {
+          alert("Run AI analysis first.");
+          return;
+        }
+        if (!confirm("Approve AI recommendation and dispatch suggested responders?")) return;
+        var notes = document.getElementById("session-notes").value;
+        api("/api/call-center/calls/" + activeCallId + "/ai/decision", {
+          method: "POST",
+          body: {
+            decision: "approve",
+            recommendation_id: latestAiPanel.recommendation_id,
+            notes: notes
+          }
+        }).then(function (d) {
+          document.getElementById("session-msg").textContent = d.message || "";
+          if (d.panel) renderAiPanel(d.panel);
+          if (d.success && d.call) {
+            document.getElementById("session-status").textContent = d.call.status;
+            loadLive();
+          } else if (!d.success) alert(d.message || "Approve failed");
+        });
+      };
+    }
+
+    var btnReject = document.getElementById("btn-ai-reject");
+    if (btnReject) {
+      btnReject.onclick = function () {
+        if (!latestAiPanel || !latestAiPanel.recommendation_id) {
+          alert("Run AI analysis first.");
+          return;
+        }
+        api("/api/call-center/calls/" + activeCallId + "/ai/decision", {
+          method: "POST",
+          body: {
+            decision: "reject",
+            recommendation_id: latestAiPanel.recommendation_id,
+            notes: document.getElementById("session-notes").value
+          }
+        }).then(function (d) {
+          document.getElementById("session-msg").textContent = d.message || "Rejected.";
+          if (d.panel) renderAiPanel(d.panel);
+        });
+      };
+    }
+
+    var btnManual = document.getElementById("btn-ai-manual");
+    if (btnManual) {
+      btnManual.onclick = function () {
+        function focusManual() {
+          document.getElementById("session-msg").textContent =
+            "Manual selection — choose emergency types below, then Dispatch Request.";
+          var grid = document.getElementById("type-grid");
+          if (grid) grid.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        if (!latestAiPanel || !latestAiPanel.recommendation_id) {
+          focusManual();
+          return;
+        }
+        api("/api/call-center/calls/" + activeCallId + "/ai/decision", {
+          method: "POST",
+          body: {
+            decision: "manual",
+            recommendation_id: latestAiPanel.recommendation_id,
+            notes: document.getElementById("session-notes").value
+          }
+        }).then(function (d) {
+          if (d.panel) renderAiPanel(d.panel);
+          focusManual();
+        });
+      };
+    }
 
     document.getElementById("btn-dispatch").onclick = function () {
       var types = Object.keys(selectedTypes);
@@ -352,10 +558,21 @@
     });
   }
 
+  var livePollTimer = null;
+
+  function scheduleLivePoll() {
+    if (livePollTimer) clearInterval(livePollTimer);
+    livePollTimer = setInterval(loadLive, refreshMs);
+  }
+
   function loadLive() {
     api("/api/call-center/live").then(function (d) {
       if (!d.success) return;
-      if (d.refresh_interval) refreshMs = d.refresh_interval * 1000;
+      var nextMs = d.refresh_interval ? d.refresh_interval * 1000 : refreshMs;
+      if (nextMs !== refreshMs) {
+        refreshMs = nextMs;
+        scheduleLivePoll();
+      }
       renderStats(d.stats, d.operators_online);
       renderIncoming(d.calls);
       document.getElementById("refresh-time").textContent =
@@ -378,5 +595,5 @@
   }
 
   loadLive();
-  setInterval(loadLive, refreshMs);
+  scheduleLivePoll();
 })();

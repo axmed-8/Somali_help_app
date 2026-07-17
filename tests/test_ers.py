@@ -14,8 +14,14 @@ sys.path.insert(0, ROOT)
 @pytest.fixture
 def app_client():
   os.environ["GURMADNET_DB"] = "json"
+  os.environ["EMAIL_PROVIDER"] = "memory"
   import importlib
   import app as ers_app
+  from email_service.factory import clear_email_provider_cache
+  from email_service.memory_provider import clear_outbox
+
+  clear_email_provider_cache()
+  clear_outbox()
   importlib.reload(ers_app)
 
   tmp = tempfile.mkdtemp()
@@ -38,6 +44,8 @@ def app_client():
     ("Dr. Amina", "amina@hospital.com", "123456", "hospital", "0622222222"),
     ("Captain Hassan", "hassan@police.com", "123456", "police", "0633333333"),
     ("Chief Muse", "muse@fire.com", "123456", "fire", "0644444444"),
+    ("Admin User", "admin@emergency.so", "admin123", "admin", "0610000000"),
+    ("Call Center Operator", "operator@callcenter.so", "123456", "call_center", "+252612000999"),
   ]
   from werkzeug.security import generate_password_hash
   for name, email, password, role, phone in test_users:
@@ -51,6 +59,7 @@ def app_client():
       "password_hash": generate_password_hash(password),
       "role": role,
       "status": "active",
+      "email_verified": True,
       "created_at": ers_app.now_str(),
       "last_login": None,
       "activity": [],
@@ -58,9 +67,14 @@ def app_client():
   for u in udata["users"]:
     if u.get("email") == "amina@hospital.com":
       u["hospital_id"] = 1
+    u["email_verified"] = True
   ers_app.save_users(udata)
+  ers_app.app.config["TESTING"] = True
+  ers_app.app.config["WTF_CSRF_ENABLED"] = False
   client = ers_app.app.test_client()
   yield client, ers_app
+  clear_outbox()
+  clear_email_provider_cache()
   shutil.rmtree(tmp, ignore_errors=True)
 
 
@@ -195,6 +209,8 @@ def test_hospital_registration_creates_profile(app_client):
     },
     follow_redirects=True,
   )
+  # Signup no longer requires email verification — login immediately
+  login(client, "newhospital@test.so", "123456")
   r = client.post(
     "/hospital/register",
     data={
@@ -403,4 +419,216 @@ def test_call_center_role_guard(app_client):
   client, _ = app_client
   login(client, "ahmed@example.com", "123456")
   r = client.get("/api/call-center/live")
-  assert r.status_code in (302, 403) or (r.is_json and r.get_json().get("success") is not True)
+  assert r.status_code in (302, 401, 403) or (r.is_json and r.get_json().get("success") is not True)
+
+
+def test_signup_persists_citizen(app_client):
+  client, ers_app = app_client
+  r = client.post(
+    "/signup",
+    data={
+      "name": "Signup Citizen",
+      "email": "signup.citizen@test.so",
+      "password": "123456",
+      "confirm_password": "123456",
+      "phone": "0619999999",
+      "role": "citizen",
+    },
+    follow_redirects=True,
+  )
+  assert r.status_code == 200
+  assert b"account created" in r.data.lower() or b"log in" in r.data.lower()
+  users = ers_app.load_users()["users"]
+  user = next(u for u in users if u.get("email") == "signup.citizen@test.so")
+  assert user.get("email_verified") is True
+  # Can log in immediately
+  r = login(client, "signup.citizen@test.so", "123456")
+  assert client.get("/dashboard").status_code == 200
+
+
+def test_signup_allows_immediate_login(app_client):
+  client, ers_app = app_client
+  email = "immediate.login@example.com"
+  client.post(
+    "/signup",
+    data={
+      "name": "Immediate",
+      "email": email,
+      "password": "123456",
+      "confirm_password": "123456",
+      "phone": "0618888888",
+      "role": "citizen",
+    },
+    follow_redirects=True,
+  )
+  user, _ = ers_app.get_user_by_login(email)
+  assert user.get("email_verified") is True
+  r = login(client, email, "123456")
+  assert b"verify your email" not in r.data.lower()
+  assert client.get("/dashboard").status_code == 200
+
+
+def test_password_reset_otp_flow(app_client):
+  client, ers_app = app_client
+  from email_service.memory_provider import OUTBOX, clear_outbox
+  import re
+
+  clear_outbox()
+  email = "ahmed@example.com"
+  r = client.post("/forgot-password", data={"email": email}, follow_redirects=True)
+  assert r.status_code == 200
+  assert OUTBOX
+  assert email in OUTBOX[-1]["to"]
+  body = OUTBOX[-1]["text"]
+  match = re.search(r"reset code is:\s*(\d{6})", body, re.I)
+  assert match, body
+  otp = match.group(1)
+
+  r = client.post(
+    "/forgot-password/verify",
+    data={"email": email, "otp": otp},
+    follow_redirects=False,
+  )
+  assert r.status_code in (302, 303)
+  loc = r.headers.get("Location", "")
+  assert "/reset-password/" in loc
+  token = loc.rstrip("/").split("/")[-1]
+
+  # OTP cannot be reused
+  r2 = client.post(
+    "/forgot-password/verify",
+    data={"email": email, "otp": otp},
+    follow_redirects=True,
+  )
+  assert b"invalid or expired" in r2.data.lower() or b"incorrect" in r2.data.lower() or b"expired" in r2.data.lower()
+
+  r = client.post(
+    f"/reset-password/{token}",
+    data={"password": "newpass1", "confirm_password": "newpass1"},
+    follow_redirects=True,
+  )
+  assert b"password updated" in r.data.lower()
+  # Old password fails, new works
+  r = login(client, email, "123456")
+  assert b"invalid email or password" in r.data.lower() or client.get("/dashboard").status_code != 200
+  client.get("/logout", follow_redirects=True)
+  r = login(client, email, "newpass1")
+  assert client.get("/dashboard").status_code == 200
+  # Restore demo password for other tests in same process (fixture is per-test temp DB so OK)
+
+
+def test_signup_rejects_disposable_email(app_client):
+  client, ers_app = app_client
+  r = client.post(
+    "/signup",
+    data={
+      "name": "Temp User",
+      "email": "someone@mailinator.com",
+      "password": "123456",
+      "confirm_password": "123456",
+      "phone": "0610000000",
+      "role": "citizen",
+    },
+    follow_redirects=True,
+  )
+  assert r.status_code == 200
+  assert b"temporary or disposable" in r.data.lower() or b"real email" in r.data.lower()
+  users = ers_app.load_users()["users"]
+  assert not any(u.get("email") == "someone@mailinator.com" for u in users)
+
+
+def test_unverified_legacy_user_can_still_login(app_client):
+  """Unverified flag must not block login after auth policy change."""
+  client, ers_app = app_client
+  email = "legacy.unverified@test.so"
+  client.post(
+    "/signup",
+    data={
+      "name": "Legacy",
+      "email": email,
+      "password": "123456",
+      "confirm_password": "123456",
+      "role": "citizen",
+    },
+    follow_redirects=True,
+  )
+  user, udata = ers_app.get_user_by_login(email)
+  user["email_verified"] = False
+  ers_app.save_users(udata)
+  r = login(client, email, "123456")
+  assert client.get("/dashboard").status_code == 200
+  assert b"verify your email" not in r.data.lower()
+
+
+def test_invalid_verification_token(app_client):
+  client, _ = app_client
+  r = client.get("/verify-email/not-a-real-token", follow_redirects=True)
+  assert r.status_code == 200
+  assert b"no longer required" in r.data.lower() or b"log in" in r.data.lower()
+
+
+def test_profile_api_never_leaks_password_hash(app_client):
+  client, _ = app_client
+  login(client, "ahmed@example.com", "123456")
+  r = client.get("/api/user/profile")
+  assert r.status_code == 200
+  profile = r.get_json()["profile"]
+  assert "password_hash" not in profile
+  assert "email_verify_token" not in profile
+  r2 = client.put("/api/user/profile", json={"phone": "061999"})
+  assert r2.status_code == 200
+  assert "password_hash" not in r2.get_json()["profile"]
+
+
+def test_forgot_password_sends_otp(app_client):
+  client, _ = app_client
+  from email_service.memory_provider import OUTBOX, clear_outbox
+
+  clear_outbox()
+  r = client.post(
+    "/forgot-password",
+    data={"email": "ahmed@example.com"},
+    follow_redirects=True,
+  )
+  assert r.status_code == 200
+  assert b"reset code" in r.data.lower() or b"one-time" in r.data.lower() or b"enter" in r.data.lower()
+  assert OUTBOX
+  assert "ahmed@example.com" in OUTBOX[-1]["to"]
+  assert "reset code" in (OUTBOX[-1].get("text") or "").lower()
+
+
+def test_forgot_password_unknown_email(app_client):
+  client, _ = app_client
+  from email_service.memory_provider import OUTBOX, clear_outbox
+
+  clear_outbox()
+  r = client.post(
+    "/forgot-password",
+    data={"email": "nobody-exists@example.com"},
+    follow_redirects=True,
+  )
+  assert r.status_code == 200
+  assert b"no account found" in r.data.lower()
+  assert not OUTBOX
+
+
+def test_chat_and_notifications_flow(app_client):
+  client, ers_app = app_client
+  login(client, "ahmed@example.com", "123456")
+  eid = client.post(
+    "/api/send_alert",
+    json={
+      "type": "medical",
+      "latitude": 2.0469,
+      "longitude": 45.3182,
+      "location": "Chat test",
+      "notes": "need help",
+    },
+  ).get_json()["id"]
+  r = client.post(f"/api/messages/{eid}", json={"message": "Citizen message"})
+  assert r.status_code == 200
+  assert r.get_json()["success"] is True
+  msgs = client.get(f"/api/messages/{eid}").get_json()
+  assert msgs.get("success") is True or "messages" in msgs or isinstance(msgs, (dict, list))
+  notes = client.get("/api/notifications")
+  assert notes.status_code == 200

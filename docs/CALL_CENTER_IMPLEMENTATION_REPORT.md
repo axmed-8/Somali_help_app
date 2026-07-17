@@ -179,7 +179,7 @@ Created via existing emergency pipeline with:
 - Admin **Call Center** menu: operators, phones, priorities, statistics
 - Notifications to citizen, hospital, admins on dispatch
 - Responder dashboards show CALL CENTER badge
-- Demo account: `operator@callcenter.so` / `123456`
+- Operators are created by an administrator (role: `call_center`) — no demo accounts
 
 ---
 
@@ -215,12 +215,11 @@ Created via existing emergency pipeline with:
 set GURMADNET_DB=json
 python app.py
 
-# Operator
+# Operator — use a call_center account created by an admin
 # http://127.0.0.1:5000/call-center/login
-# operator@callcenter.so / 123456
 
-# Citizen
-# http://127.0.0.1:5000/login → ahmed@example.com / 123456
+# Citizen — register with a real email, then sign in
+# http://127.0.0.1:5000/login
 # Home → Call Emergency Center
 ```
 

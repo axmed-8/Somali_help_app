@@ -34,6 +34,19 @@
     return d.innerHTML;
   }
 
+  function setAvatarElement(av, photo, fallbackName) {
+    if (!av) return;
+    av.textContent = "";
+    if (photo && String(photo).indexOf("data:image/") === 0) {
+      var img = document.createElement("img");
+      img.src = photo;
+      img.alt = "";
+      av.appendChild(img);
+    } else {
+      av.textContent = (fallbackName || "U").charAt(0);
+    }
+  }
+
   function notifIcon(type) {
     var icons = {
       request_received: "📥", request_accepted: "✅", team_assigned: "🚑",
@@ -204,12 +217,7 @@
     statusEl.className = "gn-status-chip " + (st === "active" ? "live" : "idle");
 
     ["top-avatar", "profile-avatar"].forEach(function (id) {
-      var av = document.getElementById(id);
-      if (ps.profile_photo) {
-        av.innerHTML = "<img src='" + ps.profile_photo + "' alt=''>";
-      } else {
-        av.textContent = (ps.name || "U").charAt(0);
-      }
+      setAvatarElement(document.getElementById(id), ps.profile_photo, ps.name);
     });
 
     if (data) {
@@ -467,7 +475,17 @@
   });
 
   document.querySelectorAll(".gn-menu-item[data-goto]").forEach(function (btn) {
-    btn.onclick = function () { showPanel(btn.getAttribute("data-goto")); };
+    btn.onclick = function () {
+      showPanel(btn.getAttribute("data-goto"));
+      var focusId = btn.getAttribute("data-focus");
+      if (focusId) {
+        setTimeout(function () {
+          var el = document.getElementById(focusId);
+          if (el && el.focus) el.focus();
+          else if (el && el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 50);
+      }
+    };
   });
 
   document.getElementById("btn-share-loc").onclick = function () {
@@ -585,8 +603,9 @@
     if (!file || file.size > 100000) { alert("Image must be under 100KB"); return; }
     var reader = new FileReader();
     reader.onload = function (ev) {
-      document.getElementById("profile-avatar").innerHTML = "<img src='" + ev.target.result + "' alt=''>";
-      document.getElementById("top-avatar").innerHTML = "<img src='" + ev.target.result + "' alt=''>";
+      var dataUrl = ev.target.result;
+      setAvatarElement(document.getElementById("profile-avatar"), dataUrl, "U");
+      setAvatarElement(document.getElementById("top-avatar"), dataUrl, "U");
     };
     reader.readAsDataURL(file);
   };

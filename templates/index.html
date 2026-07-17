@@ -38,10 +38,11 @@
         </button>
       </div>
 
-      <div class="cc-call-center-wrap" style="margin:16px 0 8px;text-align:center;">
+      <div class="cc-call-center-wrap" id="call-center" style="margin:16px 0 8px;text-align:center;">
         <button type="button" class="btn-primary" id="btn-call-center"
-          style="width:100%;max-width:360px;background:linear-gradient(135deg,#0D47A1,#1565C0);border:none;padding:14px 20px;border-radius:16px;font-weight:700;font-size:1rem;">
-          📞 {{ content.call_center_button_text or 'Call Emergency Center' }}
+          style="width:100%;max-width:360px;background:linear-gradient(135deg,#0D47A1,#1565C0);border:none;padding:14px 20px;border-radius:16px;font-weight:700;font-size:1rem;"
+          aria-label="Call Emergency Center">
+          Call Emergency Center
         </button>
         <p class="hint-text" style="margin-top:8px;">{{ content.call_center_hint or 'Speak with an operator — your GPS is shared automatically' }}</p>
         <p id="call-center-status" class="hint-text hidden" style="color:#2E7D32;"></p>

@@ -21,6 +21,7 @@
         <a href="#" data-section="settings">⚙️ Settings</a>
         <a href="#" data-section="emergencies">📋 Emergencies</a>
         <a href="#" data-section="callcenter">📞 Call Center</a>
+        <a href="#" data-section="ai">🧠 AI Intelligence</a>
         <a href="#" data-section="reports">📈 Reports</a>
         <a href="#" data-section="appearance">🎨 Appearance</a>
       </nav>
@@ -163,6 +164,21 @@
           </div>
         </section>
 
+        <!-- Section: AI Intelligence -->
+        <section id="sec-ai" class="admin-section">
+          <h2 class="section-title">AI Intelligence</h2>
+          <p class="hint">Decision-support metrics only. The AI never auto-dispatches — operators approve recommendations.</p>
+          <div class="stats" id="ai-admin-stats">
+            <div class="stat-card"><div class="stat-value" id="ai-st-today">—</div><div class="stat-label">AI Decisions Today</div></div>
+            <div class="stat-card"><div class="stat-value" id="ai-st-conf">—</div><div class="stat-label">Avg Confidence</div></div>
+            <div class="stat-card"><div class="stat-value" id="ai-st-improve">—</div><div class="stat-label">Approval Rate %</div></div>
+            <div class="stat-card"><div class="stat-value" id="ai-st-approved">—</div><div class="stat-label">Approved</div></div>
+            <div class="stat-card"><div class="stat-value" id="ai-st-rejected">—</div><div class="stat-label">Rejected</div></div>
+            <div class="stat-card"><div class="stat-value" id="ai-st-manual">—</div><div class="stat-label">Manual Selections</div></div>
+          </div>
+          <p style="margin-top:12px;color:#64748B;font-size:0.9rem;">Provider: <strong id="ai-provider-label">rule_based</strong> · Enabled: <strong id="ai-enabled-label">—</strong></p>
+        </section>
+
         <!-- Section 6: Reports -->
         <section id="sec-reports" class="admin-section">
           <div class="charts-grid">
@@ -208,9 +224,12 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="{{ url_for('static', filename='js/location.js') }}"></script>
+  {# JSON payload kept outside JS so editors don't treat Jinja as broken syntax #}
+  <script type="application/json" id="admin-content-defaults">{{ content | tojson }}</script>
   <script>
     (function () {
-      const DEFAULTS = {{ content | tojson }};
+      var defaultsEl = document.getElementById("admin-content-defaults");
+      const DEFAULTS = defaultsEl ? JSON.parse(defaultsEl.textContent) : {};
       var emergenciesCache = {};
 
       function api(url, opts) {
@@ -242,10 +261,28 @@
           if (a.getAttribute("data-section") === "settings") loadSettingsForm();
           if (a.getAttribute("data-section") === "emergencies") loadEmergencies();
           if (a.getAttribute("data-section") === "callcenter") loadCallCenter();
+          if (a.getAttribute("data-section") === "ai") loadAiIntelligence();
           if (a.getAttribute("data-section") === "reports") loadReports();
           if (a.getAttribute("data-section") === "appearance") loadAppearance();
         });
       });
+
+      function loadAiIntelligence() {
+        api("/api/admin/ai/stats").then(function (d) {
+          if (!d.success) return;
+          var s = d.stats || {};
+          document.getElementById("ai-st-today").textContent = s.decisions_today != null ? s.decisions_today : "—";
+          document.getElementById("ai-st-conf").textContent = s.average_confidence != null
+            ? Math.round((s.average_confidence || 0) * 100) + "%"
+            : "—";
+          document.getElementById("ai-st-improve").textContent = s.approval_rate_pct != null ? s.approval_rate_pct + "%" : "—";
+          document.getElementById("ai-st-approved").textContent = s.approved_recommendations != null ? s.approved_recommendations : "—";
+          document.getElementById("ai-st-rejected").textContent = s.rejected_recommendations != null ? s.rejected_recommendations : "—";
+          document.getElementById("ai-st-manual").textContent = s.manual_selections != null ? s.manual_selections : "—";
+          document.getElementById("ai-provider-label").textContent = d.ai_provider || "rule_based";
+          document.getElementById("ai-enabled-label").textContent = d.ai_enabled ? "Yes" : "No";
+        });
+      }
 
       function loadCallCenter() {
         api("/api/admin/call-center/stats").then(function (d) {
@@ -362,10 +399,15 @@
           var tbody = document.querySelector("#users-table tbody");
           tbody.innerHTML = "";
           (data.users || []).forEach(function (u) {
+            function esc(s) {
+              var d = document.createElement("div");
+              d.textContent = s == null ? "" : String(s);
+              return d.innerHTML;
+            }
             var tr = document.createElement("tr");
             tr.innerHTML =
-              "<td>" + u.id + "</td><td>" + u.name + "</td><td>" + u.email + "</td><td>" + u.phone + "</td>" +
-              "<td>" + u.role + "</td><td>" + u.status + "</td><td>" + fmtTime(u.created_at) + "</td><td>" + fmtTime(u.last_login) + "</td>" +
+              "<td>" + esc(u.id) + "</td><td>" + esc(u.name) + "</td><td>" + esc(u.email) + "</td><td>" + esc(u.phone) + "</td>" +
+              "<td>" + esc(u.role) + "</td><td>" + esc(u.status) + "</td><td>" + esc(fmtTime(u.created_at)) + "</td><td>" + esc(fmtTime(u.last_login)) + "</td>" +
               '<td class="actions-cell">' +
               '<button class="btn-sm" data-act="edit" data-id="' + u.id + '">Edit</button>' +
               '<button class="btn-sm" data-act="block" data-id="' + u.id + '">Block</button>' +

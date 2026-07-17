@@ -158,7 +158,21 @@ def list_memory_events(read_fn, event_type=None, emergency_id=None, limit=200):
     if event_type:
         items = [i for i in items if i.get("event_type") == event_type]
     if emergency_id is not None:
-        items = [i for i in items if i.get("emergency_id") == emergency_id]
+        try:
+            eid = int(emergency_id)
+        except (TypeError, ValueError):
+            eid = emergency_id
+
+        def _eid_match(item):
+            raw = item.get("emergency_id")
+            if raw is None:
+                return False
+            try:
+                return int(raw) == eid
+            except (TypeError, ValueError):
+                return raw == emergency_id
+
+        items = [i for i in items if _eid_match(i)]
     items = sorted(items, key=lambda x: x.get("id", 0), reverse=True)
     return items[:limit]
 

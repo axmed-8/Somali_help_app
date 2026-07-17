@@ -194,7 +194,12 @@ def load_users():
             u["created_at"] = _dt_str(u.get("created_at"))
             u["last_login"] = _dt_str(u.get("last_login"))
             u["reset_expires"] = _dt_str(u.get("reset_expires"))
+            u["email_verify_expires"] = _dt_str(u.get("email_verify_expires"))
             u["last_seen_call_center"] = _dt_str(u.get("last_seen_call_center"))
+            if "email_verified" in u:
+                u["email_verified"] = bool(u.get("email_verified"))
+            else:
+                u["email_verified"] = True
             users.append(u)
         max_id = max((u["id"] for u in users), default=0)
         return {"users": users, "next_id": max_id + 1}
@@ -215,9 +220,13 @@ def save_users(data):
                     "profile_photo", "emergency_contact_name", "emergency_contact_phone",
                     "emergency_contact_relation", "address", "city", "date_of_birth",
                     "blood_type", "medical_notes", "saved_locations", "hospital_id",
-                    "reset_token", "reset_expires", "created_at", "last_login",
+                    "reset_token", "reset_expires",
+                    "email_verified", "email_verify_token", "email_verify_expires",
+                    "created_at", "last_login",
                     "last_seen_call_center", "activity",
                 ]
+                # MySQL TINYINT expects 0/1
+                row["email_verified"] = 1 if row.get("email_verified") else 0
                 if row["id"] in existing:
                     sets = ", ".join(f"{c}=%s" for c in cols if c != "id")
                     cur.execute(
@@ -869,6 +878,39 @@ def save_ai_list_store(table, data):
                         ),
                     )
         conn.commit()
+
+
+def ensure_email_verification_schema():
+    """Idempotent columns for signup email verification."""
+    if not available():
+        return {"ok": False, "reason": "pymysql unavailable"}
+    changes = []
+    with _db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SHOW COLUMNS FROM users LIKE 'email_verified'")
+            if not cur.fetchone():
+                cur.execute(
+                    "ALTER TABLE users ADD COLUMN email_verified TINYINT(1) NOT NULL DEFAULT 0 "
+                    "AFTER reset_expires"
+                )
+                # Existing accounts remain usable
+                cur.execute("UPDATE users SET email_verified = 1")
+                changes.append("users.email_verified")
+            cur.execute("SHOW COLUMNS FROM users LIKE 'email_verify_token'")
+            if not cur.fetchone():
+                cur.execute(
+                    "ALTER TABLE users ADD COLUMN email_verify_token VARCHAR(128) NULL "
+                    "AFTER email_verified"
+                )
+                changes.append("users.email_verify_token")
+            cur.execute("SHOW COLUMNS FROM users LIKE 'email_verify_expires'")
+            if not cur.fetchone():
+                cur.execute(
+                    "ALTER TABLE users ADD COLUMN email_verify_expires DATETIME NULL "
+                    "AFTER email_verify_token"
+                )
+                changes.append("users.email_verify_expires")
+    return {"ok": True, "changes": changes}
 
 
 def ensure_ai_schema():

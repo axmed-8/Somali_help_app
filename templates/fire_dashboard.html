@@ -98,10 +98,17 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="{{ url_for('static', filename='js/location.js') }}"></script>
+  <div
+    id="fire-dash-config"
+    hidden
+    data-config='{{ {"refreshMs": settings.refresh_interval * 1000}|tojson }}'
+  ></div>
   <script>
     (function () {
       const API_TYPE = "fire";
-      let REFRESH_MS = {{ settings.refresh_interval * 1000 }};
+      let REFRESH_MS = JSON.parse(
+        document.getElementById("fire-dash-config").getAttribute("data-config")
+      ).refreshMs;
 
       function formatTime(iso) {
         try {
@@ -157,6 +164,9 @@
           '<button type="button" class="btn-action btn-dispatch" data-id="' +
           em.id +
           '">Dispatch</button>' +
+          '<button type="button" class="btn-action btn-complete" data-id="' +
+          em.id +
+          '">Mark Complete</button>' +
           '<button type="button" class="btn-action btn-view" data-emergency="' +
           escapeAttr(JSON.stringify(em)) +
           '">View on Map</button>' +
@@ -171,7 +181,9 @@
           })
           .then(function (data) {
             if (data.refresh_interval) REFRESH_MS = data.refresh_interval * 1000;
-            const list = data.emergencies || [];
+            const list = (data.emergencies || []).filter(function (e) {
+              return e.status !== "completed" && e.status !== "resolved" && e.status !== "cancelled";
+            });
             const container = document.getElementById("alerts-container");
             container.innerHTML = "";
 
@@ -213,6 +225,30 @@
           });
       }
 
+      function loadHistory() {
+        fetch("/api/get_emergencies?type=" + API_TYPE + "&status=completed,resolved", {
+          credentials: "same-origin"
+        })
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            const container = document.getElementById("history-container");
+            container.innerHTML = "";
+            const list = data.emergencies || [];
+            if (list.length === 0) {
+              container.innerHTML =
+                '<div class="empty-alerts">No completed fire calls in history yet.</div>';
+            } else {
+              list.forEach(function (em) {
+                container.appendChild(renderCard(em));
+              });
+            }
+          })
+          .catch(function () {
+            document.getElementById("history-container").innerHTML =
+              '<div class="empty-alerts">Could not load history.</div>';
+          });
+      }
+
       function bindActions() {
         document.querySelectorAll(".btn-dispatch").forEach(function (btn) {
           btn.onclick = function () {
@@ -225,6 +261,21 @@
             }).then(function () {
               alert("Fire truck dispatched to incident #" + id);
               loadEmergencies();
+            });
+          };
+        });
+
+        document.querySelectorAll(".btn-complete").forEach(function (btn) {
+          btn.onclick = function () {
+            const id = parseInt(btn.getAttribute("data-id"), 10);
+            fetch("/api/update_status", {
+              method: "POST",
+              credentials: "same-origin",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: id, status: "completed" })
+            }).then(function () {
+              loadEmergencies();
+              loadHistory();
             });
           };
         });
@@ -259,6 +310,7 @@
             "hidden-panel",
             panel !== "settings"
           );
+          if (panel === "history") loadHistory();
         });
       });
 

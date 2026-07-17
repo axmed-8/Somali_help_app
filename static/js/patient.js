@@ -340,4 +340,14 @@
 
   checkActiveBanner();
   loadRecent();
+
+  // Deep-link from dashboard: /#call-center
+  if (location.hash === "#call-center") {
+    var ccBtn = document.getElementById("btn-call-center");
+    var ccWrap = document.getElementById("call-center");
+    if (ccWrap && ccWrap.scrollIntoView) ccWrap.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (ccBtn) {
+      setTimeout(function () { ccBtn.focus(); }, 200);
+    }
+  }
 })();

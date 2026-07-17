@@ -420,7 +420,7 @@
       });
 
       function loadHistory() {
-        fetch("/api/get_emergencies?type=" + API_TYPE + "&status=resolved")
+        fetch("/api/get_emergencies?type=" + API_TYPE + "&status=completed,resolved")
           .then(function (res) {
             return res.json();
           })

@@ -1,7 +1,10 @@
 import csv
+import hashlib
+import hmac
 import importlib.util
 import io
 import json
+import logging
 import os
 import secrets
 import tempfile
@@ -10,6 +13,15 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta
 from functools import wraps
+
+# Load .env (SMTP_*) before email_service / other config readers
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(os.path.join(BASE_DIR, ".env"), override=False)
+except ImportError:
+    pass
 
 from flask import (
     Flask,
@@ -22,13 +34,22 @@ from flask import (
     session,
     url_for,
 )
+from flask_wtf.csrf import CSRFError, CSRFProtect, generate_csrf
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import hospital_logic as hl
 import call_center_logic as cc
-from ai_engine import get_ai_engine
+from ai_engine import get_ai_engine, call_center_ai
+from email_service import send_verification_email
+from email_service.service import (
+    allow_test_email_domains,
+    is_valid_email_format,
+    normalize_email,
+    send_password_reset_otp_email,
+    signup_email_rejection_reason,
+)
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+_logger = logging.getLogger(__name__)
 DATABASE_DIR = os.path.join(BASE_DIR, "database")
 STORE_USERS = "users"
 STORE_EMERGENCIES = "emergencies"
@@ -94,7 +115,54 @@ def _path_lock(path):
 
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
+_secret = (os.environ.get("SECRET_KEY") or "").strip()
+if not _secret:
+    _secret = secrets.token_hex(32)
+    _logger.warning(
+        "SECRET_KEY is not set — using an ephemeral key. "
+        "Set a strong SECRET_KEY in .env for production."
+    )
+elif _secret in {"change-me-in-production", "changeme", "secret"}:
+    _logger.warning(
+        "SECRET_KEY is insecure (%r). Replace it with a long random value before production.",
+        _secret,
+    )
+app.secret_key = _secret
+# Harden session cookies for production-quality defaults
+_csrf_enabled = os.environ.get("WTF_CSRF_ENABLED", "true").lower() not in (
+    "0",
+    "false",
+    "no",
+    "off",
+)
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.environ.get("SESSION_COOKIE_SECURE", "").lower()
+    in ("1", "true", "yes", "on"),
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=12),
+    WTF_CSRF_ENABLED=_csrf_enabled,
+    WTF_CSRF_TIME_LIMIT=None,
+    WTF_CSRF_HEADERS=["X-CSRFToken", "X-CSRF-Token"],
+    WTF_CSRF_SSL_STRICT=False,
+)
+csrf = CSRFProtect(app)
+
+
+@app.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    _logger.warning("CSRF rejection path=%s reason=%s", request.path, getattr(e, "description", e))
+    wants_json = (request.path or "").startswith("/api/") or (
+        request.accept_mimetypes.best == "application/json"
+    )
+    if wants_json:
+        return jsonify({
+            "success": False,
+            "message": "Your session expired or the request was invalid. Refresh and try again.",
+            "csrf_error": True,
+        }), 400
+    flash("Your session expired. Please try again.", "error")
+    return redirect(request.referrer or url_for("login"))
 
 TYPE_MAP = {
     "medical": ["medical", "family_help", "family help"],
@@ -150,18 +218,19 @@ def _resolve_use_mysql():
 
 USE_MYSQL = _resolve_use_mysql()
 
-# Ensure Call Center + AI MySQL schema before any role seeding (prevents ENUM truncation)
+# Ensure Call Center + AI + email verification MySQL schema before seeding
 if USE_MYSQL:
     try:
         from database import mysql_store as _ms_boot
 
         _ms_boot.ensure_call_center_schema()
         _ms_boot.ensure_ai_schema()
+        _ms_boot.ensure_email_verification_schema()
     except Exception as _cc_schema_exc:
         import logging as _logging
 
         _logging.getLogger(__name__).warning(
-            "Call Center/AI MySQL schema ensure skipped: %s", _cc_schema_exc
+            "Call Center/AI/email MySQL schema ensure skipped: %s", _cc_schema_exc
         )
 
 
@@ -402,6 +471,21 @@ def _schedule_ai_analysis(emergency, source="sos"):
                     "AI dispatch_result memory write failed for emergency %s", eid
                 )
 
+        # Deterministic sync path in tests — avoids flaky async timing races
+        if app.config.get("TESTING") or os.environ.get("AI_SYNC", "").lower() in (
+            "1",
+            "true",
+            "yes",
+        ):
+            try:
+                return _run_ai_analysis_now(engine, context, _on_done)
+            except Exception:
+                import logging
+                logging.getLogger(__name__).exception(
+                    "AI sync analysis failed for emergency %s", eid
+                )
+                return None
+
         return engine.analyze_emergency_async(context, on_done=_on_done)
     except Exception:
         import logging
@@ -409,6 +493,14 @@ def _schedule_ai_analysis(emergency, source="sos"):
             "AI schedule failed for emergency %s", emergency.get("id")
         )
         return None
+
+
+def _run_ai_analysis_now(engine, context, on_done):
+    """Synchronous AI path used under TESTING for deterministic results."""
+    result = engine.analyze_and_recommend(context)
+    if on_done:
+        on_done(result)
+    return result
 
 
 def _ai_record_outcome(emergency):
@@ -434,6 +526,89 @@ def _ai_record_outcome(emergency):
         logging.getLogger(__name__).exception(
             "AI outcome memory write failed for emergency %s", emergency.get("id")
         )
+
+
+def _citizen_emergency_history(user_id, limit=10):
+    """Previous emergencies for Call Center AI context (read-only)."""
+    if not user_id:
+        return []
+    edata = load_emergencies()
+    rows = [
+        {
+            "id": e.get("id"),
+            "type": e.get("type"),
+            "status": e.get("status"),
+            "timestamp": e.get("timestamp"),
+            "location": e.get("location") or e.get("district"),
+        }
+        for e in edata.get("emergencies", [])
+        if e.get("user_id") == user_id
+    ]
+    rows.sort(key=lambda x: x.get("timestamp") or "", reverse=True)
+    return rows[:limit]
+
+
+def _ai_context_from_call(call, notes=None):
+    """Build AI context for an open Call Center session (does not dispatch)."""
+    call = dict(call or {})
+    history = _citizen_emergency_history(call.get("user_id"))
+    call["emergency_history"] = history
+    if call.get("latitude") is not None and call.get("longitude") is not None:
+        try:
+            call["nearest"] = cc.find_nearest_responders(
+                call["latitude"],
+                call["longitude"],
+                read_json,
+                save_json,
+                RESPONSE_STATIONS,
+            )
+        except Exception:
+            call.setdefault("nearest", {})
+    hdata = hl.load_hospitals(read_json, save_json)
+    edata = load_emergencies()
+    active = [
+        e for e in edata.get("emergencies", [])
+        if e.get("status") not in COMPLETED_STATUSES
+    ]
+    ctx = call_center_ai.build_call_context(call, notes=notes, extra={
+        "hospitals": hdata.get("hospitals", []),
+        "police_station": RESPONSE_STATIONS.get("police"),
+        "fire_station": RESPONSE_STATIONS.get("fire"),
+        "active_emergencies": active,
+        "emergency_history": history,
+    })
+    return ctx
+
+
+def _ai_panel_for_call(call_id):
+    """Latest analysis + recommendation flattened for the AI Assistant Panel."""
+    packed = _ai_engine().get_latest_for_call(call_id)
+    return {
+        "analysis": packed.get("analysis"),
+        "recommendation": packed.get("recommendation"),
+        "panel": call_center_ai.panel_from_result(packed),
+    }
+
+
+def _run_call_center_ai(call, notes=None):
+    """
+    Synchronous Call Center AI (rule_based is fast).
+    Recommendation-only — never creates emergencies or dispatches.
+    """
+    settings = load_settings()
+    if not settings.get("ai_enabled", True):
+        return {"success": False, "message": "AI is disabled", "panel": None}
+    engine = _ai_engine()
+    ctx = _ai_context_from_call(call, notes=notes)
+    result = engine.summarize_call(ctx)
+    panel = call_center_ai.panel_from_result(result)
+    return {
+        "success": True,
+        "analysis": result.get("analysis"),
+        "recommendation": result.get("recommendation"),
+        "panel": panel,
+        "emergency_history": ctx.get("emergency_history") or [],
+    }
 
 
 def _notify(target_type, target_id, message, request_id=None, ntype="system_alert"):
@@ -653,7 +828,79 @@ def normalize_user_record(user):
     user.setdefault("blood_type", "")
     user.setdefault("medical_notes", "")
     user.setdefault("saved_locations", [])
+    # Email verification (Step 1). Missing field → verified for legacy/seeded accounts.
+    if "email_verified" not in user:
+        user["email_verified"] = True
+    else:
+        user["email_verified"] = bool(user.get("email_verified"))
+    user.setdefault("email_verify_token", None)
+    user.setdefault("email_verify_expires", None)
     return user
+
+
+def _user_is_email_verified(user):
+    """Legacy users without the field are treated as verified."""
+    if not user:
+        return False
+    if "email_verified" not in user:
+        return True
+    return bool(user.get("email_verified"))
+
+
+def _issue_email_verification(user):
+    """Attach a secure verification token to the user (does not send email)."""
+    hours = int(os.environ.get("EMAIL_VERIFICATION_HOURS", "24"))
+    token = secrets.token_urlsafe(32)
+    user["email_verified"] = False
+    user["email_verify_token"] = token
+    user["email_verify_expires"] = (
+        datetime.now() + timedelta(hours=hours)
+    ).strftime("%Y-%m-%d %H:%M:%S")
+    return token
+
+
+def _send_user_verification_email(user, token):
+    """Send verification email via configurable provider. Returns send() result."""
+    verify_url = url_for("verify_email", token=token, _external=True)
+    result = send_verification_email(
+        to_email=user.get("email"),
+        verify_url=verify_url,
+        user_name=user_name(user),
+    )
+    if not result.get("success"):
+        _logger.error(
+            "Verification email failed to=%s provider=%s error=%s",
+            user.get("email"),
+            result.get("provider"),
+            result.get("error"),
+        )
+    return result
+
+
+def _flash_email_send_failure(context="verification"):
+    """User-facing email failure only — never expose SMTP/.env/exception details."""
+    if context == "signup":
+        flash(
+            "Account created, but we could not send the verification email. "
+            "Please use Resend verification on the login page, or try again later.",
+            "warning",
+        )
+    else:
+        flash(
+            "We could not send the verification email right now. "
+            "Please try again in a few minutes or contact support.",
+            "error",
+        )
+
+
+def _render_login_page(pending_email=None, needs_verification=False):
+    """Render login with verification UX flags (keeps existing auth routes)."""
+    pending = (pending_email if pending_email is not None else request.args.get("pending_email") or "").strip()
+    return render_template(
+        "login.html",
+        pending_email=pending,
+        needs_verification=bool(needs_verification or pending),
+    )
 
 
 def user_name(user):
@@ -667,6 +914,85 @@ def prepare_user_for_template(user):
         return None
     u = normalize_user_record(dict(user))
     return u
+
+
+def public_user_profile(user):
+    """Safe user dict for API/JSON responses — never includes secrets."""
+    if not user:
+        return None
+    u = normalize_user_record(dict(user))
+    return {
+        k: u.get(k)
+        for k in (
+            "id",
+            "name",
+            "email",
+            "phone",
+            "role",
+            "status",
+            "profile_photo",
+            "emergency_contact_name",
+            "emergency_contact_phone",
+            "emergency_contact_relation",
+            "address",
+            "city",
+            "date_of_birth",
+            "blood_type",
+            "medical_notes",
+            "created_at",
+            "last_login",
+            "saved_locations",
+            "email_verified",
+            "hospital_id",
+        )
+        if k in u or k in (
+            "id", "name", "email", "phone", "role", "status", "email_verified",
+        )
+    }
+
+
+def _wants_json_response():
+    if (request.path or "").startswith("/api/"):
+        return True
+    accept = request.accept_mimetypes
+    return accept.best == "application/json"
+
+
+def _safe_client_message(exc, fallback="Something went wrong. Please try again."):
+    """Never expose stack traces, SMTP, SQL, or filesystem paths to clients."""
+    msg = str(exc or "").strip()
+    if not msg or len(msg) > 200:
+        return fallback
+    lowered = msg.lower()
+    blocked = (
+        "traceback",
+        "smtp",
+        ".env",
+        "password",
+        "pymysql",
+        "operationalerror",
+        "sql syntax",
+        "file \"",
+        "line ",
+        "modulenotfound",
+        "permissionerror",
+        "secret",
+    )
+    if any(b in lowered for b in blocked):
+        return fallback
+    return msg
+
+
+def _api_error(exc, fallback="Request failed. Please try again.", status=400):
+    _logger.exception("API error: %s", exc)
+    return jsonify({"success": False, "message": _safe_client_message(exc, fallback)}), status
+
+
+def _auth_challenge(message="Please log in to continue.", category="warning"):
+    if _wants_json_response():
+        return jsonify({"success": False, "message": message, "auth_required": True}), 401
+    flash(message, category)
+    return redirect(url_for("login", next=request.path))
 
 
 def _mysql_backend():
@@ -831,100 +1157,15 @@ def parse_dt(value):
 
 
 def seed_defaults():
-    udata = load_users()
-    if not udata["users"]:
-        defaults = [
-            ("Admin User", "admin@emergency.so", "admin123", "admin", "0612345678"),
-        ]
-        for name, email, password, role, phone in defaults:
-            uid = udata["next_id"]
-            udata["next_id"] += 1
-            udata["users"].append(
-                {
-                    "id": uid,
-                    "name": name,
-                    "email": email,
-                    "phone": phone,
-                    "password_hash": generate_password_hash(password),
-                    "role": role,
-                    "status": "active",
-                    "created_at": now_str(),
-                    "last_login": None,
-                    "activity": [],
-                }
-            )
-        save_users(udata)
-
-    # Ensure Call Center operator demo account exists (additive, never removes users)
+    """Initialize schema/content only — never creates demo or seed user accounts."""
     if USE_MYSQL:
         try:
             from database import mysql_store as _ms
 
             _ms.ensure_call_center_schema()
+            _ms.ensure_email_verification_schema()
         except Exception:
             pass
-    udata = load_users()
-    if not any(u.get("email", "").lower() == "operator@callcenter.so" for u in udata["users"]):
-        uid = udata["next_id"]
-        udata["next_id"] += 1
-        udata["users"].append(
-            {
-                "id": uid,
-                "name": "Call Center Operator",
-                "email": "operator@callcenter.so",
-                "phone": "+252612000999",
-                "password_hash": generate_password_hash("123456"),
-                "role": "call_center",
-                "status": "active",
-                "created_at": now_str(),
-                "last_login": None,
-                "activity": [{"action": "Account seeded", "timestamp": now_str()}],
-            }
-        )
-        try:
-            save_users(udata)
-        except Exception as exc:
-            # Surface ENUM truncation clearly instead of crashing obscurely
-            import logging
-
-            logging.error(
-                "Failed to seed call_center operator (check users.role ENUM includes "
-                "call_center). Error: %s",
-                exc,
-            )
-            # Remove the failed user from memory so app can still start
-            udata["users"] = [
-                u for u in udata["users"] if u.get("email", "").lower() != "operator@callcenter.so"
-            ]
-            udata["next_id"] = max((u["id"] for u in udata["users"]), default=0) + 1
-
-    edata = load_emergencies()
-    if not edata["emergencies"]:
-        samples = [
-            ("medical", "Wadajir District, Mogadishu", 2.03, 45.33, "Ahmed Hassan", "+252 61 234 5678", "pending", "hospital"),
-            ("fire", "Bakaro Market, Mogadishu", 2.02, 45.32, "Fatima Ali", "+252 61 876 5432", "pending", "fire"),
-            ("security", "KM4 Junction, Mogadishu", 2.04, 45.34, "Omar Yusuf", "+252 61 111 2233", "dispatched", "police"),
-            ("accident", "Howlwadaag, Mogadishu", 2.05, 45.35, "Hawa Mohamed", "+252 61 444 5566", "pending", "police"),
-        ]
-        for etype, location, lat, lng, name, phone, status, assigned in samples:
-            eid = edata["next_id"]
-            edata["next_id"] += 1
-            edata["emergencies"].append(
-                {
-                    "id": eid,
-                    "type": etype,
-                    "location": location + " (" + str(lat) + ", " + str(lng) + ")",
-                    "district": location,
-                    "latitude": lat,
-                    "longitude": lng,
-                    "caller_name": name,
-                    "phone": phone,
-                    "timestamp": now_iso(),
-                    "status": status,
-                    "assigned_to": assigned,
-                }
-            )
-        save_emergencies(edata)
 
     if not os.path.exists(CONTENT_FILE):
         save_content(DEFAULT_CONTENT.copy())
@@ -974,16 +1215,18 @@ def login_user(user):
     session["role"] = user["role"]
     session["name"] = user["name"]
     session["email"] = user["email"]
+    return True
 
 
 def login_required(f):
     @wraps(f)
     def wrapped(*args, **kwargs):
         if not session.get("user_id"):
-            flash("Please log in to continue.", "warning")
-            return redirect(url_for("login", next=request.path))
+            return _auth_challenge("Please log in to continue.")
         settings = load_settings()
         if settings.get("maintenance_mode") and session.get("role") != "admin":
+            if _wants_json_response():
+                return jsonify({"success": False, "message": "System is under maintenance."}), 503
             flash("System is under maintenance. Try again later.", "error")
             return redirect(url_for("login"))
         return f(*args, **kwargs)
@@ -996,13 +1239,16 @@ def role_required(*roles):
         @wraps(f)
         def wrapped(*args, **kwargs):
             if not session.get("user_id"):
-                flash("Please log in to continue.", "warning")
-                return redirect(url_for("login", next=request.path))
+                return _auth_challenge("Please log in to continue.")
             settings = load_settings()
             if settings.get("maintenance_mode") and session.get("role") != "admin":
+                if _wants_json_response():
+                    return jsonify({"success": False, "message": "System is under maintenance."}), 503
                 flash("System is under maintenance.", "error")
                 return redirect(url_for("login"))
             if session.get("role") not in roles:
+                if _wants_json_response():
+                    return jsonify({"success": False, "message": "Forbidden"}), 403
                 flash("You do not have permission to access that page.", "error")
                 return redirect(ROLE_HOME.get(session.get("role"), "/login"))
             return f(*args, **kwargs)
@@ -1060,7 +1306,105 @@ def inject_globals():
         "settings": load_settings(),
         "auth_user": current_user(),
         "google_maps_key": load_settings().get("google_maps_api_key", ""),
+        "csrf_token": generate_csrf,
     }
+
+
+@app.after_request
+def _inject_csrf_assets(response):
+    """Ensure every HTML page has CSRF meta + fetch helper (does not alter APIs)."""
+    if app.config.get("TESTING") or not app.config.get("WTF_CSRF_ENABLED", True):
+        return response
+    ctype = (response.headers.get("Content-Type") or "").lower()
+    if "text/html" not in ctype:
+        return response
+    try:
+        html = response.get_data(as_text=True)
+    except Exception:
+        return response
+    if not html or "csrf-token" in html:
+        return response
+    token = generate_csrf()
+    meta = f'<meta name="csrf-token" content="{token}">'
+    script = f'<script src="{url_for("static", filename="js/csrf.js")}"></script>'
+    if "</head>" in html:
+        html = html.replace("</head>", meta + "\n</head>", 1)
+    if "</body>" in html:
+        html = html.replace("</body>", script + "\n</body>", 1)
+    response.set_data(html)
+    return response
+
+
+def _password_otp_minutes():
+    try:
+        return max(2, min(30, int(os.environ.get("PASSWORD_OTP_MINUTES", "10"))))
+    except ValueError:
+        return 10
+
+
+def _hash_password_otp(otp_code):
+    """HMAC-SHA256 of OTP bound to app secret — never store raw OTP."""
+    key = (app.secret_key or "").encode("utf-8")
+    return hmac.new(key, str(otp_code).encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def _clear_password_otp(user):
+    user["email_verify_token"] = None
+    user["email_verify_expires"] = None
+    user.pop("reset_otp_attempts", None)
+
+
+def _issue_password_otp(user):
+    """Create a one-time 6-digit OTP for password reset. Returns plain OTP."""
+    minutes = _password_otp_minutes()
+    otp = f"{secrets.randbelow(1_000_000):06d}"
+    user["email_verify_token"] = _hash_password_otp(otp)
+    user["email_verify_expires"] = (
+        datetime.now() + timedelta(minutes=minutes)
+    ).strftime("%Y-%m-%d %H:%M:%S")
+    user["reset_otp_attempts"] = 0
+    # Invalidate any prior reset link token
+    user["reset_token"] = None
+    user["reset_expires"] = None
+    return otp, minutes
+
+
+def _verify_password_otp(user, otp_code):
+    """
+    Validate OTP. Returns (ok, error_message).
+    On success: OTP is consumed and a short-lived reset_token is issued.
+    """
+    if not user:
+        return False, "Invalid or expired code."
+    stored = user.get("email_verify_token")
+    expires = parse_dt(user.get("email_verify_expires"))
+    if not stored or expires < datetime.now():
+        _clear_password_otp(user)
+        return False, "This code has expired. Request a new one."
+    attempts = int(user.get("reset_otp_attempts") or 0)
+    if attempts >= 5:
+        _clear_password_otp(user)
+        return False, "Too many incorrect attempts. Request a new code."
+    candidate = (otp_code or "").strip().replace(" ", "")
+    if not candidate.isdigit() or len(candidate) != 6:
+        user["reset_otp_attempts"] = attempts + 1
+        return False, "Enter the 6-digit code from your email."
+    expected = _hash_password_otp(candidate)
+    if len(str(stored)) != len(expected) or not hmac.compare_digest(str(stored), expected):
+        user["reset_otp_attempts"] = attempts + 1
+        left = 5 - int(user.get("reset_otp_attempts") or 0)
+        if left <= 0:
+            _clear_password_otp(user)
+            return False, "Too many incorrect attempts. Request a new code."
+        return False, f"Incorrect code. {left} attempt(s) remaining."
+    # Consume OTP (one-time) and issue password-reset token
+    _clear_password_otp(user)
+    token = secrets.token_urlsafe(32)
+    user["reset_token"] = token
+    user["reset_expires"] = (
+        datetime.now() + timedelta(minutes=15)
+    ).strftime("%Y-%m-%d %H:%M:%S")
+    return True, token
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -1072,6 +1416,17 @@ def login():
     if request.method == "POST":
         login_id = request.form.get("username", "").strip()
         password = request.form.get("password", "")
+
+        if not login_id:
+            flash("Please enter your email address.", "error")
+            return _render_login_page()
+        if not password:
+            flash("Please enter your password.", "error")
+            return _render_login_page(pending_email=login_id)
+        if "@" in login_id and not is_valid_email_format(login_id):
+            flash("Please enter a valid email address.", "error")
+            return _render_login_page(pending_email=login_id)
+
         user, udata = get_user_by_login(login_id)
 
         if user and user.get("status") == "blocked":
@@ -1087,34 +1442,105 @@ def login():
                 return redirect(nxt)
             return redirect(_role_home(user))
         else:
-            flash("Invalid email/username or password.", "error")
+            flash("Invalid email or password. Please try again.", "error")
 
-    return render_template("login.html")
+    return _render_login_page()
 
 
 @app.route("/forgot-password", methods=["GET", "POST"])
 def forgot_password():
+    """Step 1: request a one-time password reset code by email."""
     if request.method == "POST":
-        email = request.form.get("email", "").strip().lower()
+        email = normalize_email(request.form.get("email", ""))
+        if not is_valid_email_format(email):
+            flash("Please enter a valid email address.", "error")
+            return render_template("forgot_password.html", email=email)
+
         user, udata = get_user_by_login(email)
-        if user:
-            token = secrets.token_urlsafe(32)
-            user["reset_token"] = token
-            user["reset_expires"] = (datetime.now() + timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S")
-            save_users(udata)
+        if not user:
             flash(
-                "If that email exists, a reset link was generated. "
-                f"Reset URL: {url_for('reset_password', token=token, _external=True)}",
-                "success",
+                "No account found with that email address. "
+                "Check the spelling or create a new account.",
+                "error",
             )
-        else:
-            flash("If that email exists, reset instructions were sent.", "success")
-        return redirect(url_for("login"))
+            return render_template("forgot_password.html", email=email)
+
+        otp, minutes = _issue_password_otp(user)
+        save_users(udata)
+        result = send_password_reset_otp_email(
+            to_email=email,
+            otp_code=otp,
+            user_name=user_name(user),
+            minutes=minutes,
+        )
+        if not result.get("success"):
+            err = (result.get("error") or "").lower()
+            _logger.error(
+                "Password reset OTP email failed to=%s error=%s",
+                email,
+                result.get("error"),
+            )
+            # Roll back OTP so a failed send cannot leave a usable code
+            _clear_password_otp(user)
+            save_users(udata)
+            if "smtp not configured" in err or "smtp_password" in err:
+                flash(
+                    "Email delivery is not configured yet. "
+                    "Ask the administrator to set SMTP_PASSWORD in .env "
+                    "(Gmail App Password), or reset the password from Admin.",
+                    "error",
+                )
+            else:
+                flash(
+                    "We could not send a reset code right now. Please try again later.",
+                    "error",
+                )
+            return render_template("forgot_password.html", email=email)
+
+        _logger.info("Password reset OTP sent to %s (expires in %s min)", email, minutes)
+        flash(
+            "A one-time reset code has been sent to your email. Check your inbox.",
+            "success",
+        )
+        return redirect(url_for("verify_reset_otp", email=email))
+
     return render_template("forgot_password.html")
+
+
+@app.route("/forgot-password/verify", methods=["GET", "POST"])
+def verify_reset_otp():
+    """Step 2: verify the emailed OTP, then continue to set a new password."""
+    email = normalize_email(
+        request.values.get("email") or request.args.get("email") or ""
+    )
+    if request.method == "GET":
+        return render_template("verify_reset_otp.html", email=email)
+
+    if not is_valid_email_format(email):
+        flash("Please enter a valid email address.", "error")
+        return redirect(url_for("forgot_password"))
+
+    otp_code = request.form.get("otp") or request.form.get("code") or ""
+    user, udata = get_user_by_login(email)
+    # Constant-ish messaging when user missing
+    if not user:
+        flash("Invalid or expired code.", "error")
+        return render_template("verify_reset_otp.html", email=email)
+
+    ok, payload = _verify_password_otp(user, otp_code)
+    save_users(udata)
+    if not ok:
+        flash(payload, "error")
+        return render_template("verify_reset_otp.html", email=email)
+
+    token = payload
+    flash("Code verified. Choose a new password.", "success")
+    return redirect(url_for("reset_password", token=token))
 
 
 @app.route("/reset-password/<token>", methods=["GET", "POST"])
 def reset_password(token):
+    """Step 3: set a new password after OTP verification (one-time token)."""
     udata = load_users()
     user = None
     for u in udata["users"]:
@@ -1122,11 +1548,14 @@ def reset_password(token):
             user = u
             break
     if not user:
-        flash("Invalid or expired reset link.", "error")
-        return redirect(url_for("login"))
+        flash("Invalid or expired reset session. Request a new code.", "error")
+        return redirect(url_for("forgot_password"))
     expires = parse_dt(user.get("reset_expires"))
     if expires < datetime.now():
-        flash("Reset link expired. Request a new one.", "error")
+        user.pop("reset_token", None)
+        user.pop("reset_expires", None)
+        save_users(udata)
+        flash("Reset session expired. Request a new code.", "error")
         return redirect(url_for("forgot_password"))
     if request.method == "POST":
         pw = request.form.get("password", "")
@@ -1139,6 +1568,8 @@ def reset_password(token):
             user["password_hash"] = generate_password_hash(pw)
             user.pop("reset_token", None)
             user.pop("reset_expires", None)
+            _clear_password_otp(user)
+            log_activity(user, "Password reset via OTP")
             save_users(udata)
             flash("Password updated. You can log in now.", "success")
             return redirect(url_for("login"))
@@ -1153,16 +1584,19 @@ def signup():
 
     if request.method == "POST":
         name = request.form.get("name", "").strip() or request.form.get("full_name", "").strip()
-        email = request.form.get("email", "").strip()
+        email = normalize_email(request.form.get("email", ""))
         phone = request.form.get("phone", "").strip()
         password = request.form.get("password", "")
         confirm = request.form.get("confirm_password", "")
         role = request.form.get("role", "citizen")
+        email_reject = signup_email_rejection_reason(email)
 
         if role == "admin" or role == "call_center":
             flash("Cannot register as admin or call center operator.", "error")
         elif not name or not email or not password:
             flash("All required fields must be filled.", "error")
+        elif email_reject:
+            flash(email_reject, "error")
         elif len(password) < 6:
             flash("Password must be at least 6 characters.", "error")
         elif password != confirm:
@@ -1171,7 +1605,7 @@ def signup():
             flash("Invalid role.", "error")
         else:
             udata = load_users()
-            if any(u["email"].lower() == email.lower() for u in udata["users"]):
+            if any(u["email"].lower() == email for u in udata["users"]):
                 flash("Email already registered.", "error")
             else:
                 uid = udata["next_id"]
@@ -1184,20 +1618,33 @@ def signup():
                     "password_hash": generate_password_hash(password),
                     "role": role,
                     "status": "active",
+                    "email_verified": True,
+                    "email_verify_token": None,
+                    "email_verify_expires": None,
                     "created_at": now_str(),
-                    "last_login": now_str(),
+                    "last_login": None,
                     "activity": [{"action": "Account created", "timestamp": now_str()}],
                 }
                 udata["users"].append(user)
                 save_users(udata)
-                login_user(user)
-                flash("Account created successfully!", "success")
-                if role == "hospital":
-                    return redirect(url_for("hospital_register"))
-                return redirect(ROLE_HOME[role])
+                flash("Account created. You can log in now.", "success")
+                return redirect(url_for("login"))
 
     return render_template("signup.html")
 
+
+@app.route("/verify-email/<token>")
+def verify_email(token):
+    """Legacy route — email verification is no longer required for login."""
+    flash("Email verification is no longer required. You can log in directly.", "success")
+    return redirect(url_for("login"))
+
+
+@app.route("/resend-verification", methods=["POST"])
+def resend_verification():
+    """Legacy route — kept so old UI posts do not 404."""
+    flash("Email verification is no longer required. You can log in with your password.", "success")
+    return redirect(url_for("login"))
 
 @app.route("/logout")
 def logout():
@@ -1400,7 +1847,7 @@ def geocode_search():
         if not results:
             return jsonify({
                 "success": False,
-                "message": str(exc),
+                "message": _safe_client_message(exc),
                 "results": [],
                 "rejected": rejected,
             }), 502
@@ -1431,7 +1878,7 @@ def geocode_reverse():
     try:
         hl.validate_coordinates(lat, lng)
     except ValueError as exc:
-        return jsonify({"success": False, "message": str(exc)}), 400
+        return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
     try:
         rows = _nominatim_request("reverse", {
             "lat": lat,
@@ -1463,7 +1910,7 @@ def geocode_reverse():
             },
         })
     except Exception as exc:
-        return jsonify({"success": False, "message": str(exc)}), 502
+        return jsonify({"success": False, "message": _safe_client_message(exc, "Upstream service unavailable.")}), 502
 
 
 @app.route("/hospital")
@@ -1549,8 +1996,8 @@ def hospital_register():
             return redirect(url_for("hospital_dashboard"))
         except ValueError as exc:
             if request.is_json:
-                return jsonify({"success": False, "message": str(exc)}), 400
-            flash(str(exc), "error")
+                return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
+            flash(_safe_client_message(exc, "Something went wrong. Please try again."), "error")
 
     return render_template(
         "hospital_register.html",
@@ -1576,7 +2023,7 @@ def api_hospital_profile():
         append_audit("hospital_profile_updated", "hospital", hid)
         return jsonify({"success": True, "hospital": hospital})
     except ValueError as exc:
-        return jsonify({"success": False, "message": str(exc)}), 400
+        return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
 
 
 @app.route("/police")
@@ -1598,8 +2045,9 @@ def admin_dashboard():
 
 
 @app.route("/api/location/ip")
+@login_required
 def location_ip():
-    """Approximate location when GPS is denied (JSON database app, no external DB)."""
+    """Approximate location when GPS is denied (authenticated users only)."""
     default = {
         "lat": 2.0469,
         "lng": 45.3182,
@@ -1902,7 +2350,14 @@ def api_messages(request_id):
     if request.method == "POST":
         data = request.get_json(silent=True) or {}
         msg_type = data.get("msg_type", "text")
-        text = (data.get("text") or "").strip()
+        # Accept text / message / content for client compatibility
+        text = (
+            data.get("text")
+            or data.get("message")
+            or data.get("content")
+            or ""
+        )
+        text = str(text).strip()
         audio = (data.get("audio") or "").strip()
         if msg_type == "voice":
             if not audio:
@@ -1958,26 +2413,28 @@ def api_user_profile():
     if not user:
         return jsonify({"success": False}), 404
     if request.method == "GET":
-        safe = {k: user.get(k) for k in (
-            "id", "name", "email", "phone", "profile_photo", "emergency_contact_name",
-            "emergency_contact_phone", "emergency_contact_relation", "address", "city",
-            "date_of_birth", "blood_type", "medical_notes", "created_at", "last_login",
-            "status", "saved_locations",
-        )}
-        return jsonify({"success": True, "profile": safe})
+        return jsonify({"success": True, "profile": public_user_profile(user)})
     data = request.get_json(silent=True) or {}
     allowed = (
-        "name", "phone", "profile_photo", "emergency_contact_name", "emergency_contact_phone",
+        "name", "phone", "emergency_contact_name", "emergency_contact_phone",
         "emergency_contact_relation", "address", "city", "date_of_birth", "blood_type", "medical_notes",
         "saved_locations",
     )
     for key in allowed:
         if key in data:
             user[key] = data[key]
-    if data.get("profile_photo") and len(str(data["profile_photo"])) > 120000:
-        return jsonify({"success": False, "message": "Photo too large"}), 400
+    if "profile_photo" in data:
+        photo = data.get("profile_photo") or ""
+        if photo and not str(photo).startswith("data:image/"):
+            return jsonify({
+                "success": False,
+                "message": "Profile photo must be an uploaded image.",
+            }), 400
+        if photo and len(str(photo)) > 120000:
+            return jsonify({"success": False, "message": "Photo too large"}), 400
+        user["profile_photo"] = photo
     save_users(udata)
-    return jsonify({"success": True, "profile": prepare_user_for_template(user)})
+    return jsonify({"success": True, "profile": public_user_profile(user)})
 
 
 @app.route("/api/user/dashboard")
@@ -2379,7 +2836,7 @@ def send_alert():
                 fix["latitude"], fix["longitude"]
             )
         except ValueError as exc:
-            return jsonify({"success": False, "message": str(exc)}), 400
+            return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
     elif lat is not None and lng is not None:
         return jsonify({
             "success": False,
@@ -2503,7 +2960,7 @@ def append_emergency_location(eid):
             fix["latitude"], fix["longitude"]
         )
     except ValueError as exc:
-        return jsonify({"success": False, "message": str(exc)}), 400
+        return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
     em.setdefault("location_history", [])
     em["location_history"].append(fix)
     if fix["latitude"] is not None:
@@ -2678,8 +3135,15 @@ def get_emergencies():
         if role == "hospital":
             if em.get("assigned_hospital_id") != hospital_id:
                 continue
-        if status_filter and em["status"] != status_filter:
-            continue
+        if status_filter:
+            allowed_statuses = {s.strip() for s in status_filter.split(",") if s.strip()}
+            # Treat completed/resolved as interchangeable history statuses
+            if "resolved" in allowed_statuses:
+                allowed_statuses.add("completed")
+            if "completed" in allowed_statuses:
+                allowed_statuses.add("resolved")
+            if em.get("status") not in allowed_statuses:
+                continue
         row = dict(em)
         row["tracking_active"] = em.get("tracking_active", False)
         row["last_location_update"] = em.get("last_location_update")
@@ -2898,18 +3362,34 @@ def admin_create_user():
     data = request.get_json(silent=True) or {}
     udata = load_users()
     uid = udata["next_id"]
-    udata["next_id"] += 1
     role = data.get("role", "citizen")
     if role not in VALID_ROLES:
         return jsonify({"success": False, "message": "Invalid role"}), 400
+    email = normalize_email(data.get("email") or "")
+    if not email:
+        return jsonify({"success": False, "message": "A real email address is required"}), 400
+    reject = signup_email_rejection_reason(email)
+    # Test domains (example.com) allowed only when EMAIL_PROVIDER=memory / ALLOW_TEST_EMAILS.
+    if reject and not allow_test_email_domains():
+        return jsonify({"success": False, "message": reject}), 400
+    if any(u["email"].lower() == email for u in udata["users"]):
+        return jsonify({"success": False, "message": "Email already registered"}), 400
+    password = (data.get("password") or "").strip()
+    if len(password) < 6:
+        return jsonify({"success": False, "message": "Password must be at least 6 characters"}), 400
+    udata["next_id"] += 1
     user = {
         "id": uid,
         "name": data.get("name") or data.get("full_name", "New User"),
-        "email": data.get("email", f"user{uid}@example.com"),
+        "email": email,
         "phone": data.get("phone", ""),
-        "password_hash": generate_password_hash(data.get("password", "123456")),
+        "password_hash": generate_password_hash(password),
         "role": role,
         "status": "active",
+        # Admin-created accounts are trusted and active immediately
+        "email_verified": True,
+        "email_verify_token": None,
+        "email_verify_expires": None,
         "created_at": now_str(),
         "last_login": None,
         "activity": [{"action": "Created by admin", "timestamp": now_str()}],
@@ -3217,7 +3697,7 @@ def api_call_center_initiate():
     try:
         call = cc.create_incoming_call(payload, read_json, save_json)
     except ValueError as exc:
-        return jsonify({"success": False, "message": str(exc)}), 400
+        return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
 
     phone = settings.get("call_center_phone") or cc.default_call_center_settings()["phone_primary"]
     _notify_admins(
@@ -3289,7 +3769,19 @@ def api_call_center_get(call_id):
         call["nearest"] = cc.find_nearest_responders(
             call["latitude"], call["longitude"], read_json, save_json, RESPONSE_STATIONS
         )
-    return jsonify({"success": True, "call": call})
+    history = _citizen_emergency_history(call.get("user_id"))
+    call["emergency_history"] = history
+    packed = _ai_panel_for_call(call_id)
+    return jsonify({
+        "success": True,
+        "call": call,
+        "emergency_history": history,
+        "ai": {
+            "analysis": packed.get("analysis"),
+            "recommendation": packed.get("recommendation"),
+            "panel": packed.get("panel"),
+        },
+    })
 
 
 @app.route("/api/call-center/calls/<int:call_id>/answer", methods=["POST"])
@@ -3298,8 +3790,25 @@ def api_call_center_answer(call_id):
     try:
         call = cc.answer_call(call_id, current_user(), read_json, save_json)
     except ValueError as exc:
-        return jsonify({"success": False, "message": str(exc)}), 400
-    return jsonify({"success": True, "call": call})
+        return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
+    history = _citizen_emergency_history(call.get("user_id"))
+    call["emergency_history"] = history
+    if call.get("latitude") is not None and call.get("longitude") is not None:
+        call["nearest"] = cc.find_nearest_responders(
+            call["latitude"], call["longitude"], read_json, save_json, RESPONSE_STATIONS
+        )
+    ai_payload = None
+    try:
+        ai_payload = _run_call_center_ai(call, notes=call.get("notes"))
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("Call Center AI on answer failed for call %s", call_id)
+    return jsonify({
+        "success": True,
+        "call": call,
+        "emergency_history": history,
+        "ai": ai_payload,
+    })
 
 
 @app.route("/api/call-center/calls/<int:call_id>/status", methods=["POST"])
@@ -3316,8 +3825,180 @@ def api_call_center_status(call_id):
             operator=current_user(),
         )
     except ValueError as exc:
-        return jsonify({"success": False, "message": str(exc)}), 400
+        return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
     return jsonify({"success": True, "call": call})
+
+
+@app.route("/api/call-center/calls/<int:call_id>/ai", methods=["GET"])
+@call_center_required
+def api_call_center_ai_get(call_id):
+    """Return latest AI recommendation for an open call (never dispatches)."""
+    data = cc.load_calls(read_json, save_json)
+    call = cc.get_call_by_id(data, call_id)
+    if not call:
+        return jsonify({"success": False, "message": "Not found"}), 404
+    packed = _ai_panel_for_call(call_id)
+    history = _citizen_emergency_history(call.get("user_id"))
+    return jsonify({
+        "success": True,
+        "call_id": call_id,
+        "emergency_history": history,
+        "analysis": packed.get("analysis"),
+        "recommendation": packed.get("recommendation"),
+        "panel": packed.get("panel"),
+    })
+
+
+@app.route("/api/call-center/calls/<int:call_id>/ai/analyze", methods=["POST"])
+@call_center_required
+def api_call_center_ai_analyze(call_id):
+    """
+    Re-run Call Center AI from operator notes / description.
+    Does NOT dispatch — operator must Approve or use Manual Dispatch.
+    """
+    payload = request.get_json(silent=True) or {}
+    data = cc.load_calls(read_json, save_json)
+    call = cc.get_call_by_id(data, call_id)
+    if not call:
+        return jsonify({"success": False, "message": "Not found"}), 404
+    notes = payload.get("notes")
+    if notes is None:
+        notes = call.get("notes") or ""
+    if notes != call.get("notes"):
+        call["notes"] = notes
+        cc.save_calls(data, save_json)
+    try:
+        result = _run_call_center_ai(call, notes=notes)
+    except Exception as exc:
+        return jsonify({"success": False, "message": _safe_client_message(exc, "Internal server error.")}), 500
+    return jsonify(result)
+
+
+@app.route("/api/call-center/calls/<int:call_id>/ai/decision", methods=["POST"])
+@call_center_required
+def api_call_center_ai_decision(call_id):
+    """
+    Operator decision on AI recommendation: approve | reject | manual.
+    Approve uses existing Call Center dispatch (AI never dispatches itself).
+    """
+    payload = request.get_json(silent=True) or {}
+    decision = (payload.get("decision") or "").strip().lower()
+    if decision not in ("approve", "reject", "manual", "approved", "rejected"):
+        return jsonify({
+            "success": False,
+            "message": "decision must be approve, reject, or manual",
+        }), 400
+
+    data = cc.load_calls(read_json, save_json)
+    call = cc.get_call_by_id(data, call_id)
+    if not call:
+        return jsonify({"success": False, "message": "Not found"}), 404
+
+    operator = current_user()
+    engine = _ai_engine()
+    packed = engine.get_latest_for_call(call_id)
+    rec = packed.get("recommendation") or {}
+    rec_id = payload.get("recommendation_id") or rec.get("id")
+    if not rec_id:
+        return jsonify({"success": False, "message": "No AI recommendation to decide on. Analyze first."}), 400
+
+    notes = (payload.get("notes") or "").strip()
+    if notes:
+        call["notes"] = notes
+        cc.save_calls(data, save_json)
+
+    engine.record_human_decision({
+        "call_id": call_id,
+        "emergency_id": rec.get("emergency_id"),
+        "recommendation_id": rec_id,
+        "decision": decision,
+        "operator_id": operator.get("id"),
+        "operator_name": operator.get("name"),
+        "notes": payload.get("decision_notes") or "",
+    })
+
+    if decision in ("reject", "rejected", "manual"):
+        return jsonify({
+            "success": True,
+            "decision": "manual" if decision == "manual" else "reject",
+            "message": (
+                "AI recommendation rejected. Use Manual Dispatch."
+                if decision in ("reject", "rejected")
+                else "Manual selection mode — choose types and dispatch."
+            ),
+            "panel": _ai_panel_for_call(call_id).get("panel"),
+        })
+
+    # Approve → existing multi-dispatch path (human-approved)
+    types = payload.get("types") or rec.get("suggested_dispatch_types") or []
+    if isinstance(types, str):
+        types = [types]
+    if not types and rec.get("recommended_hospital"):
+        types = ["medical"]
+    if not types:
+        return jsonify({
+            "success": False,
+            "message": "No suggested dispatch types. Use Manual Dispatch.",
+        }), 400
+
+    if not call.get("operator_id"):
+        try:
+            call = cc.answer_call(call_id, operator, read_json, save_json)
+        except ValueError:
+            pass
+        data = cc.load_calls(read_json, save_json)
+        call = cc.get_call_by_id(data, call_id)
+
+    pairs = cc.resolve_dispatch_types(types)
+    if not pairs:
+        return jsonify({"success": False, "message": "Invalid emergency types."}), 400
+
+    created = []
+    teams = []
+    for etype, team in pairs:
+        em = _create_emergency_from_call(call, etype, team, operator, notes or call.get("notes") or "")
+        created.append(em)
+        teams.append(team)
+        _notify_call_dispatch(call, em, [team])
+
+    call = cc.record_dispatch(
+        call_id,
+        [e.get("type") for e in created],
+        [e["id"] for e in created],
+        teams,
+        read_json,
+        save_json,
+    )
+
+    try:
+        engine.record_dispatch_result({
+            "call_id": call_id,
+            "recommendation_id": rec_id,
+            "human_decision": "approve",
+            "dispatched_to": teams,
+            "emergency_ids": [e["id"] for e in created],
+            "notes": "Operator approved AI recommendation",
+        })
+    except Exception:
+        pass
+
+    return jsonify({
+        "success": True,
+        "decision": "approve",
+        "message": f"AI recommendation approved. Dispatched to {', '.join(teams)}.",
+        "call": call,
+        "emergencies": [
+            {
+                "id": e["id"],
+                "type": e.get("type"),
+                "status": e.get("status"),
+                "assigned_to": e.get("assigned_to"),
+                "assigned_hospital_name": e.get("assigned_hospital_name"),
+            }
+            for e in created
+        ],
+        "panel": _ai_panel_for_call(call_id).get("panel"),
+    })
 
 
 @app.route("/api/call-center/calls/<int:call_id>/nearest", methods=["GET"])
@@ -3536,7 +4217,7 @@ def api_call_center_cancel(call_id):
             call_id, "cancelled", read_json, save_json, operator=current_user()
         )
     except ValueError as exc:
-        return jsonify({"success": False, "message": str(exc)}), 400
+        return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
     _notify(
         "patient",
         call.get("user_id"),
@@ -3555,7 +4236,7 @@ def api_call_center_complete(call_id):
             call_id, "completed", read_json, save_json, operator=current_user()
         )
     except ValueError as exc:
-        return jsonify({"success": False, "message": str(exc)}), 400
+        return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
     return jsonify({"success": True, "call": call})
 
 
@@ -3638,7 +4319,34 @@ def api_admin_call_center_settings():
     return jsonify({"success": True, "settings": settings})
 
 
+@app.route("/api/admin/ai/stats", methods=["GET"])
+@admin_required
+def api_admin_ai_stats():
+    """AI Intelligence dashboard counters (recommendations only — AI never dispatches)."""
+    settings = load_settings()
+    try:
+        stats = _ai_engine().stats()
+    except Exception as exc:
+        return jsonify({"success": False, "message": _safe_client_message(exc, "Internal server error.")}), 500
+    # Placeholder improvement metric until Phase 2 timing analytics
+    approved = stats.get("approved_recommendations") or 0
+    rejected = stats.get("rejected_recommendations") or 0
+    decided = approved + rejected
+    approval_rate = round((approved / decided) * 100, 1) if decided else 0.0
+    return jsonify({
+        "success": True,
+        "ai_enabled": settings.get("ai_enabled", True),
+        "ai_provider": settings.get("ai_provider") or "rule_based",
+        "stats": {
+            **stats,
+            "approval_rate_pct": approval_rate,
+            "average_response_improvement": approval_rate,
+        },
+    })
+
+
 if __name__ == "__main__":
     ensure_database_dir()
     seed_defaults()
-    app.run(debug=True, host="127.0.0.1", port=5000)
+    debug = os.environ.get("FLASK_DEBUG", "").lower() in ("1", "true", "yes", "on")
+    app.run(debug=debug, host="127.0.0.1", port=int(os.environ.get("PORT", "5000")))

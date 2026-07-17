@@ -39,6 +39,7 @@
       {% endwith %}
 
       <form id="hospital-register-form" class="hospital-form" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <section class="reg-section">
           <div class="reg-section-head">
             <span class="reg-section-num">01</span>
@@ -229,12 +230,15 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="{{ url_for('static', filename='js/location.js') }}"></script>
   <script src="{{ url_for('static', filename='js/hospital.js') }}"></script>
+  <div
+    id="hospital-reg-config"
+    hidden
+    data-config='{{ {"googleMapsKey": google_maps_key or "", "defaultLat": 2.0469, "defaultLng": 45.3182}|tojson }}'
+  ></div>
   <script>
-    HospitalApp.initRegistration({
-      googleMapsKey: {{ google_maps_key|tojson }},
-      defaultLat: 2.0469,
-      defaultLng: 45.3182
-    });
+    HospitalApp.initRegistration(
+      JSON.parse(document.getElementById("hospital-reg-config").getAttribute("data-config"))
+    );
   </script>
 </body>
 </html>

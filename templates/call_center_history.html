@@ -56,6 +56,11 @@
       fetch("/api/call-center/history?limit=200", { credentials: "same-origin" })
         .then(function (r) { return r.json(); })
         .then(function (d) {
+          function esc(s) {
+            var el = document.createElement("div");
+            el.textContent = s == null ? "" : String(s);
+            return el.innerHTML;
+          }
           var tbody = document.querySelector("#history-table tbody");
           tbody.innerHTML = "";
           (d.calls || []).forEach(function (c) {
@@ -63,18 +68,18 @@
             var gps = (c.latitude != null) ? (c.latitude + ", " + c.longitude) : "—";
             var dur = c.duration_sec ? Math.round(c.duration_sec / 60) + " min" : "—";
             tr.innerHTML =
-              "<td>#" + c.id + "</td>" +
-              "<td>" + (c.caller_name || "") + "</td>" +
-              "<td>" + (c.phone || "") + "</td>" +
-              "<td>" + gps + "</td>" +
-              "<td>" + (c.address || "") + "</td>" +
-              "<td>" + ((c.emergency_types || []).join(", ") || c.emergency_type || "—") + "</td>" +
-              "<td>" + (c.operator_name || "—") + "</td>" +
-              "<td>" + ((c.dispatched_to || []).join(", ") || "—") + "</td>" +
-              "<td>" + (c.start_time || "") + "</td>" +
-              "<td>" + (c.end_time || "—") + "</td>" +
-              "<td>" + dur + "</td>" +
-              "<td>" + (c.final_status || c.status) + "</td>";
+              "<td>#" + esc(c.id) + "</td>" +
+              "<td>" + esc(c.caller_name) + "</td>" +
+              "<td>" + esc(c.phone) + "</td>" +
+              "<td>" + esc(gps) + "</td>" +
+              "<td>" + esc(c.address) + "</td>" +
+              "<td>" + esc((c.emergency_types || []).join(", ") || c.emergency_type || "—") + "</td>" +
+              "<td>" + esc(c.operator_name || "—") + "</td>" +
+              "<td>" + esc((c.dispatched_to || []).join(", ") || "—") + "</td>" +
+              "<td>" + esc(c.start_time || "") + "</td>" +
+              "<td>" + esc(c.end_time || "—") + "</td>" +
+              "<td>" + esc(dur) + "</td>" +
+              "<td>" + esc(c.final_status || c.status) + "</td>";
             tbody.appendChild(tr);
           });
         });

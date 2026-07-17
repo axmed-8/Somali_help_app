@@ -217,8 +217,8 @@
         </div>
         <div class="gn-menu-list">
           <button type="button" class="gn-menu-item" data-goto="settings">Personal Information</button>
-          <button type="button" class="gn-menu-item">Emergency Contacts</button>
-          <button type="button" class="gn-menu-item">Saved Locations</button>
+          <button type="button" class="gn-menu-item" data-goto="settings" data-focus="pf-ec-name">Emergency Contacts</button>
+          <button type="button" class="gn-menu-item" data-goto="settings" data-focus="saved-locations-list">Saved Locations</button>
         </div>
       </section>
 
@@ -227,11 +227,11 @@
         <h2 class="gn-panel-title">Settings</h2>
         <form id="profile-form" class="gn-card gn-card-pad">
           <div class="gn-field-grid">
-            <div class="gn-field"><label>Full name</label><input type="text" id="pf-name" value="{{ user.name }}"></div>
-            <div class="gn-field"><label>Phone</label><input type="tel" id="pf-phone" value="{{ user.phone or '' }}"></div>
-            <div class="gn-field full"><label>Email</label><input type="email" value="{{ user.email }}" readonly></div>
-            <div class="gn-field"><label>Emergency contact</label><input type="text" id="pf-ec-name" placeholder="Name"></div>
-            <div class="gn-field"><label>Contact phone</label><input type="tel" id="pf-ec-phone" placeholder="Phone"></div>
+            <div class="gn-field"><label for="pf-name">Full name</label><input type="text" id="pf-name" value="{{ user.name }}"></div>
+            <div class="gn-field"><label for="pf-phone">Phone</label><input type="tel" id="pf-phone" value="{{ user.phone or '' }}"></div>
+            <div class="gn-field full"><label for="pf-email">Email</label><input type="email" id="pf-email" value="{{ user.email }}" readonly></div>
+            <div class="gn-field"><label for="pf-ec-name">Emergency contact</label><input type="text" id="pf-ec-name" placeholder="Name"></div>
+            <div class="gn-field"><label for="pf-ec-phone">Contact phone</label><input type="tel" id="pf-ec-phone" placeholder="Phone"></div>
           </div>
           <div style="margin-top:12px;">
             <label class="gn-field-label">Saved locations</label>

@@ -111,8 +111,8 @@ The app auto-enables MySQL when `db_config.env` is present.
 
 | Feature | Test |
 |---------|------|
-| Login | `admin@emergency.so` / `admin123` |
-| Registration | Sign up a new citizen account |
+| Login | Sign in with a registered real email |
+| Registration | Sign up a new account with a valid email |
 | Chat | Send message on an active emergency dashboard |
 | Notifications | Trigger SOS and check notification panel |
 | Emergency requests | SOS from citizen home or dashboard |

@@ -139,6 +139,7 @@ class RuleBasedProvider(AIProvider):
             category=category,
             gurmad_type=gurmad_type,
             priority=priority,
+            severity=priority,
             risk_level=risk,
             required_services=services,
             required_services_label=services_label(services),

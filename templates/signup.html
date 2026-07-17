@@ -9,33 +9,38 @@
 </head>
 <body class="gn-auth auth-page">
   <div class="auth-container">
-    <div class="auth-card auth-card-wide">
+    <div class="auth-card auth-card-wide" role="main">
       <div class="auth-header">
-        <span class="auth-logo">AI</span>
+        <span class="auth-logo" aria-hidden="true">AI</span>
         <h1>Create Account</h1>
         <p>Join {{ content.app_name }} — Somalia Emergency Platform</p>
       </div>
 
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-          {% for category, message in messages %}
-            <div class="flash flash-{{ category }}">{{ message }}</div>
-          {% endfor %}
+          <div class="auth-alerts" aria-live="polite">
+            {% for category, message in messages %}
+              <div class="flash flash-{{ category }}" role="{{ 'alert' if category in ['error', 'warning'] else 'status' }}">
+                {{ message }}
+              </div>
+            {% endfor %}
+          </div>
         {% endif %}
       {% endwith %}
 
-      <form method="post" action="{{ url_for('signup') }}" class="auth-form">
-        <div class="form-group">
+      <form method="post" action="{{ url_for('signup') }}" class="auth-form" id="signup-form" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group" id="group-name">
           <label for="name">Full name</label>
-          <input type="text" id="name" name="name" required placeholder="Ahmed Hassan">
+          <input type="text" id="name" name="name" required autocomplete="name" placeholder="Ahmed Hassan" aria-invalid="false">
         </div>
-        <div class="form-group">
+        <div class="form-group" id="group-email">
           <label for="email">Email</label>
-          <input type="email" id="email" name="email" required placeholder="you@example.com">
+          <input type="email" id="email" name="email" required autocomplete="email" inputmode="email" placeholder="you@example.com" aria-invalid="false">
         </div>
         <div class="form-group">
           <label for="phone">Phone</label>
-          <input type="tel" id="phone" name="phone" placeholder="0612345678">
+          <input type="tel" id="phone" name="phone" autocomplete="tel" placeholder="0612345678">
         </div>
         <div class="form-group">
           <label for="role">Account type</label>
@@ -46,21 +51,46 @@
             <option value="fire">Emergency Responder — Fire & Rescue</option>
           </select>
         </div>
-        <div class="form-group">
+        <div class="form-group" id="group-password">
           <label for="password">Password</label>
-          <input type="password" id="password" name="password" required minlength="6">
+          <input type="password" id="password" name="password" required minlength="6" autocomplete="new-password" aria-invalid="false">
         </div>
-        <div class="form-group">
+        <div class="form-group" id="group-confirm">
           <label for="confirm_password">Confirm password</label>
-          <input type="password" id="confirm_password" name="confirm_password" required minlength="6">
+          <input type="password" id="confirm_password" name="confirm_password" required minlength="6" autocomplete="new-password" aria-invalid="false">
         </div>
-        <button type="submit" class="btn-auth btn-primary-auth">Create Account</button>
+        <button type="submit" class="btn-auth btn-primary-auth" id="btn-signup" data-default-label="Create Account">
+          Create Account
+        </button>
       </form>
+
+      <p class="auth-footer auth-footer-muted">
+        Use a valid email address. You can log in right after signup.
+        Your email is also used if you need to reset your password.
+      </p>
 
       <p class="auth-footer">
         Already have an account? <a href="{{ url_for('login') }}">Log in</a>
       </p>
     </div>
   </div>
+  <script>
+    (function () {
+      var form = document.getElementById("signup-form");
+      var btn = document.getElementById("btn-signup");
+      if (!form || !btn) return;
+      form.addEventListener("submit", function (e) {
+        if (!form.checkValidity()) {
+          e.preventDefault();
+          form.reportValidity();
+          return;
+        }
+        btn.disabled = true;
+        btn.classList.add("is-loading");
+        btn.setAttribute("aria-busy", "true");
+        btn.textContent = "Creating account…";
+      });
+    })();
+  </script>
 </body>
 </html>
