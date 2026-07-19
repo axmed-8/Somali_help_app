@@ -3,18 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sign Up - {{ content.app_name }}</title>
+  <title>Create Account — {{ content.app_name }}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/gurmadnet.css') }}">
 </head>
 <body class="gn-auth auth-page">
   <div class="auth-container">
-    <div class="auth-card auth-card-wide" role="main">
+    <div class="auth-card auth-card-signup" role="main">
       <div class="auth-header">
         <span class="auth-logo" aria-hidden="true">AI</span>
-        <h1>Create Account</h1>
-        <p>Join {{ content.app_name }} — Somalia Emergency Platform</p>
+        <h1>Create a new account</h1>
+        <p>Citizen registration for {{ content.app_name }}</p>
+        <p class="signup-step-hint" id="signup-step-hint">Complete your details to continue.</p>
       </div>
+
+      <div class="signup-progress" aria-label="Registration progress">
+        <div class="signup-progress-bar" id="signup-progress-bar" style="width: 25%"></div>
+      </div>
+      <p class="signup-step-label" id="signup-step-label">Step 1 of 4</p>
 
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -28,69 +34,215 @@
         {% endif %}
       {% endwith %}
 
+      <div class="auth-alerts" id="signup-client-alerts" aria-live="polite" hidden></div>
+
       <form method="post" action="{{ url_for('signup') }}" class="auth-form" id="signup-form" novalidate>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="form-group" id="group-name">
-          <label for="name">Full name</label>
-          <input type="text" id="name" name="name" required autocomplete="name" placeholder="Ahmed Hassan" aria-invalid="false">
+
+        <!-- Step 1: Personal Information -->
+        <section class="signup-step" data-step="1" aria-labelledby="sec-personal">
+          <h2 id="sec-personal" class="signup-section-title">Personal Information</h2>
+          <div class="form-group">
+            <label for="first_name">First Name <span class="req" aria-hidden="true">*</span></label>
+            <input type="text" id="first_name" name="first_name" required autocomplete="given-name" placeholder="First name" maxlength="60">
+          </div>
+          <div class="form-group">
+            <label for="middle_name">Middle Name <span class="label-optional">(Optional)</span></label>
+            <input type="text" id="middle_name" name="middle_name" autocomplete="additional-name" placeholder="Middle name" maxlength="60">
+          </div>
+          <div class="form-group">
+            <label for="last_name">Last Name <span class="req" aria-hidden="true">*</span></label>
+            <input type="text" id="last_name" name="last_name" required autocomplete="family-name" placeholder="Last name" maxlength="60">
+          </div>
+          <div class="form-group">
+            <label for="gender">Gender <span class="req" aria-hidden="true">*</span></label>
+            <select id="gender" name="gender" required>
+              <option value="" disabled selected>Select gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+          </div>
+          <div class="form-group dob-picker-group">
+            <label for="dob_display">Date of Birth <span class="req" aria-hidden="true">*</span></label>
+            <div class="dob-picker" id="dob-picker">
+              <input
+                type="text"
+                id="dob_display"
+                class="dob-display"
+                readonly
+                inputmode="none"
+                placeholder="DD/MM/YYYY"
+                autocomplete="bday"
+                aria-haspopup="dialog"
+                aria-expanded="false"
+                aria-controls="dob-popover"
+              >
+              <input type="hidden" id="date_of_birth" name="date_of_birth" required value="">
+              <button type="button" class="dob-icon-btn" id="dob-open-btn" aria-label="Open date picker">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+              </button>
+              <div class="dob-backdrop" id="dob-backdrop" hidden></div>
+              <div class="dob-popover" id="dob-popover" role="dialog" aria-label="Select date of birth" hidden>
+                <div class="dob-popover-head">
+                  <button type="button" class="dob-nav-btn" id="dob-prev" aria-label="Previous month">‹</button>
+                  <div class="dob-head-labels">
+                    <button type="button" class="dob-month-btn" id="dob-month-btn" aria-label="Select month"></button>
+                    <button type="button" class="dob-year-btn" id="dob-year-btn" aria-label="Select year"></button>
+                  </div>
+                  <button type="button" class="dob-nav-btn" id="dob-next" aria-label="Next month">›</button>
+                </div>
+                <div class="dob-weekdays" aria-hidden="true">
+                  <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+                </div>
+                <div class="dob-days" id="dob-days"></div>
+                <div class="dob-year-panel" id="dob-year-panel" hidden>
+                  <div class="dob-year-list" id="dob-year-list"></div>
+                </div>
+                <div class="dob-month-panel" id="dob-month-panel" hidden>
+                  <div class="dob-month-grid" id="dob-month-grid"></div>
+                </div>
+                <div class="dob-popover-foot">
+                  <button type="button" class="dob-clear-btn" id="dob-clear">Clear</button>
+                  <button type="button" class="dob-today-btn" id="dob-done">Done</button>
+                </div>
+              </div>
+            </div>
+            <p class="auth-hint">Format: DD/MM/YYYY</p>
+          </div>
+        </section>
+
+        <!-- Step 2: Contact Information -->
+        <section class="signup-step" data-step="2" hidden aria-labelledby="sec-contact">
+          <h2 id="sec-contact" class="signup-section-title">Contact Information</h2>
+          <div class="form-group">
+            <label for="email">Email Address <span class="req" aria-hidden="true">*</span></label>
+            <input type="email" id="email" name="email" required autocomplete="email" inputmode="email" placeholder="Email" maxlength="180">
+          </div>
+          <div class="form-group">
+            <label for="phone">Phone Number <span class="req" aria-hidden="true">*</span></label>
+            <input type="tel" id="phone" name="phone" required autocomplete="tel" inputmode="tel" placeholder="Phone number" maxlength="40">
+          </div>
+          <div class="form-group">
+            <label for="address">Home Address <span class="label-optional">(Optional)</span></label>
+            <input type="text" id="address" name="address" autocomplete="street-address" placeholder="Home address" maxlength="255">
+          </div>
+          <div class="form-group">
+            <label for="city">City <span class="label-optional">(Optional)</span></label>
+            <input type="text" id="city" name="city" autocomplete="address-level2" placeholder="City" maxlength="80">
+          </div>
+        </section>
+
+        <!-- Step 3: Emergency Contact -->
+        <section class="signup-step" data-step="3" hidden aria-labelledby="sec-emergency">
+          <h2 id="sec-emergency" class="signup-section-title">Emergency Contact</h2>
+          <div class="form-group">
+            <label for="emergency_contact_name">Emergency Contact Name <span class="req" aria-hidden="true">*</span></label>
+            <input type="text" id="emergency_contact_name" name="emergency_contact_name" required autocomplete="name" placeholder="Contact name" maxlength="120">
+          </div>
+          <div class="form-group">
+            <label for="emergency_contact_relation">Relationship <span class="req" aria-hidden="true">*</span></label>
+            <select id="emergency_contact_relation" name="emergency_contact_relation" required>
+              <option value="" disabled selected>Select relationship</option>
+              <option value="Father">Father</option>
+              <option value="Mother">Mother</option>
+              <option value="Brother">Brother</option>
+              <option value="Sister">Sister</option>
+              <option value="Spouse">Spouse</option>
+              <option value="Friend">Friend</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="emergency_contact_phone">Emergency Contact Phone <span class="req" aria-hidden="true">*</span></label>
+            <input type="tel" id="emergency_contact_phone" name="emergency_contact_phone" required inputmode="tel" placeholder="Contact phone" maxlength="40">
+          </div>
+          <div class="form-group">
+            <label for="emergency_contact_email">Emergency Contact Email <span class="label-optional">(Optional)</span></label>
+            <input type="email" id="emergency_contact_email" name="emergency_contact_email" autocomplete="email" placeholder="Email for SOS alerts" maxlength="180">
+            <p class="auth-hint">Optional. Used to email your contact when you send an SOS.</p>
+          </div>
+        </section>
+
+        <!-- Step 4: Additional + Security -->
+        <section class="signup-step" data-step="4" hidden aria-labelledby="sec-security">
+          <h2 id="sec-extra" class="signup-section-title">Additional Information <span class="label-optional">(Optional)</span></h2>
+          <div class="signup-optional-note">
+            <p>
+              The following information is optional. If you have it, you may provide it.
+              Otherwise, you can continue without filling these fields.
+            </p>
+          </div>
+          <div class="form-group">
+            <label for="national_id">National ID</label>
+            <input type="text" id="national_id" name="national_id" autocomplete="off" placeholder="National ID" maxlength="40" inputmode="numeric">
+            <p class="auth-hint">Only the last 4 digits are stored for display. You can skip this if you do not have a National ID.</p>
+          </div>
+          <div class="form-group">
+            <label for="blood_type">Blood Type</label>
+            <select id="blood_type" name="blood_type">
+              <option value="">Prefer not to say</option>
+              <option value="A+">A+</option>
+              <option value="A-">A-</option>
+              <option value="B+">B+</option>
+              <option value="B-">B-</option>
+              <option value="AB+">AB+</option>
+              <option value="AB-">AB-</option>
+              <option value="O+">O+</option>
+              <option value="O-">O-</option>
+              <option value="Unknown">Unknown</option>
+            </select>
+          </div>
+
+          <h2 id="sec-security" class="signup-section-title">Security</h2>
+          <div class="form-group" id="group-password">
+            <label for="password">Password <span class="req" aria-hidden="true">*</span></label>
+            <div class="password-field">
+              <input type="password" id="password" name="password" required minlength="6" autocomplete="new-password" placeholder="New password">
+              <button type="button" class="password-toggle" id="password-toggle" aria-label="Show password" aria-controls="password" aria-pressed="false">
+                <svg class="icon-eye" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                <svg class="icon-eye-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" hidden><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+              </button>
+            </div>
+          </div>
+          <div class="form-group" id="group-confirm">
+            <label for="confirm_password">Confirm Password <span class="req" aria-hidden="true">*</span></label>
+            <div class="password-field">
+              <input type="password" id="confirm_password" name="confirm_password" required minlength="6" autocomplete="new-password" placeholder="Confirm password">
+              <button type="button" class="password-toggle" id="confirm-toggle" aria-label="Show password" aria-controls="confirm_password" aria-pressed="false">
+                <svg class="icon-eye" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                <svg class="icon-eye-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" hidden><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+              </button>
+            </div>
+          </div>
+
+          <label class="signup-terms">
+            <input type="checkbox" id="agree_terms" name="agree_terms" value="1" required>
+            <span>I agree to the Terms &amp; Privacy Policy.</span>
+          </label>
+        </section>
+
+        <div class="signup-nav">
+          <button type="button" class="btn-auth btn-secondary-auth" id="btn-back" hidden>Back</button>
+          <button type="button" class="btn-auth btn-primary-auth" id="btn-next">Next</button>
+          <button type="submit" class="btn-auth btn-primary-auth" id="btn-signup" data-default-label="Create Secure Account" hidden>
+            Create Secure Account
+          </button>
         </div>
-        <div class="form-group" id="group-email">
-          <label for="email">Email</label>
-          <input type="email" id="email" name="email" required autocomplete="email" inputmode="email" placeholder="you@example.com" aria-invalid="false">
-        </div>
-        <div class="form-group">
-          <label for="phone">Phone</label>
-          <input type="tel" id="phone" name="phone" autocomplete="tel" placeholder="0612345678">
-        </div>
-        <div class="form-group">
-          <label for="role">Account type</label>
-          <select id="role" name="role" required>
-            <option value="citizen">Citizen — Report & track emergencies</option>
-            <option value="hospital">Emergency Responder — Medical / Ambulance</option>
-            <option value="police">Emergency Responder — Police</option>
-            <option value="fire">Emergency Responder — Fire & Rescue</option>
-          </select>
-        </div>
-        <div class="form-group" id="group-password">
-          <label for="password">Password</label>
-          <input type="password" id="password" name="password" required minlength="6" autocomplete="new-password" aria-invalid="false">
-        </div>
-        <div class="form-group" id="group-confirm">
-          <label for="confirm_password">Confirm password</label>
-          <input type="password" id="confirm_password" name="confirm_password" required minlength="6" autocomplete="new-password" aria-invalid="false">
-        </div>
-        <button type="submit" class="btn-auth btn-primary-auth" id="btn-signup" data-default-label="Create Account">
-          Create Account
-        </button>
       </form>
 
       <p class="auth-footer auth-footer-muted">
-        Use a valid email address. You can log in right after signup.
-        Your email is also used if you need to reset your password.
+        Citizen accounts only. Hospital, Police, Fire, and Call Center accounts are created by an administrator.
       </p>
-
       <p class="auth-footer">
         Already have an account? <a href="{{ url_for('login') }}">Log in</a>
       </p>
     </div>
   </div>
-  <script>
-    (function () {
-      var form = document.getElementById("signup-form");
-      var btn = document.getElementById("btn-signup");
-      if (!form || !btn) return;
-      form.addEventListener("submit", function (e) {
-        if (!form.checkValidity()) {
-          e.preventDefault();
-          form.reportValidity();
-          return;
-        }
-        btn.disabled = true;
-        btn.classList.add("is-loading");
-        btn.setAttribute("aria-busy", "true");
-        btn.textContent = "Creating account…";
-      });
-    })();
-  </script>
+  <script src="{{ url_for('static', filename='js/auth_signup.js') }}" defer></script>
 </body>
 </html>

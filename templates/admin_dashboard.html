@@ -3,132 +3,524 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ content.admin_dashboard_title }}</title>
+  <title>{% if is_super_admin %}Super Admin{% else %}Admin{% endif %} — {{ content.app_name }}</title>
+  {% if app_favicon_url %}<link rel="icon" href="{{ app_favicon_url }}">{% endif %}
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_command.css') }}">
+  <style>:root { --sac-brand: {{ brand_primary_color|default('#2563eb') }}; }</style>
+  {% include "_google_maps.html" %}
 </head>
-<body class="dashboard-admin">
-  <div class="dashboard-container">
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-brand">
-        <h2>Admin Panel</h2>
-        <span>Emergency Help App</span>
+<body class="sac-body {% if is_super_admin %}sac-role-super{% else %}sac-role-admin{% endif %}" data-admin-role="{{ admin_role }}">
+  <div class="sac-shell">
+    <aside class="sac-sidebar" id="sac-sidebar">
+      <div class="sac-side-brand">
+        <div class="sac-logo" aria-hidden="true">AI</div>
+        <div>
+          <h1>GurmadNet AI</h1>
+          <p>National Emergency Command</p>
+        </div>
       </div>
-      <nav class="admin-nav">
-        <a href="#" class="active" data-section="overview">📊 Overview</a>
-        <a href="#" data-section="content">✏️ Edit Content</a>
-        <a href="#" data-section="users">👥 Users</a>
-        <a href="#" data-section="settings">⚙️ Settings</a>
-        <a href="#" data-section="emergencies">📋 Emergencies</a>
-        <a href="#" data-section="callcenter">📞 Call Center</a>
-        <a href="#" data-section="ai">🧠 AI Intelligence</a>
-        <a href="#" data-section="reports">📈 Reports</a>
-        <a href="#" data-section="appearance">🎨 Appearance</a>
+      <div class="sac-role-pill" id="sac-role-pill">{% if is_super_admin %}Super Admin (Full Access){% else %}Admin (Limited Access){% endif %}</div>
+
+      <nav class="sac-nav" aria-label="Admin navigation">
+        <a href="#" class="active" data-section="overview" data-perm="dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9"/><path d="M9 21V9h6v12"/></svg>
+          Dashboard
+        </a>
+
+        <div class="sac-nav-group open" data-perm="users_ops">
+          <button type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Users Management
+          </button>
+          <div class="sac-sub">
+            <a href="#" data-section="users" data-role-filter="citizen" data-perm="users_ops">Citizens</a>
+            {% if is_super_admin %}
+            <a href="#" data-section="users" data-role-filter="admins" data-perm="users_admins">Admins</a>
+            {% endif %}
+            <a href="#" data-section="users" data-role-filter="hospital" data-perm="users_ops">Hospitals</a>
+            <a href="#" data-section="users" data-role-filter="police" data-perm="users_ops">Police</a>
+            <a href="#" data-section="users" data-role-filter="fire" data-perm="users_ops">Fire Department</a>
+            <a href="#" data-section="users" data-role-filter="call_center" data-perm="users_ops">Call Center</a>
+            <a href="#" data-section="users" data-role-filter="" data-perm="users_ops">All Users</a>
+          </div>
+        </div>
+
+        <div class="sac-nav-group" data-perm="emergencies_view">
+          <button type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Emergency Management
+          </button>
+          <div class="sac-sub">
+            <a href="#" data-section="emergencies" data-perm="emergencies_view">Active Emergencies</a>
+            <a href="#" data-section="emergencies" data-perm="emergencies_view">Emergency History</a>
+            <a href="#" data-section="dispatch" data-perm="emergencies_view">Dispatch Center</a>
+            <a href="#" data-section="sos" data-perm="emergencies_view">SOS Requests</a>
+          </div>
+        </div>
+
+        <a href="#" data-section="users" data-role-filter="hospital" data-perm="users_ops">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/><path d="M10 10h4"/><path d="M12 8v4"/></svg>
+          Hospitals Management
+        </a>
+        <a href="#" data-section="users" data-role-filter="hospital" data-perm="users_ops">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="8" rx="2"/><path d="M5 11V8a2 2 0 0 1 2-2h3l2 3h7a2 2 0 0 1 2 2v2"/></svg>
+          Ambulances Management
+        </a>
+        <a href="#" data-section="users" data-role-filter="police" data-perm="users_ops">Police Management</a>
+        <a href="#" data-section="users" data-role-filter="fire" data-perm="users_ops">Fire Department</a>
+        <a href="#" data-section="callcenter" data-perm="call_center">Call Center</a>
+        <a href="#" data-section="ai" data-perm="ai">
+          AI Intelligence <span class="badge-new">New</span>
+        </a>
+        <a href="#" data-section="map" data-perm="dashboard">Live Somalia Map</a>
+        <a href="#" data-section="reports" data-perm="reports">Reports &amp; Analytics</a>
+        {% if is_super_admin %}
+        <a href="#" data-section="system" data-perm="settings_system">System Configuration</a>
+        {% endif %}
+        <a href="#" data-section="settings" data-perm="settings_ops">Settings</a>
+        <a href="#" data-section="content" data-perm="content_edit">Content CMS</a>
+        <a href="#" data-section="appearance" data-perm="appearance">Appearance</a>
+        {% if is_super_admin %}
+        <a href="#" data-section="audit" data-perm="audit">Audit Logs</a>
+        <a href="#" data-section="backup" data-perm="backup">Backup &amp; Restore</a>
+        {% endif %}
+        <a href="#" data-section="monitoring" data-perm="monitoring">System Monitoring</a>
+        <a href="#" data-section="profile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          My Profile
+        </a>
+        <a href="#" data-section="help">Help &amp; Support</a>
       </nav>
-      <div class="dashboard-links">
-        <span>{{ user.name }} (admin)</span>
-      </div>
+
+      <a
+        class="sac-hotline"
+        id="sac-hotline-card"
+        href="https://wa.me/252613910872"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Open WhatsApp emergency hotline"
+      >
+        <strong>Emergency Hotline</strong>
+        <span id="sac-hotline-number">+252613910872</span>
+        <div class="sac-hotline-cta">Click to WhatsApp</div>
+      </a>
     </aside>
 
-    <div class="main-content">
-      <header class="top-bar">
-        <button type="button" class="sidebar-toggle" id="sidebar-toggle">☰</button>
-        <h1>{{ content.admin_dashboard_title }}</h1>
-        <div class="top-bar-actions">
-          <span class="status-badge online">System Online</span>
-          <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
+    <div class="sac-main">
+      <header class="sac-topbar">
+        <button type="button" class="sac-menu-btn" id="sac-menu-btn" aria-label="Open menu">☰</button>
+        <div class="sac-top-titles">
+          <h2>{{ content.app_name }}</h2>
+          <p>National Emergency Command Center</p>
+        </div>
+
+        <div class="sac-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input type="search" id="sac-global-search" placeholder="Search anything… Ctrl + K" autocomplete="off">
+        </div>
+
+        <div class="sac-top-actions">
+          <button type="button" class="sac-icon-btn" title="Notifications">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+            <span class="dot" id="sac-notif-count" hidden>0</span>
+          </button>
+          {% if is_super_admin %}
+          <button type="button" class="sac-icon-btn" title="Audit logs" data-shortcut="audit" data-perm="audit">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </button>
+          {% endif %}
+          <button type="button" class="sac-icon-btn" id="sac-fullscreen-btn" title="Full screen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+          </button>
+          <button type="button" class="sac-icon-btn" id="sac-theme-btn" title="Toggle theme">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>
+          </button>
+          <div class="sac-status-live">
+            <i></i>
+            <span id="sac-system-status-text">System Status: Operational • Live</span>
+          </div>
+          <div class="sac-profile" id="sac-profile-chip" title="Open My Profile">
+            <button type="button" class="sac-avatar sac-avatar-btn" id="sac-top-avatar" data-section="profile" aria-label="Open My Profile">
+              {% if user.profile_photo and user.profile_photo.startswith('data:image/') %}
+              <img src="{{ user.profile_photo }}" alt="">
+              {% else %}
+              {{ (user.name or 'A')[:1]|upper }}
+              {% endif %}
+            </button>
+            <div>
+              <strong id="sac-top-name">{{ user.name }}</strong>
+              <span id="sac-profile-role">{% if is_super_admin %}Super Administrator{% else %}Administrator{% endif %}</span>
+              <div class="sac-profile-links">
+                <a href="#" data-section="profile">My Profile</a>
+                <a href="{{ url_for('logout') }}">Logout</a>
+              </div>
+            </div>
+          </div>
         </div>
       </header>
 
-      <div class="content-area admin-content">
-        <!-- Section 1: Overview -->
-        <section id="sec-overview" class="admin-section active">
-          <div class="stats" id="overview-stats">
-            <div class="stat-card"><div class="stat-value" id="st-users">—</div><div class="stat-label">Total users</div></div>
-            <div class="stat-card"><div class="stat-value" id="st-today">—</div><div class="stat-label">Emergencies today</div></div>
-            <div class="stat-card"><div class="stat-value" id="st-week">—</div><div class="stat-label">This week</div></div>
-            <div class="stat-card"><div class="stat-value" id="st-avg">—</div><div class="stat-label">Avg response (min)</div></div>
+      <div class="sac-content">
+        <!-- Overview / Command Center -->
+        <section id="sec-overview" class="sac-section active">
+          <div class="sac-section-head">
+            <div>
+              <h2>Command Center</h2>
+              <p>Live national emergency operations overview</p>
+            </div>
+            {% if is_super_admin %}
+            <button type="button" class="btn-admin-primary" data-shortcut="backup" data-perm="backup">Backup Now</button>
+            {% endif %}
           </div>
-          <div class="panel-section">
-            <h2 class="section-title">Users by role</h2>
-            <div class="role-breakdown" id="role-breakdown"></div>
+
+          <div class="sac-kpi-grid">
+            <article class="sac-kpi sac-glass">
+              <div class="sac-kpi-top"><div class="sac-kpi-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div></div>
+              <div class="sac-kpi-label">Total Citizens</div>
+              <div class="sac-kpi-value" id="kpi-citizens">—</div>
+              <div class="sac-kpi-trend" id="kpi-citizens-trend">—</div>
+              <canvas id="spark-citizens" height="36"></canvas>
+            </article>
+            <article class="sac-kpi sac-glass">
+              <div class="sac-kpi-top"><div class="sac-kpi-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div></div>
+              <div class="sac-kpi-label">Active Emergencies</div>
+              <div class="sac-kpi-value" id="kpi-active">—</div>
+              <div class="sac-kpi-trend" id="kpi-active-trend">—</div>
+              <canvas id="spark-active" height="36"></canvas>
+            </article>
+            <article class="sac-kpi sac-glass">
+              <div class="sac-kpi-top"><div class="sac-kpi-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/></svg></div></div>
+              <div class="sac-kpi-label">Hospitals Online</div>
+              <div class="sac-kpi-value" id="kpi-hospitals">—</div>
+              <div class="sac-kpi-trend" id="kpi-hospitals-trend">—</div>
+              <canvas id="spark-hospitals" height="36"></canvas>
+            </article>
+            <article class="sac-kpi sac-glass">
+              <div class="sac-kpi-top"><div class="sac-kpi-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div></div>
+              <div class="sac-kpi-label">Police Units Online</div>
+              <div class="sac-kpi-value" id="kpi-police">—</div>
+              <div class="sac-kpi-trend" id="kpi-police-trend">—</div>
+              <canvas id="spark-police" height="36"></canvas>
+            </article>
+            <article class="sac-kpi sac-glass">
+              <div class="sac-kpi-top"><div class="sac-kpi-icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1.5-3-1-1-1.5-2.5-1.5-4a6 6 0 0 1 12 0c0 1.5-.5 3-1.5 4-1 1-1.5 1.62-1.5 3a2.5 2.5 0 0 0 2.5 2.5"/></svg></div></div>
+              <div class="sac-kpi-label">Fire Units Online</div>
+              <div class="sac-kpi-value" id="kpi-fire">—</div>
+              <div class="sac-kpi-trend" id="kpi-fire-trend">—</div>
+              <canvas id="spark-fire" height="36"></canvas>
+            </article>
+            <article class="sac-kpi sac-glass">
+              <div class="sac-kpi-top"><div class="sac-kpi-icon teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="8" rx="2"/><path d="M5 11V8a2 2 0 0 1 2-2h3l2 3h7"/></svg></div></div>
+              <div class="sac-kpi-label">Ambulances Available</div>
+              <div class="sac-kpi-value" id="kpi-ambulances">—</div>
+              <div class="sac-kpi-trend" id="kpi-ambulances-trend">—</div>
+              <canvas id="spark-ambulances" height="36"></canvas>
+            </article>
+            <article class="sac-kpi sac-glass">
+              <div class="sac-kpi-top"><div class="sac-kpi-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 1 4 4v1a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/><path d="M4 14h16"/><path d="M6 18h12"/></svg></div></div>
+              <div class="sac-kpi-label">AI Alerts</div>
+              <div class="sac-kpi-value" id="kpi-ai">—</div>
+              <div class="sac-kpi-trend" id="kpi-ai-trend">—</div>
+              <canvas id="spark-ai" height="36"></canvas>
+            </article>
+            <article class="sac-kpi sac-glass">
+              <div class="sac-kpi-top"><div class="sac-kpi-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div></div>
+              <div class="sac-kpi-label">Avg Response Time</div>
+              <div class="sac-kpi-value" id="kpi-avg">—</div>
+              <div class="sac-kpi-trend" id="kpi-avg-trend">—</div>
+              <canvas id="spark-avg" height="36"></canvas>
+            </article>
           </div>
-          <div class="panel-section">
-            <h2 class="section-title">All-time emergencies</h2>
-            <p><strong id="st-total">—</strong> total · <span id="st-blocked">—</span> blocked users</p>
+
+          <div class="sac-row-3">
+            <article class="sac-card sac-glass">
+              <div class="sac-card-head">
+                <h3>Live Emergency Map</h3>
+                <button type="button" class="sac-link-btn" data-section="map">Open large map →</button>
+              </div>
+              <div class="sac-map-legend sac-map-legend-key" role="group" aria-label="Filter map pins">
+                <button type="button" class="sac-key sac-key-all is-active" data-map-filter="all">All</button>
+                <button type="button" class="sac-key sac-key-sos" data-map-filter="emergency">SOS</button>
+                <button type="button" class="sac-key sac-key-hospital" data-map-filter="hospital">Hospital</button>
+                <button type="button" class="sac-key sac-key-police" data-map-filter="police">Police</button>
+                <button type="button" class="sac-key sac-key-fire" data-map-filter="fire">Fire</button>
+              </div>
+              <div class="sac-map-wrap sac-map-friendly">
+                <div id="sac-map" role="application" aria-label="Live emergency map"></div>
+                <div class="sac-empty sac-map-empty" id="sac-map-empty" hidden>
+                  <div class="sac-map-empty-card">
+                    <strong>No live pins yet</strong>
+                    <p>When citizens send SOS with GPS, they appear here.</p>
+                  </div>
+                </div>
+              </div>
+              <div class="sac-map-toolbar">
+                <button type="button" class="sac-map-btn" id="btn-overview-locate" title="Show my location">📍 My location</button>
+                <button type="button" class="sac-map-btn" id="btn-overview-recenter" title="Fit all pins">⌂ Fit all</button>
+                <span class="hint" id="sac-map-gps-status">Scroll or pinch to zoom · drag to move</span>
+              </div>
+              <div class="sac-map-legend" id="sac-map-legend"></div>
+            </article>
+            <article class="sac-card sac-glass">
+              <div class="sac-card-head"><h3>Live Emergency Feed</h3></div>
+              <div class="sac-feed" id="sac-emergency-feed"></div>
+            </article>
+            <article class="sac-card sac-glass">
+              <div class="sac-card-head">
+                <h3>AI Intelligence Center</h3>
+                <button type="button" class="sac-link-btn" data-shortcut="ai">Go to AI Center →</button>
+              </div>
+              <div id="sac-ai-center">
+                <div class="sac-ai-alert">
+                  <div class="tag" id="ai-alert-priority">—</div>
+                  <div id="ai-alert-text">—</div>
+                </div>
+                <p class="hint" id="ai-recommend-text">—</p>
+                <div class="sac-ai-metrics">
+                  <div><strong id="ai-accuracy">—</strong><span>Avg confidence</span></div>
+                  <div><strong id="ai-predicted">—</strong><span>Decisions today</span></div>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div class="sac-row-4">
+            <article class="sac-card sac-glass">
+              <div class="sac-card-head"><h3>Emergency Statistics</h3></div>
+              <canvas id="chart-week-emergencies" height="160"></canvas>
+              <p class="hint" style="margin-top:10px;">
+                Total <strong id="week-total">—</strong> ·
+                Resolved <strong id="week-resolved">—</strong> ·
+                Pending <strong id="week-pending">—</strong> ·
+                Cancelled <strong id="week-cancelled">—</strong>
+              </p>
+            </article>
+            <article class="sac-card sac-glass">
+              <div class="sac-card-head"><h3>Emergency Types</h3></div>
+              <canvas id="chart-types" height="180"></canvas>
+            </article>
+            <article class="sac-card sac-glass">
+              <div class="sac-card-head"><h3>Response Time</h3></div>
+              <canvas id="chart-week-response" height="160"></canvas>
+            </article>
+            <article class="sac-card sac-glass" data-perm="users_ops">
+              <div class="sac-card-head"><h3>Quick Actions</h3></div>
+              <div class="sac-shortcuts">
+                <button type="button" data-shortcut="add-citizen" data-perm="users_ops">Add Citizen</button>
+                {% if is_super_admin %}<button type="button" data-shortcut="create-admin" data-perm="users_admins">Create staff</button>{% endif %}
+                {% if is_super_admin %}<button type="button" data-shortcut="add-hospital" data-perm="users_admins">Add Hospital</button>{% endif %}
+                <button type="button" data-shortcut="dispatch" data-perm="emergencies_view">Dispatch Unit</button>
+                <button type="button" data-shortcut="report" data-perm="reports">Generate Report</button>
+                {% if is_super_admin %}
+                <button type="button" data-shortcut="backup" data-perm="backup">Backup Database</button>
+                <button type="button" data-shortcut="audit" data-perm="audit">System Logs</button>
+                {% endif %}
+                <button type="button" data-shortcut="settings" data-perm="settings_ops">Settings</button>
+              </div>
+            </article>
+          </div>
+
+          <div class="sac-row-3b">
+            {% if is_super_admin %}
+            <article class="sac-card sac-glass" data-perm="audit">
+              <div class="sac-card-head"><h3>Recent System Activities</h3></div>
+              <div class="sac-table-wrap">
+                <table class="sac-table" id="sac-activity-table">
+                  <thead><tr><th>Administrator</th><th>Action</th><th>Date / Time</th><th>IP</th></tr></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </article>
+            {% endif %}
+            <article class="sac-card sac-glass" data-perm="monitoring">
+              <div class="sac-card-head"><h3>System Health</h3></div>
+              <div class="sac-health-grid" id="sac-health-grid"></div>
+            </article>
+            <article class="sac-card sac-glass" data-perm="reports">
+              <div class="sac-card-head"><h3>Top Locations</h3></div>
+              <div class="sac-bars" id="sac-top-locations"></div>
+            </article>
           </div>
         </section>
 
-        <!-- Section 2: Content -->
-        <section id="sec-content" class="admin-section">
-          <h2 class="section-title">Edit system text</h2>
-          <p class="hint">Changes apply immediately on all pages after save.</p>
-          <div id="content-editor" class="content-editor"></div>
+        <!-- Full map section -->
+        <section id="sec-map" class="sac-section" data-perm="dashboard">
+          <div class="sac-section-head">
+            <div>
+              <h2>Live Somalia Map</h2>
+              <p>Easy map — zoom, drag, and tap pins for details</p>
+            </div>
+            <div class="sac-head-actions">
+              <button type="button" class="sac-map-btn" id="btn-map-locate">📍 My location</button>
+              <button type="button" class="sac-map-btn" id="btn-map-recenter">⌂ Fit all</button>
+              <button type="button" class="sac-map-btn sac-map-btn-primary" id="btn-map-refresh">↻ Refresh</button>
+            </div>
+          </div>
+          <div class="sac-card sac-glass sac-map-card">
+            <div class="sac-map-legend sac-map-legend-key" role="group" aria-label="Filter map pins">
+              <button type="button" class="sac-key sac-key-all is-active" data-map-filter="all">All</button>
+              <button type="button" class="sac-key sac-key-sos" data-map-filter="emergency">SOS only</button>
+              <button type="button" class="sac-key sac-key-hospital" data-map-filter="hospital">Hospital only</button>
+              <button type="button" class="sac-key sac-key-police" data-map-filter="police">Police only</button>
+              <button type="button" class="sac-key sac-key-fire" data-map-filter="fire">Fire only</button>
+            </div>
+            <div class="sac-map-wrap sac-map-wrap-full sac-map-friendly">
+              <div id="sac-map-full" role="application" aria-label="Full live emergency GPS map"></div>
+              <div class="sac-empty sac-map-empty" id="sac-map-full-empty" hidden>
+                <div class="sac-map-empty-card">
+                  <strong>Map is ready</strong>
+                  <p>No GPS pins yet. Tap <em>My location</em> to see where you are.</p>
+                </div>
+              </div>
+            </div>
+            <p class="sac-map-help">
+              <strong>How to use:</strong>
+              tap <em>All</em> = full Somalia map ·
+              tap <em>Hospital / SOS / Police / Fire</em> = that type only ·
+              tap a pin = details
+            </p>
+            <div class="sac-map-legend" id="sac-map-full-legend"></div>
+          </div>
         </section>
 
-        <!-- Section 3: Users -->
-        <section id="sec-users" class="admin-section">
-          <div class="admin-toolbar">
-            <input type="search" id="user-search" placeholder="Search name or email...">
-            <select id="user-role-filter">
-              <option value="">All roles</option>
-              <option value="citizen">Citizen</option>
-              <option value="hospital">Hospital</option>
-              <option value="police">Police</option>
-              <option value="fire">Fire</option>
-              <option value="call_center">Call Center</option>
-              <option value="admin">Admin</option>
-            </select>
-            <button type="button" class="btn-action btn-admin-primary" id="btn-add-user">+ Add user</button>
-          </div>
-          <div class="table-wrap">
-            <table class="admin-table" id="users-table">
-              <thead>
-                <tr>
-                  <th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Status</th><th>Registered</th><th>Last login</th><th>Actions</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
+        <!-- Users -->
+        <section id="sec-users" class="sac-section" data-perm="users_ops">
+          <div class="sac-section-head"><div><h2>Users Management</h2><p>{% if is_super_admin %}Create and manage staff and Admin accounts{% else %}Create and manage citizens and operations staff{% endif %}</p></div></div>
+          <div class="sac-card sac-glass">
+            <div class="sac-toolbar admin-toolbar">
+              <input type="search" id="user-search" placeholder="Search name or email...">
+              <select id="user-role-filter">
+                <option value="">All roles</option>
+                <option value="citizen">Citizen</option>
+                <option value="hospital">Hospital</option>
+                <option value="police">Police</option>
+                <option value="fire">Fire</option>
+                <option value="call_center">Call Center</option>
+                {% if is_super_admin %}
+                <option value="admin">Admin</option>
+                <option value="super_admin">Super Admin</option>
+                <option value="admins">All Admins</option>
+                {% endif %}
+              </select>
+              <button type="button" class="btn-action btn-admin-primary" id="btn-add-user">+ Add user</button>
+              {% if is_super_admin %}
+              <button type="button" class="btn-action btn-admin-primary" id="btn-create-admin">+ Create staff</button>
+              {% endif %}
+            </div>
+            {% if is_super_admin %}
+            <p class="hint" id="admin-users-hint"><strong>+ Add user</strong> = citizens only. <strong>+ Create staff</strong> = Admin, Hospital, Police, or Fire only.</p>
+            {% else %}
+            <p class="hint" id="admin-users-hint"><strong>+ Add user</strong> adds citizens only. Hospital, Police, Fire, and Admin accounts are created by Super Admin.</p>
+            {% endif %}
+            <div class="table-wrap">
+              <table class="admin-table" id="users-table">
+                <thead>
+                  <tr>
+                    <th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Linked hospital</th><th>Status</th><th>Registered</th><th>Last login</th><th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
           </div>
         </section>
 
-        <!-- Section 4: Settings -->
-        <section id="sec-settings" class="admin-section">
-          <h2 class="section-title">System settings</h2>
-          <form id="settings-form" class="settings-form">
-            <label class="toggle-row"><input type="checkbox" name="sos_enabled" id="sos_enabled"> Enable SOS system</label>
-            <label class="toggle-row"><input type="checkbox" name="maintenance_mode" id="maintenance_mode"> Maintenance mode (only admin access)</label>
-            <label class="toggle-row"><input type="checkbox" name="sms_notifications" id="sms_notifications"> SMS/WhatsApp notifications</label>
-            <div class="form-row"><label>Ambulance response (min)</label><input type="number" name="ambulance_response_time" id="ambulance_response_time" min="1"></div>
-            <div class="form-row"><label>Police response (min)</label><input type="number" name="police_response_time" id="police_response_time" min="1"></div>
-            <div class="form-row"><label>Fire response (min)</label><input type="number" name="fire_response_time" id="fire_response_time" min="1"></div>
-            <div class="form-row"><label>Dashboard refresh (sec)</label><input type="number" name="refresh_interval" id="refresh_interval" min="3"></div>
-            <div class="form-row"><label>Max emergencies / day</label><input type="number" name="max_emergencies_per_day" id="max_emergencies_per_day" min="1"></div>
-            <button type="submit" class="btn-action btn-admin-primary">Save settings</button>
+        <!-- Content -->
+        <section id="sec-content" class="sac-section" data-perm="content_edit">
+          <div class="sac-section-head"><div><h2>Content CMS</h2><p>Edit system text shown across the application</p></div></div>
+          <div class="sac-card sac-glass">
+            <p class="hint">Changes apply immediately on all pages after save.{% if not is_super_admin %} Content reset is Super Admin only.{% endif %}</p>
+            <div id="content-editor" class="content-editor"></div>
+          </div>
+        </section>
+
+        <!-- Settings -->
+        <section id="sec-settings" class="sac-section" data-perm="settings_ops">
+          <div class="sac-section-head"><div><h2>Settings</h2><p>{% if is_super_admin %}SOS, maintenance, response times, and notifications{% else %}Operational response times and notifications{% endif %}</p></div></div>
+          <div class="sac-card sac-glass">
+            <form id="settings-form" class="settings-form">
+              {% if is_super_admin %}
+              <label class="toggle-row" data-perm="settings_system"><input type="checkbox" name="sos_enabled" id="sos_enabled"> Enable SOS system</label>
+              <label class="toggle-row" data-perm="settings_system"><input type="checkbox" name="maintenance_mode" id="maintenance_mode"> Maintenance mode (staff admin access only)</label>
+              {% endif %}
+              <label class="toggle-row"><input type="checkbox" name="sms_notifications" id="sms_notifications"> SMS/WhatsApp notifications</label>
+              <div class="form-row"><label>Ambulance response (min)</label><input type="number" name="ambulance_response_time" id="ambulance_response_time" min="1"></div>
+              <div class="form-row"><label>Police response (min)</label><input type="number" name="police_response_time" id="police_response_time" min="1"></div>
+              <div class="form-row"><label>Fire response (min)</label><input type="number" name="fire_response_time" id="fire_response_time" min="1"></div>
+              <div class="form-row"><label>Dashboard refresh (sec)</label><input type="number" name="refresh_interval" id="refresh_interval" min="3"></div>
+              {% if is_super_admin %}
+              <div class="form-row" data-perm="settings_system"><label>Max emergencies / day</label><input type="number" name="max_emergencies_per_day" id="max_emergencies_per_day" min="1"></div>
+              {% endif %}
+              <button type="submit" class="btn-action btn-admin-primary">Save settings</button>
+            </form>
+          </div>
+        </section>
+
+        {% if is_super_admin %}
+        <section id="sec-system" class="sac-section" data-perm="settings_system">
+          <div class="sac-section-head">
+            <div>
+              <h2>System Configuration</h2>
+              <p>Edit and manage all application settings from one place — no source code changes required</p>
+            </div>
+            <div class="sac-head-actions">
+              <button type="button" class="btn-action" id="sys-cfg-reload">Reload</button>
+              <button type="button" class="btn-action btn-admin-primary" id="sys-cfg-save-all">Save all settings</button>
+            </div>
+          </div>
+          <div class="sac-card sac-glass sys-cfg-meta" id="sys-cfg-db-info"></div>
+          <div class="sac-card sac-glass">
+            <div class="sac-shortcuts">
+              <button type="button" data-shortcut="backup" data-perm="backup">Backup &amp; Restore</button>
+              <button type="button" data-shortcut="audit" data-perm="audit">Audit Logs</button>
+              <button type="button" data-section="content">Content CMS</button>
+              <button type="button" data-section="appearance">Appearance</button>
+              <button type="button" data-section="monitoring">System Monitoring</button>
+              <button type="button" data-shortcut="settings">Ops Settings</button>
+            </div>
+          </div>
+          <nav class="sys-cfg-toc" id="sys-cfg-toc" aria-label="Settings sections"></nav>
+          <form id="system-config-form" class="sys-cfg-form">
+            <div id="sys-cfg-groups"></div>
+            <div class="sys-cfg-footer">
+              <button type="submit" class="btn-action btn-admin-primary">Save all settings</button>
+              <p class="hint">Secret fields (SMTP password, API keys) stay blank when already set — leave blank to keep the current value.</p>
+            </div>
           </form>
         </section>
+        {% endif %}
 
-        <!-- Section 5: Emergencies -->
-        <section id="sec-emergencies" class="admin-section">
-          <div class="admin-toolbar">
-            <a href="/api/admin/emergencies/export" class="btn-action btn-admin-primary" download>Export CSV</a>
+        <!-- Emergencies / Dispatch / SOS -->
+        <section id="sec-emergencies" class="sac-section" data-perm="emergencies_view">
+          <div class="sac-section-head">
+            <div><h2>Emergency Management</h2><p>Assign, update status, export, and locate incidents</p></div>
+            <a href="/api/admin/emergencies/export" class="btn-action btn-admin-primary" data-perm="emergencies_export" download>Export CSV</a>
           </div>
-          <div class="table-wrap">
-            <table class="admin-table" id="emergencies-table">
-              <thead>
-                <tr>
-                  <th>ID</th><th>Type</th><th>Location</th><th>Caller</th><th>Phone</th><th>Time</th><th>Status</th><th>Assigned</th><th>Actions</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
+          <div class="sac-card sac-glass">
+            <div class="table-wrap">
+              <table class="admin-table" id="emergencies-table">
+                <thead>
+                  <tr>
+                    <th>ID</th><th>Type</th><th>Location</th><th>Caller</th><th>Phone</th><th>Time</th><th>Status</th><th>Assigned</th><th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
           </div>
         </section>
+        <section id="sec-dispatch" class="sac-section" data-perm="emergencies_view">
+          <div class="sac-section-head"><div><h2>Dispatch Center</h2><p>Use the emergencies table to assign hospital, police, or fire</p></div></div>
+          <div class="sac-card sac-glass"><p class="hint">Open <strong>Emergency Management</strong> to update assignment and status in real time.</p><button type="button" class="btn-admin-primary" data-section="emergencies">Open Emergencies</button></div>
+        </section>
+        <section id="sec-sos" class="sac-section" data-perm="emergencies_view">
+          <div class="sac-section-head"><div><h2>SOS Requests</h2><p>Citizen-originated emergency requests</p></div></div>
+          <div class="sac-card sac-glass"><button type="button" class="btn-admin-primary" data-section="emergencies">View SOS / Emergencies</button></div>
+        </section>
 
-        <!-- Section: Call Center -->
-        <section id="sec-callcenter" class="admin-section">
-          <h2 class="section-title">Call Center Management</h2>
+        <!-- Call Center -->
+        <section id="sec-callcenter" class="sac-section" data-perm="call_center">
+          <div class="sac-section-head"><div><h2>Call Center</h2><p>Operators, queues, and priority settings</p></div></div>
           <div class="stats" id="cc-admin-stats">
             <div class="stat-card"><div class="stat-value" id="cc-st-online">—</div><div class="stat-label">Operators Online</div></div>
             <div class="stat-card"><div class="stat-value" id="cc-st-incoming">—</div><div class="stat-label">Incoming</div></div>
@@ -137,37 +529,36 @@
             <div class="stat-card"><div class="stat-value" id="cc-st-resolved">—</div><div class="stat-label">Resolved Today</div></div>
             <div class="stat-card"><div class="stat-value" id="cc-st-avg">—</div><div class="stat-label">Avg Response (min)</div></div>
           </div>
-          <form id="cc-settings-form" class="settings-form" style="margin-top:16px;">
-            <label class="toggle-row"><input type="checkbox" id="cc_enabled"> Enable Call Center</label>
-            <div class="form-row"><label>Primary phone</label><input type="tel" id="cc_phone_primary" placeholder="+252612000999"></div>
-            <div class="form-row"><label>Secondary phone</label><input type="tel" id="cc_phone_secondary"></div>
-            <div class="form-row"><label>Priority Medical (1=highest)</label><input type="number" id="cc_pri_medical" min="1" max="5" value="1"></div>
-            <div class="form-row"><label>Priority Fire</label><input type="number" id="cc_pri_fire" min="1" max="5" value="1"></div>
-            <div class="form-row"><label>Priority Police</label><input type="number" id="cc_pri_police" min="1" max="5" value="1"></div>
-            <button type="submit" class="btn-action btn-admin-primary">Save Call Center settings</button>
-          </form>
-          <div class="panel-section" style="margin-top:20px;">
-            <h3>Operators</h3>
-            <div id="cc-operators-list"></div>
-            <p class="hint">Create operators via Users → Add user → role <strong>call_center</strong>. Dedicated login: <code>/call-center/login</code></p>
-          </div>
-          <div class="panel-section">
-            <h3>Recent calls</h3>
-            <div class="table-wrap">
-              <table class="admin-table" id="cc-recent-table">
-                <thead>
-                  <tr><th>ID</th><th>Caller</th><th>Phone</th><th>Type</th><th>Operator</th><th>Status</th><th>Start</th></tr>
-                </thead>
-                <tbody></tbody>
-              </table>
+          <div class="sac-card sac-glass">
+            <form id="cc-settings-form" class="settings-form">
+              <label class="toggle-row"><input type="checkbox" id="cc_enabled"> Enable Call Center</label>
+              <div class="form-row"><label>Primary phone</label><input type="tel" id="cc_phone_primary" placeholder="+252612000999"></div>
+              <div class="form-row"><label>Secondary phone</label><input type="tel" id="cc_phone_secondary"></div>
+              <div class="form-row"><label>Priority Medical (1=highest)</label><input type="number" id="cc_pri_medical" min="1" max="5" value="1"></div>
+              <div class="form-row"><label>Priority Fire</label><input type="number" id="cc_pri_fire" min="1" max="5" value="1"></div>
+              <div class="form-row"><label>Priority Police</label><input type="number" id="cc_pri_police" min="1" max="5" value="1"></div>
+              <button type="submit" class="btn-action btn-admin-primary">Save Call Center settings</button>
+            </form>
+            <div class="panel-section" style="margin-top:20px;">
+              <h3>Operators</h3>
+              <div id="cc-operators-list"></div>
+              <p class="hint">Call center operator accounts are managed by Super Admin. Login: <code>/call-center/login</code></p>
+            </div>
+            <div class="panel-section">
+              <h3>Recent calls</h3>
+              <div class="table-wrap">
+                <table class="admin-table" id="cc-recent-table">
+                  <thead><tr><th>ID</th><th>Caller</th><th>Phone</th><th>Type</th><th>Operator</th><th>Status</th><th>Start</th></tr></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
             </div>
           </div>
         </section>
 
-        <!-- Section: AI Intelligence -->
-        <section id="sec-ai" class="admin-section">
-          <h2 class="section-title">AI Intelligence</h2>
-          <p class="hint">Decision-support metrics only. The AI never auto-dispatches — operators approve recommendations.</p>
+        <!-- AI -->
+        <section id="sec-ai" class="sac-section" data-perm="ai">
+          <div class="sac-section-head"><div><h2>AI Intelligence</h2><p>Decision-support metrics only — AI never auto-dispatches</p></div></div>
           <div class="stats" id="ai-admin-stats">
             <div class="stat-card"><div class="stat-value" id="ai-st-today">—</div><div class="stat-label">AI Decisions Today</div></div>
             <div class="stat-card"><div class="stat-value" id="ai-st-conf">—</div><div class="stat-label">Avg Confidence</div></div>
@@ -176,36 +567,273 @@
             <div class="stat-card"><div class="stat-value" id="ai-st-rejected">—</div><div class="stat-label">Rejected</div></div>
             <div class="stat-card"><div class="stat-value" id="ai-st-manual">—</div><div class="stat-label">Manual Selections</div></div>
           </div>
-          <p style="margin-top:12px;color:#64748B;font-size:0.9rem;">Provider: <strong id="ai-provider-label">rule_based</strong> · Enabled: <strong id="ai-enabled-label">—</strong></p>
+          <p class="hint">Provider: <strong id="ai-provider-label">rule_based</strong> · Enabled: <strong id="ai-enabled-label">—</strong></p>
         </section>
 
-        <!-- Section 6: Reports -->
-        <section id="sec-reports" class="admin-section">
-          <div class="charts-grid">
-            <div class="panel-section">
-              <h3>Emergencies by type</h3>
-              <div class="bar-chart" id="chart-type"></div>
+        <!-- Executive Analytics (Power BI style) -->
+        <section id="sec-reports" class="sac-section bi-dash" data-perm="reports">
+          <div class="bi-head">
+            <div class="bi-head-left">
+              <div class="bi-badge">BI</div>
+              <div>
+                <h2>Executive Analytics</h2>
+                <p>National emergency intelligence · decision-ready insights</p>
+              </div>
             </div>
-            <div class="panel-section">
-              <h3>Top locations</h3>
-              <div class="bar-chart" id="chart-location"></div>
+            <div class="bi-head-right">
+              <span class="bi-live"><i></i> Live</span>
+              <span class="bi-updated" id="bi-updated">Last updated: —</span>
+              <button type="button" class="bi-btn" id="bi-refresh">Refresh</button>
+              <button type="button" class="bi-btn bi-btn-primary" id="bi-export">Export</button>
             </div>
           </div>
-          <div class="panel-section">
-            <h3>Summary</h3>
-            <p id="reports-summary">Loading...</p>
+
+          <div class="bi-filters sac-glass">
+            <div class="bi-filter">
+              <label for="bi-filter-days">Date range</label>
+              <select id="bi-filter-days">
+                <option value="7" selected>Last 7 days</option>
+                <option value="14">Last 14 days</option>
+                <option value="30">Last 30 days</option>
+                <option value="90">Last 90 days</option>
+              </select>
+            </div>
+            <div class="bi-filter">
+              <label for="bi-filter-region">Region</label>
+              <select id="bi-filter-region"><option value="">All regions</option></select>
+            </div>
+            <div class="bi-filter">
+              <label for="bi-filter-type">Emergency type</label>
+              <select id="bi-filter-type"><option value="">All types</option></select>
+            </div>
+            <div class="bi-filter">
+              <label for="bi-filter-status">Status</label>
+              <select id="bi-filter-status">
+                <option value="">All statuses</option>
+                <option value="active">Active</option>
+                <option value="resolved">Resolved</option>
+              </select>
+            </div>
+            <div class="bi-filter-actions">
+              <button type="button" class="bi-btn bi-btn-primary" id="bi-apply">Apply</button>
+              <button type="button" class="bi-btn" id="bi-reset">Reset</button>
+            </div>
+            <div class="bi-range" id="bi-range">—</div>
+          </div>
+
+          <div class="bi-kpi-grid">
+            <article class="bi-kpi sac-glass">
+              <div class="bi-kpi-label">Total Emergencies</div>
+              <div class="bi-kpi-value" id="bi-kpi-total">—</div>
+              <div class="bi-kpi-sub" id="bi-kpi-total-sub">In selected range</div>
+            </article>
+            <article class="bi-kpi sac-glass">
+              <div class="bi-kpi-label">Active Now</div>
+              <div class="bi-kpi-value accent-orange" id="bi-kpi-active">—</div>
+              <div class="bi-kpi-sub">In progress / pending</div>
+            </article>
+            <article class="bi-kpi sac-glass">
+              <div class="bi-kpi-label">Resolved</div>
+              <div class="bi-kpi-value accent-green" id="bi-kpi-resolved">—</div>
+              <div class="bi-kpi-sub" id="bi-kpi-rate">Resolution rate —</div>
+            </article>
+            <article class="bi-kpi sac-glass">
+              <div class="bi-kpi-label">Avg Response</div>
+              <div class="bi-kpi-value accent-cyan" id="bi-kpi-avg">—</div>
+              <div class="bi-kpi-sub">Dispatch latency</div>
+            </article>
+            <article class="bi-kpi sac-glass">
+              <div class="bi-kpi-label">Hospitals Online</div>
+              <div class="bi-kpi-value accent-purple" id="bi-kpi-hospitals">—</div>
+              <div class="bi-kpi-sub">Operational capacity</div>
+            </article>
+            <article class="bi-kpi sac-glass">
+              <div class="bi-kpi-label">Ambulances</div>
+              <div class="bi-kpi-value accent-blue" id="bi-kpi-ambulances">—</div>
+              <div class="bi-kpi-sub">Available / fleet</div>
+            </article>
+          </div>
+
+          <div class="bi-row bi-row-3">
+            <article class="bi-card sac-glass">
+              <div class="bi-card-head"><h3>Emergencies by Type</h3><span class="bi-chip">Doughnut</span></div>
+              <div class="bi-chart-box"><canvas id="bi-chart-donut"></canvas></div>
+            </article>
+            <article class="bi-card sac-glass bi-span-2">
+              <div class="bi-card-head"><h3>Emergency Trend</h3><span class="bi-chip">Line</span></div>
+              <div class="bi-chart-box bi-chart-tall"><canvas id="bi-chart-line"></canvas></div>
+            </article>
+          </div>
+
+          <div class="bi-row bi-row-2">
+            <article class="bi-card sac-glass">
+              <div class="bi-card-head"><h3>Top Regions</h3><span class="bi-chip">Bar</span></div>
+              <div class="bi-chart-box bi-chart-tall"><canvas id="bi-chart-bar"></canvas></div>
+            </article>
+            <article class="bi-card sac-glass">
+              <div class="bi-card-head"><h3>Status by Day</h3><span class="bi-chip">Stacked</span></div>
+              <div class="bi-chart-box bi-chart-tall"><canvas id="bi-chart-stacked"></canvas></div>
+            </article>
+          </div>
+
+          <div class="bi-row bi-row-2">
+            <article class="bi-card sac-glass">
+              <div class="bi-card-head"><h3>Status Mix</h3><span class="bi-chip">Doughnut</span></div>
+              <div class="bi-chart-box"><canvas id="bi-chart-status"></canvas></div>
+            </article>
+            <article class="bi-card sac-glass">
+              <div class="bi-card-head"><h3>Recent Cases</h3><span class="bi-chip">Table</span></div>
+              <div class="bi-table-wrap">
+                <table class="bi-table" id="bi-recent-table">
+                  <thead>
+                    <tr><th>ID</th><th>Type</th><th>Region</th><th>Status</th><th>Time</th></tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </article>
           </div>
         </section>
 
-        <!-- Section 7: Appearance -->
-        <section id="sec-appearance" class="admin-section">
-          <form id="appearance-form" class="settings-form">
-            <div class="form-row"><label>Hospital color</label><input type="color" name="color_hospital" id="color_hospital"></div>
-            <div class="form-row"><label>Police color</label><input type="color" name="color_police" id="color_police"></div>
-            <div class="form-row"><label>Fire color</label><input type="color" name="color_fire" id="color_fire"></div>
-            <label class="toggle-row"><input type="checkbox" name="dark_mode" id="dark_mode"> Dark mode (stored setting)</label>
-            <button type="submit" class="btn-action btn-admin-primary">Save appearance</button>
-          </form>
+        <!-- Appearance -->
+        <section id="sec-appearance" class="sac-section" data-perm="appearance">
+          <div class="sac-section-head"><div><h2>Appearance</h2><p>Role colors and stored dark-mode preference</p></div></div>
+          <div class="sac-card sac-glass">
+            <form id="appearance-form" class="settings-form">
+              <div class="form-row"><label>Hospital color</label><input type="color" name="color_hospital" id="color_hospital"></div>
+              <div class="form-row"><label>Police color</label><input type="color" name="color_police" id="color_police"></div>
+              <div class="form-row"><label>Fire color</label><input type="color" name="color_fire" id="color_fire"></div>
+              <label class="toggle-row"><input type="checkbox" name="dark_mode" id="dark_mode"> Dark mode (stored setting)</label>
+              <button type="submit" class="btn-action btn-admin-primary">Save appearance</button>
+            </form>
+          </div>
+        </section>
+
+        {% if is_super_admin %}
+        <!-- Audit -->
+        <section id="sec-audit" class="sac-section" data-perm="audit">
+          <div class="sac-section-head"><div><h2>Audit Logs</h2><p>Administrator actions across the platform</p></div></div>
+          <div class="sac-card sac-glass">
+            <div class="table-wrap">
+              <table class="admin-table" id="audit-table">
+                <thead><tr><th>Administrator</th><th>Action</th><th>Entity</th><th>Date / Time</th><th>IP</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Backup -->
+        <section id="sec-backup" class="sac-section" data-perm="backup">
+          <div class="sac-section-head"><div><h2>Backup &amp; Restore</h2><p>Create a timestamped database backup</p></div></div>
+          <div class="sac-card sac-glass">
+            <p class="hint">Backups are written under the application database backups folder. Restore is performed by an administrator from server files.</p>
+            <button type="button" class="btn-admin-primary" id="btn-backup-now">Backup Database Now</button>
+          </div>
+        </section>
+        {% endif %}
+
+        <!-- Monitoring -->
+        <section id="sec-monitoring" class="sac-section" data-perm="monitoring">
+          <div class="sac-section-head"><div><h2>System Monitoring</h2><p>Service health and infrastructure status</p></div></div>
+          <div class="sac-card sac-glass">
+            <div class="sac-health-grid" id="sac-health-grid-clone"></div>
+            <p class="hint" style="margin-top:12px;">Live health cards also appear on the Command Center dashboard.</p>
+          </div>
+        </section>
+
+        <!-- My Profile (self-only) -->
+        <section id="sec-profile" class="sac-section">
+          <div class="sac-section-head">
+            <div>
+              <h2>My Profile</h2>
+              <p>Manage your account — you can only edit your own profile here</p>
+            </div>
+          </div>
+
+          <div class="sac-profile-layout">
+            <div class="sac-card sac-glass sac-profile-hero-card">
+              <div class="sac-profile-hero">
+                <div class="sac-profile-avatar-lg" id="ap-avatar">{{ (user.name or 'A')[:1]|upper }}</div>
+                <div class="sac-profile-hero-meta">
+                  <h3 id="ap-display-name">{{ user.name }}</h3>
+                  <p id="ap-display-email">{{ user.email }}</p>
+                  <span class="sac-profile-role-chip" id="ap-role-chip">{% if is_super_admin %}Super Administrator{% else %}Administrator{% endif %}</span>
+                  <label class="sac-photo-btn">
+                    Change photo
+                    <input type="file" id="ap-photo-input" accept="image/*" hidden>
+                  </label>
+                  <button type="button" class="sac-link-btn" id="ap-photo-remove" hidden>Remove photo</button>
+                </div>
+              </div>
+              <dl class="sac-profile-meta">
+                <div><dt>Status</dt><dd id="ap-status">—</dd></div>
+                <div><dt>Last login</dt><dd id="ap-last-login">—</dd></div>
+                <div><dt>Member since</dt><dd id="ap-created">—</dd></div>
+              </dl>
+            </div>
+
+            <div class="sac-card sac-glass">
+              <div class="sac-card-head"><h3>Personal information</h3></div>
+              <form id="ap-info-form" class="settings-form">
+                <div class="form-row"><label for="ap-name">Full name</label><input type="text" id="ap-name" required autocomplete="name"></div>
+                <div class="form-row"><label for="ap-email">Email address</label><input type="email" id="ap-email" required autocomplete="email"></div>
+                <div class="form-row"><label for="ap-phone">Phone number</label><input type="tel" id="ap-phone" autocomplete="tel" placeholder="+252…"></div>
+                <p class="hint">Role and account status can only be changed by Super Admin in Users Management.</p>
+                <button type="submit" class="btn-action btn-admin-primary">Save profile</button>
+                <span class="sac-form-msg" id="ap-info-msg" hidden></span>
+              </form>
+            </div>
+
+            <div class="sac-card sac-glass">
+              <div class="sac-card-head"><h3>Change password</h3></div>
+              <form id="ap-password-form" class="settings-form" autocomplete="off">
+                <div class="form-row"><label for="ap-current-password">Current password</label><input type="password" id="ap-current-password" required autocomplete="current-password"></div>
+                <div class="form-row"><label for="ap-new-password">New password</label><input type="password" id="ap-new-password" required autocomplete="new-password" minlength="6"></div>
+                <div class="form-row"><label for="ap-confirm-password">Confirm new password</label><input type="password" id="ap-confirm-password" required autocomplete="new-password" minlength="6"></div>
+                <button type="submit" class="btn-action btn-admin-primary">Update password</button>
+                <span class="sac-form-msg" id="ap-password-msg" hidden></span>
+              </form>
+            </div>
+
+            <div class="sac-card sac-glass">
+              <div class="sac-card-head"><h3>Account settings</h3></div>
+              <form id="ap-settings-form" class="settings-form">
+                <label class="toggle-row">
+                  <input type="checkbox" id="ap-notify-sos">
+                  Email me when a new SOS is received
+                </label>
+                <label class="toggle-row">
+                  <input type="checkbox" id="ap-notify-dispatch">
+                  Email me on dispatch updates
+                </label>
+                <p class="hint">These preferences apply only to your account.</p>
+                <button type="submit" class="btn-action btn-admin-primary">Save settings</button>
+                <span class="sac-form-msg" id="ap-settings-msg" hidden></span>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- Help -->
+        <section id="sec-help" class="sac-section">
+          <div class="sac-section-head"><div><h2>Help &amp; Support</h2><p>{% if is_super_admin %}Super Admin guidance{% else %}Admin operations guide{% endif %}</p></div></div>
+          <div class="sac-card sac-glass">
+            <ul class="hint">
+              {% if is_super_admin %}
+              <li>You have <strong>full system access</strong>: Admin accounts, backup, audit logs, maintenance, and platform settings.</li>
+              <li>Use <strong>+ Create staff</strong> to add Admin, Hospital, Police, or Fire. Use <strong>+ Add user</strong> for citizens.</li>
+              <li>Use <strong>Backup &amp; Restore</strong> before major configuration changes.</li>
+              {% else %}
+              <li>Your role is <strong>Admin (limited)</strong>. You can manage citizens, hospitals, police, fire, call center, emergencies, reports, and operational settings.</li>
+              <li>Admin accounts, backup, audit logs, and system kill-switches are Super Admin only and are hidden from this interface.</li>
+              {% endif %}
+              <li>Use <strong>My Profile</strong> to update your name, email, phone, photo, password, and notification preferences. You can only edit your own account there.</li>
+              <li>Use <strong>Emergency Management</strong> to assign units and update status.</li>
+              <li>Use <strong>AI Intelligence</strong> for recommendation metrics — operators still approve dispatch.</li>
+              <li>Hotline and Call Center phones are managed under Call Center settings.</li>
+            </ul>
+          </div>
         </section>
       </div>
     </div>
@@ -222,421 +850,29 @@
     </div>
   </div>
 
+  <script type="application/json" id="admin-content-defaults">{{ content | tojson }}</script>
+  <script type="application/json" id="admin-runtime-config">{{ {"user_name": user.name, "user_id": user.id, "app_name": content.app_name, "role": admin_role, "is_super_admin": is_super_admin, "permissions": admin_permissions} | tojson }}</script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="{{ url_for('static', filename='js/location.js') }}"></script>
-  {# JSON payload kept outside JS so editors don't treat Jinja as broken syntax #}
-  <script type="application/json" id="admin-content-defaults">{{ content | tojson }}</script>
+  <script src="{{ url_for('static', filename='js/admin_command.js') }}"></script>
   <script>
+    // Mirror health grid into monitoring section when overview loads
     (function () {
-      var defaultsEl = document.getElementById("admin-content-defaults");
-      const DEFAULTS = defaultsEl ? JSON.parse(defaultsEl.textContent) : {};
-      var emergenciesCache = {};
-
-      function api(url, opts) {
-        return fetch(url, Object.assign({ headers: { "Content-Type": "application/json" } }, opts || {}))
-          .then(function (r) { return r.json(); });
-      }
-
-      function fmtTime(iso) {
-        if (!iso) return "—";
-        try { return new Date(iso).toLocaleString(); } catch (e) { return iso; }
-      }
-
-      function showSection(name) {
-        document.querySelectorAll(".admin-section").forEach(function (s) {
-          s.classList.toggle("active", s.id === "sec-" + name);
-        });
-        document.querySelectorAll(".admin-nav a").forEach(function (a) {
-          a.classList.toggle("active", a.getAttribute("data-section") === name);
-        });
-      }
-
-      document.querySelectorAll(".admin-nav a").forEach(function (a) {
-        a.addEventListener("click", function (e) {
-          e.preventDefault();
-          showSection(a.getAttribute("data-section"));
-          if (a.getAttribute("data-section") === "overview") loadStats();
-          if (a.getAttribute("data-section") === "content") loadContentEditor();
-          if (a.getAttribute("data-section") === "users") loadUsers();
-          if (a.getAttribute("data-section") === "settings") loadSettingsForm();
-          if (a.getAttribute("data-section") === "emergencies") loadEmergencies();
-          if (a.getAttribute("data-section") === "callcenter") loadCallCenter();
-          if (a.getAttribute("data-section") === "ai") loadAiIntelligence();
-          if (a.getAttribute("data-section") === "reports") loadReports();
-          if (a.getAttribute("data-section") === "appearance") loadAppearance();
+      var obs = new MutationObserver(function () {
+        var src = document.getElementById("sac-health-grid");
+        var dst = document.getElementById("sac-health-grid-clone");
+        if (src && dst) dst.innerHTML = src.innerHTML;
+      });
+      var src = document.getElementById("sac-health-grid");
+      if (src) obs.observe(src, { childList: true, subtree: true });
+      document.querySelectorAll("[data-section]").forEach(function (el) {
+        el.addEventListener("click", function (e) {
+          if (!el.closest(".sac-nav") && el.hasAttribute("data-section")) {
+            /* handled in admin_command for nav; allow shortcut buttons in content */
+          }
         });
       });
-
-      function loadAiIntelligence() {
-        api("/api/admin/ai/stats").then(function (d) {
-          if (!d.success) return;
-          var s = d.stats || {};
-          document.getElementById("ai-st-today").textContent = s.decisions_today != null ? s.decisions_today : "—";
-          document.getElementById("ai-st-conf").textContent = s.average_confidence != null
-            ? Math.round((s.average_confidence || 0) * 100) + "%"
-            : "—";
-          document.getElementById("ai-st-improve").textContent = s.approval_rate_pct != null ? s.approval_rate_pct + "%" : "—";
-          document.getElementById("ai-st-approved").textContent = s.approved_recommendations != null ? s.approved_recommendations : "—";
-          document.getElementById("ai-st-rejected").textContent = s.rejected_recommendations != null ? s.rejected_recommendations : "—";
-          document.getElementById("ai-st-manual").textContent = s.manual_selections != null ? s.manual_selections : "—";
-          document.getElementById("ai-provider-label").textContent = d.ai_provider || "rule_based";
-          document.getElementById("ai-enabled-label").textContent = d.ai_enabled ? "Yes" : "No";
-        });
-      }
-
-      function loadCallCenter() {
-        api("/api/admin/call-center/stats").then(function (d) {
-          if (!d.success) return;
-          var s = d.stats || {};
-          document.getElementById("cc-st-online").textContent = s.operators_online;
-          document.getElementById("cc-st-incoming").textContent = s.incoming_calls;
-          document.getElementById("cc-st-waiting").textContent = s.calls_waiting;
-          document.getElementById("cc-st-progress").textContent = s.calls_in_progress;
-          document.getElementById("cc-st-resolved").textContent = s.resolved_today;
-          document.getElementById("cc-st-avg").textContent = s.avg_response_minutes;
-          var st = d.settings || {};
-          document.getElementById("cc_enabled").checked = !!st.enabled;
-          document.getElementById("cc_phone_primary").value = st.phone_primary || "";
-          document.getElementById("cc_phone_secondary").value = st.phone_secondary || "";
-          var ops = document.getElementById("cc-operators-list");
-          ops.innerHTML = (d.operators || []).map(function (o) {
-            return "<span class='role-pill'>" + o.name + " · " + o.email + " · " + o.status + "</span>";
-          }).join(" ") || "<p>No operators yet.</p>";
-          var tbody = document.querySelector("#cc-recent-table tbody");
-          tbody.innerHTML = "";
-          (d.recent_calls || []).forEach(function (c) {
-            var tr = document.createElement("tr");
-            tr.innerHTML =
-              "<td>#" + c.id + "</td><td>" + (c.caller_name || "") + "</td><td>" + (c.phone || "") + "</td>" +
-              "<td>" + ((c.emergency_types || []).join(", ") || c.emergency_type || "—") + "</td>" +
-              "<td>" + (c.operator_name || "—") + "</td><td>" + (c.status || "") + "</td><td>" + fmtTime(c.start_time) + "</td>";
-            tbody.appendChild(tr);
-          });
-        });
-        api("/api/admin/settings").then(function (s) {
-          if (s.call_center_priority_medical != null) document.getElementById("cc_pri_medical").value = s.call_center_priority_medical;
-          if (s.call_center_priority_fire != null) document.getElementById("cc_pri_fire").value = s.call_center_priority_fire;
-          if (s.call_center_priority_police != null) document.getElementById("cc_pri_police").value = s.call_center_priority_police;
-        });
-      }
-
-      document.getElementById("cc-settings-form").onsubmit = function (e) {
-        e.preventDefault();
-        api("/api/admin/call-center/settings", {
-          method: "POST",
-          body: JSON.stringify({
-            enabled: document.getElementById("cc_enabled").checked,
-            phone_primary: document.getElementById("cc_phone_primary").value,
-            phone_secondary: document.getElementById("cc_phone_secondary").value,
-            priority_medical: parseInt(document.getElementById("cc_pri_medical").value, 10),
-            priority_fire: parseInt(document.getElementById("cc_pri_fire").value, 10),
-            priority_police: parseInt(document.getElementById("cc_pri_police").value, 10)
-          })
-        }).then(function () { alert("Call Center settings saved."); loadCallCenter(); });
-      };
-      function loadStats() {
-        api("/api/admin/stats").then(function (d) {
-          document.getElementById("st-users").textContent = d.total_users;
-          document.getElementById("st-today").textContent = d.emergencies_today;
-          document.getElementById("st-week").textContent = d.emergencies_week;
-          document.getElementById("st-total").textContent = d.emergencies_total;
-          document.getElementById("st-avg").textContent = d.avg_response_time + " min";
-          document.getElementById("st-blocked").textContent = d.blocked_users;
-          var rb = document.getElementById("role-breakdown");
-          rb.innerHTML = "";
-          Object.keys(d.users_by_role || {}).forEach(function (role) {
-            var span = document.createElement("span");
-            span.className = "role-pill";
-            span.textContent = role + ": " + d.users_by_role[role];
-            rb.appendChild(span);
-          });
-        });
-      }
-
-      function loadContentEditor() {
-        api("/api/admin/content").then(function (content) {
-          var box = document.getElementById("content-editor");
-          box.innerHTML = "";
-          Object.keys(content).forEach(function (key) {
-            var row = document.createElement("div");
-            row.className = "content-row";
-            row.innerHTML =
-              '<label>' + key + '</label>' +
-              '<input type="text" data-key="' + key + '" value="' + (content[key] || "").replace(/"/g, "&quot;") + '">' +
-              '<button type="button" class="btn-sm btn-save-content" data-key="' + key + '">Save</button>' +
-              '<button type="button" class="btn-sm btn-reset-content" data-key="' + key + '">Reset</button>';
-            box.appendChild(row);
-          });
-          box.querySelectorAll(".btn-save-content").forEach(function (btn) {
-            btn.onclick = function () {
-              var key = btn.getAttribute("data-key");
-              var val = box.querySelector('input[data-key="' + key + '"]').value;
-              api("/api/admin/content/update", {
-                method: "POST",
-                body: JSON.stringify({ key: key, value: val })
-              }).then(function () { alert("Saved: " + key); });
-            };
-          });
-          box.querySelectorAll(".btn-reset-content").forEach(function (btn) {
-            btn.onclick = function () {
-              var key = btn.getAttribute("data-key");
-              api("/api/admin/content/reset", {
-                method: "POST",
-                body: JSON.stringify({ key: key })
-              }).then(function (r) {
-                box.querySelector('input[data-key="' + key + '"]').value = r.content[key] || DEFAULTS[key] || "";
-              });
-            };
-          });
-        });
-      }
-
-      function loadUsers() {
-        var q = document.getElementById("user-search").value;
-        var role = document.getElementById("user-role-filter").value;
-        var url = "/api/admin/users?q=" + encodeURIComponent(q) + "&role=" + encodeURIComponent(role);
-        fetch(url).then(function (r) { return r.json(); }).then(function (data) {
-          var tbody = document.querySelector("#users-table tbody");
-          tbody.innerHTML = "";
-          (data.users || []).forEach(function (u) {
-            function esc(s) {
-              var d = document.createElement("div");
-              d.textContent = s == null ? "" : String(s);
-              return d.innerHTML;
-            }
-            var tr = document.createElement("tr");
-            tr.innerHTML =
-              "<td>" + esc(u.id) + "</td><td>" + esc(u.name) + "</td><td>" + esc(u.email) + "</td><td>" + esc(u.phone) + "</td>" +
-              "<td>" + esc(u.role) + "</td><td>" + esc(u.status) + "</td><td>" + esc(fmtTime(u.created_at)) + "</td><td>" + esc(fmtTime(u.last_login)) + "</td>" +
-              '<td class="actions-cell">' +
-              '<button class="btn-sm" data-act="edit" data-id="' + u.id + '">Edit</button>' +
-              '<button class="btn-sm" data-act="block" data-id="' + u.id + '">Block</button>' +
-              '<button class="btn-sm" data-act="delete" data-id="' + u.id + '">Delete</button>' +
-              '<button class="btn-sm" data-act="activity" data-id="' + u.id + '">History</button>' +
-              "</td>";
-            tbody.appendChild(tr);
-          });
-          bindUserActions(data.users || []);
-        });
-      }
-
-      function bindUserActions(users) {
-        document.querySelectorAll("#users-table [data-act]").forEach(function (btn) {
-          btn.onclick = function () {
-            var id = parseInt(btn.getAttribute("data-id"), 10);
-            var act = btn.getAttribute("data-act");
-            var u = users.find(function (x) { return x.id === id; });
-            if (act === "block") {
-              api("/api/admin/users/block", { method: "POST", body: JSON.stringify({ id: id }) })
-                .then(function () { loadUsers(); });
-            } else if (act === "delete") {
-              if (confirm("Delete user permanently?")) {
-                api("/api/admin/users/delete", { method: "POST", body: JSON.stringify({ id: id }) })
-                  .then(function () { loadUsers(); });
-              }
-            } else if (act === "activity" && u) {
-              var html = (u.activity || []).map(function (a) {
-                return "<li>" + a.action + " — " + fmtTime(a.timestamp) + "</li>";
-              }).join("") || "<li>No activity</li>";
-              openModal("Activity: " + u.name, "<ul>" + html + "</ul>");
-            } else if (act === "edit" && u) {
-              openModal("Edit user", 
-                '<input id="eu-name" value="' + u.name + '" placeholder="Name"><br>' +
-                '<input id="eu-email" value="' + u.email + '" placeholder="Email"><br>' +
-                '<input id="eu-phone" value="' + u.phone + '" placeholder="Phone"><br>' +
-                '<select id="eu-role"><option value="citizen">citizen</option><option value="hospital">hospital</option><option value="police">police</option><option value="fire">fire</option><option value="call_center">call_center</option><option value="admin">admin</option></select>'
-              );
-              document.getElementById("eu-role").value = u.role;
-              document.getElementById("modal-save").onclick = function () {
-                api("/api/admin/users/edit", {
-                  method: "POST",
-                  body: JSON.stringify({
-                    id: id,
-                    name: document.getElementById("eu-name").value,
-                    email: document.getElementById("eu-email").value,
-                    phone: document.getElementById("eu-phone").value,
-                    role: document.getElementById("eu-role").value
-                  })
-                }).then(function () { closeModal(); loadUsers(); });
-              };
-            }
-          };
-        });
-      }
-
-      document.getElementById("user-search").addEventListener("input", loadUsers);
-      document.getElementById("user-role-filter").addEventListener("change", loadUsers);
-
-      document.getElementById("btn-add-user").onclick = function () {
-        openModal("Add user",
-          '<input id="nu-name" placeholder="Full name"><br>' +
-          '<input id="nu-email" placeholder="Email"><br>' +
-          '<input id="nu-phone" placeholder="Phone (0612345678)"><br>' +
-          '<input id="nu-pass" placeholder="Password" value="123456"><br>' +
-          '<select id="nu-role"><option value="citizen">citizen</option><option value="hospital">hospital</option><option value="police">police</option><option value="fire">fire</option><option value="call_center">call_center</option></select>'
-        );
-        document.getElementById("modal-save").onclick = function () {
-          api("/api/admin/users/create", {
-            method: "POST",
-            body: JSON.stringify({
-              name: document.getElementById("nu-name").value,
-              email: document.getElementById("nu-email").value,
-              phone: document.getElementById("nu-phone").value,
-              password: document.getElementById("nu-pass").value,
-              role: document.getElementById("nu-role").value
-            })
-          }).then(function () { closeModal(); loadUsers(); });
-        };
-      };
-
-      function loadSettingsForm() {
-        api("/api/admin/settings").then(function (s) {
-          ["sos_enabled", "maintenance_mode", "sms_notifications"].forEach(function (k) {
-            document.getElementById(k).checked = !!s[k];
-          });
-          ["ambulance_response_time", "police_response_time", "fire_response_time", "refresh_interval", "max_emergencies_per_day"].forEach(function (k) {
-            document.getElementById(k).value = s[k];
-          });
-        });
-      }
-
-      document.getElementById("settings-form").onsubmit = function (e) {
-        e.preventDefault();
-        var payload = {
-          sos_enabled: document.getElementById("sos_enabled").checked,
-          maintenance_mode: document.getElementById("maintenance_mode").checked,
-          sms_notifications: document.getElementById("sms_notifications").checked,
-          ambulance_response_time: parseInt(document.getElementById("ambulance_response_time").value, 10),
-          police_response_time: parseInt(document.getElementById("police_response_time").value, 10),
-          fire_response_time: parseInt(document.getElementById("fire_response_time").value, 10),
-          refresh_interval: parseInt(document.getElementById("refresh_interval").value, 10),
-          max_emergencies_per_day: parseInt(document.getElementById("max_emergencies_per_day").value, 10)
-        };
-        api("/api/admin/settings/update", { method: "POST", body: JSON.stringify(payload) })
-          .then(function () { alert("Settings saved."); });
-      };
-
-      function loadEmergencies() {
-        api("/api/admin/emergencies").then(function (data) {
-          var tbody = document.querySelector("#emergencies-table tbody");
-          tbody.innerHTML = "";
-          (data.emergencies || []).forEach(function (em) {
-            emergenciesCache[em.id] = em;
-            var tr = document.createElement("tr");
-            tr.innerHTML =
-              "<td>" + em.id + "</td><td>" + em.type + "</td><td>" + em.location + "</td>" +
-              "<td>" + (em.caller_name || "") + "</td><td>" + (em.phone || "") + "</td><td>" + fmtTime(em.timestamp) + "</td>" +
-              '<td><select data-id="' + em.id + '" class="em-status">' +
-              ["pending","dispatched","in_progress","completed","cancelled","resolved"].map(function (s) {
-                return '<option value="' + s + '"' + (em.status === s ? " selected" : "") + ">" + s + "</option>";
-              }).join("") + "</select></td>" +
-              '<td><select data-id="' + em.id + '" class="em-assign">' +
-              ["hospital","police","fire"].map(function (s) {
-                return '<option value="' + s + '"' + ((em.assigned_to || "") === s ? " selected" : "") + ">" + s + "</option>";
-              }).join("") + "</select></td>" +
-              '<td class="actions-cell">' +
-              '<button class="btn-sm" data-call="' + (em.phone || "") + '">Call</button>' +
-              '<button class="btn-sm btn-em-map" data-id="' + em.id + '">Map</button>' +
-              '<button class="btn-sm em-del" data-id="' + em.id + '">Delete</button>' +
-              "</td>";
-            tbody.appendChild(tr);
-          });
-          tbody.querySelectorAll(".em-status, .em-assign").forEach(function (sel) {
-            sel.onchange = function () {
-              var id = parseInt(sel.getAttribute("data-id"), 10);
-              var row = sel.closest("tr");
-              api("/api/admin/emergencies/update", {
-                method: "POST",
-                body: JSON.stringify({
-                  id: id,
-                  status: row.querySelector(".em-status").value,
-                  assigned_to: row.querySelector(".em-assign").value
-                })
-              });
-            };
-          });
-          tbody.querySelectorAll("[data-call]").forEach(function (b) {
-            b.onclick = function () {
-              var p = b.getAttribute("data-call");
-              if (p && p !== "Not provided") window.location.href = "tel:" + p.replace(/\s/g, "");
-            };
-          });
-          tbody.querySelectorAll(".btn-em-map").forEach(function (b) {
-            b.onclick = function () {
-              var em = emergenciesCache[b.getAttribute("data-id")];
-              if (em && window.EmergencyLocation) EmergencyLocation.showEmergencyOnMap(em);
-            };
-          });
-          tbody.querySelectorAll(".em-del").forEach(function (b) {
-            b.onclick = function () {
-              if (confirm("Delete emergency?")) {
-                api("/api/admin/emergencies/delete", { method: "POST", body: JSON.stringify({ id: parseInt(b.getAttribute("data-id"), 10) }) })
-                  .then(loadEmergencies);
-              }
-            };
-          });
-        });
-      }
-
-      function renderBarChart(containerId, dataObj) {
-        var el = document.getElementById(containerId);
-        el.innerHTML = "";
-        var max = Math.max.apply(null, Object.values(dataObj).concat([1]));
-        Object.keys(dataObj).forEach(function (label) {
-          var row = document.createElement("div");
-          row.className = "chart-row";
-          var pct = Math.round((dataObj[label] / max) * 100);
-          row.innerHTML = '<span class="chart-label">' + label + '</span><div class="chart-bar-wrap"><div class="chart-bar" style="width:' + pct + '%"></div></div><span class="chart-val">' + dataObj[label] + "</span>";
-          el.appendChild(row);
-        });
-      }
-
-      function loadReports() {
-        api("/api/admin/stats").then(function (d) {
-          renderBarChart("chart-type", d.by_type || {});
-          renderBarChart("chart-location", d.by_location || {});
-          document.getElementById("reports-summary").textContent =
-            "Total emergencies: " + d.emergencies_total + ". This week: " + d.emergencies_week + ". Today: " + d.emergencies_today + ".";
-        });
-      }
-
-      function loadAppearance() {
-        api("/api/admin/settings").then(function (s) {
-          document.getElementById("color_hospital").value = s.color_hospital || "#2E7D32";
-          document.getElementById("color_police").value = s.color_police || "#1565C0";
-          document.getElementById("color_fire").value = s.color_fire || "#C62828";
-          document.getElementById("dark_mode").checked = !!s.dark_mode;
-        });
-      }
-
-      document.getElementById("appearance-form").onsubmit = function (e) {
-        e.preventDefault();
-        api("/api/admin/settings/update", {
-          method: "POST",
-          body: JSON.stringify({
-            color_hospital: document.getElementById("color_hospital").value,
-            color_police: document.getElementById("color_police").value,
-            color_fire: document.getElementById("color_fire").value,
-            dark_mode: document.getElementById("dark_mode").checked
-          })
-        }).then(function () { alert("Appearance saved."); });
-      };
-
-      function openModal(title, body) {
-        document.getElementById("modal-title").textContent = title;
-        document.getElementById("modal-body").innerHTML = body;
-        document.getElementById("modal").classList.remove("hidden");
-      }
-      function closeModal() {
-        document.getElementById("modal").classList.add("hidden");
-      }
-      document.getElementById("modal-cancel").onclick = closeModal;
-
-      document.getElementById("sidebar-toggle").onclick = function () {
-        document.getElementById("sidebar").classList.toggle("open");
-      };
-
-      loadStats();
     })();
   </script>
 </body>

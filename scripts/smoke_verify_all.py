@@ -84,7 +84,7 @@ for path in ("/login", "/signup", "/forgot-password"):
     r = c.get(path)
     check(f"GET {path}", r.status_code == 200, str(r.status_code))
 
-# Signup + immediate login (no email verification gate)
+# Signup + login (citizen-only registration)
 from email_service.memory_provider import OUTBOX, clear_outbox
 import re
 
@@ -92,21 +92,42 @@ clear_outbox()
 r = c.post(
     "/signup",
     data={
-        "name": "New User",
+        "first_name": "New",
+        "middle_name": "",
+        "last_name": "User",
+        "gender": "female",
+        "date_of_birth": "1992-03-03",
         "email": "newuser@test.so",
+        "phone": "0619999999",
+        "address": "",
+        "city": "Mogadishu",
+        "emergency_contact_name": "Contact User",
+        "emergency_contact_email": "contact.new@test.so",
+        "emergency_contact_phone": "0618888888",
+        "emergency_contact_relation": "Parent",
+        "national_id": "556677889900",
+        "blood_type": "",
+        "medical_conditions": "",
+        "allergies": "",
         "password": "123456",
         "confirm_password": "123456",
-        "phone": "0699",
-        "role": "citizen",
+        "agree_terms": "1",
     },
     follow_redirects=True,
 )
 check("Signup HTTP", r.status_code == 200, str(r.status_code))
 udata = ers.load_users()
 nu = next((u for u in udata["users"] if u.get("email") == "newuser@test.so"), None)
-check("Signup persisted", nu and nu.get("email_verified") is True)
+check("Signup persisted citizen", nu and nu.get("role") == "citizen")
+check("Signup verification email", bool(OUTBOX))
+check("National ID last4 only", nu and nu.get("national_id_last4") == "9900" and bool(nu.get("national_id_hash")))
+m = re.search(r"verification code is:\s*(\d{6})", OUTBOX[-1]["text"], re.I)
+otp_v = m.group(1) if m else ""
+check("Verify OTP in email", bool(otp_v))
+r = c.post("/verify-email", data={"email": "newuser@test.so", "otp": otp_v}, follow_redirects=True)
+check("Email verified", b"verified" in r.data.lower())
 r = c.post("/login", data={"username": "newuser@test.so", "password": "123456"}, follow_redirects=True)
-check("Login after signup", r.status_code == 200 and b"verify your email" not in r.data.lower())
+check("Login after verify", r.status_code == 200)
 c.get("/logout", follow_redirects=True)
 
 # OTP password reset

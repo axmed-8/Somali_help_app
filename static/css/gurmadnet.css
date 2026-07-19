@@ -118,6 +118,820 @@
   transition: border-color var(--gn-transition), box-shadow var(--gn-transition);
 }
 
+.gn-auth .form-group select {
+  width: 100%;
+  border: 1.5px solid var(--gn-border);
+  border-radius: var(--gn-radius-sm);
+  padding: 14px 16px;
+  font-family: var(--gn-font);
+  background: #fff;
+  color: inherit;
+  appearance: auto;
+}
+
+.gn-auth .form-group select:focus {
+  outline: none;
+  border-color: var(--gn-accent);
+  box-shadow: 0 0 0 4px rgba(66, 165, 245, 0.2);
+}
+
+.gn-auth .auth-card-wide {
+  max-width: 560px;
+}
+
+/* Multi-step citizen signup — mobile-first, Apple/Google-like fields */
+.gn-auth .auth-card-signup {
+  max-width: 420px;
+  width: 100%;
+  padding: 28px 22px 24px;
+  border-radius: 16px;
+  box-sizing: border-box;
+}
+
+.gn-auth .auth-card-signup .auth-header {
+  margin-bottom: 18px;
+}
+
+.gn-auth .auth-card-signup .auth-header h1 {
+  font-size: 1.4rem;
+  letter-spacing: -0.02em;
+}
+
+.gn-auth .auth-card-signup .auth-header > p:not(.signup-step-hint) {
+  font-size: 0.9rem;
+  color: #65676b;
+}
+
+.gn-auth .signup-step-hint {
+  font-size: 0.9rem !important;
+  font-weight: 400;
+  line-height: 1.4;
+  color: #65676b !important;
+  margin: 8px auto 0 !important;
+}
+
+.gn-auth .signup-progress {
+  height: 4px;
+  background: #e4e6eb;
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 0 0 6px;
+}
+
+.gn-auth .signup-progress-bar {
+  height: 100%;
+  background: #1877f2;
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+.gn-auth .signup-step-label {
+  margin: 0 0 18px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #8a8d91;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+.gn-auth .signup-section-title {
+  margin: 0 0 16px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1c1e21;
+  letter-spacing: -0.01em;
+}
+
+.gn-auth .signup-step[hidden] {
+  display: none !important;
+}
+
+.gn-auth .auth-card-signup .form-group {
+  margin-bottom: 16px;
+}
+
+.gn-auth .auth-card-signup .form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #606770;
+  text-transform: none;
+  letter-spacing: 0;
+  line-height: 1.3;
+}
+
+.gn-auth .auth-card-signup .form-group .label-optional {
+  font-weight: 400;
+  font-size: 0.74rem;
+  color: #8a8d91;
+  opacity: 1;
+}
+
+.gn-auth .auth-card-signup .form-group input,
+.gn-auth .auth-card-signup .form-group select,
+.gn-auth .auth-card-signup .form-group textarea {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-height: 56px;
+  height: 56px;
+  padding: 0 16px;
+  border: 1px solid #dadce0;
+  border-radius: 12px;
+  background: #f0f2f5;
+  color: #1c1e21;
+  font-size: 1rem;
+  font-family: inherit;
+  line-height: 1.3;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.gn-auth .auth-card-signup .form-group textarea {
+  height: auto;
+  min-height: 88px;
+  padding: 14px 16px;
+  resize: vertical;
+}
+
+.gn-auth .auth-card-signup .form-group select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23606770' d='M1.4 0.6L6 5.2 10.6 0.6 12 2 6 8 0 2z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  background-size: 12px 8px;
+  padding-right: 40px;
+}
+
+.gn-auth .auth-card-signup .form-group input::placeholder,
+.gn-auth .auth-card-signup .form-group textarea::placeholder {
+  color: #8a8d91;
+  opacity: 1;
+  font-weight: 400;
+}
+
+.gn-auth .auth-card-signup .form-group input:focus,
+.gn-auth .auth-card-signup .form-group select:focus,
+.gn-auth .auth-card-signup .form-group textarea:focus {
+  outline: none;
+  background: #fff;
+  border-color: #1877f2;
+  box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.18);
+}
+
+.gn-auth .auth-card-signup .password-field input {
+  height: 56px;
+  min-height: 56px;
+  padding-right: 48px;
+  background: #f0f2f5;
+  border: 1px solid #dadce0;
+  border-radius: 12px;
+}
+
+.gn-auth .auth-card-signup .password-field input:focus {
+  background: #fff;
+  border-color: #1877f2;
+  box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.18);
+}
+
+.gn-auth .auth-card-signup .password-toggle {
+  color: #606770;
+}
+
+.gn-auth .auth-card-signup .auth-hint {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: #8a8d91;
+  line-height: 1.4;
+}
+
+.gn-auth .auth-card-signup .signup-optional-note {
+  background: #f0f2f5;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 0 0 16px;
+  font-size: 0.85rem;
+  color: #606770;
+}
+
+.gn-auth .auth-card-signup .signup-terms {
+  margin: 4px 0 8px;
+  font-size: 0.88rem;
+  color: #606770;
+  align-items: center;
+}
+
+.gn-auth .signup-nav {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.gn-auth .signup-nav .btn-auth {
+  flex: 1;
+  min-height: 52px;
+  border-radius: 12px;
+  font-size: 1.02rem;
+  font-weight: 700;
+}
+
+.gn-auth .signup-nav .btn-auth[hidden] {
+  display: none !important;
+}
+
+.gn-auth .auth-card-signup .btn-primary-auth {
+  background: #1877f2;
+  box-shadow: none;
+}
+
+.gn-auth .auth-card-signup .btn-primary-auth:hover {
+  background: #166fe5;
+  transform: none;
+}
+
+.gn-auth .auth-card-signup .btn-secondary-auth {
+  border-radius: 12px;
+  border-color: #dadce0;
+  color: #1c1e21;
+  background: #fff;
+}
+
+.gn-auth .auth-card-signup .auth-footer {
+  margin-top: 16px;
+  font-size: 0.88rem;
+}
+
+.gn-auth .req {
+  color: #e53935;
+  font-weight: 700;
+}
+
+/* Custom Date of Birth picker */
+.gn-auth .dob-picker {
+  position: relative;
+}
+
+.gn-auth .dob-picker .dob-display {
+  width: 100%;
+  padding-right: 48px;
+  cursor: pointer;
+  caret-color: transparent;
+}
+
+.gn-auth .dob-icon-btn {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: #606770;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.gn-auth .dob-icon-btn:hover {
+  background: rgba(24, 119, 242, 0.08);
+  color: #1877f2;
+}
+
+.gn-auth .dob-popover {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 40;
+  background: #fff;
+  border: 1px solid #dadce0;
+  border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.16);
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.gn-auth .dob-popover[hidden] {
+  display: none !important;
+}
+
+.gn-auth .dob-popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.gn-auth .dob-head-labels {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  justify-content: center;
+}
+
+.gn-auth .dob-nav-btn,
+.gn-auth .dob-month-btn,
+.gn-auth .dob-year-btn {
+  border: none;
+  background: #f0f2f5;
+  color: #1c1e21;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.gn-auth .dob-nav-btn {
+  width: 36px;
+  height: 36px;
+  font-size: 1.35rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.gn-auth .dob-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.gn-auth .dob-month-btn,
+.gn-auth .dob-year-btn {
+  padding: 8px 12px;
+  font-size: 0.92rem;
+}
+
+.gn-auth .dob-month-btn:hover,
+.gn-auth .dob-year-btn:hover,
+.gn-auth .dob-nav-btn:not(:disabled):hover {
+  background: #e7f3ff;
+  color: #1877f2;
+}
+
+.gn-auth .dob-weekdays,
+.gn-auth .dob-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.gn-auth .dob-weekdays {
+  margin-bottom: 6px;
+}
+
+.gn-auth .dob-weekdays span {
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #8a8d91;
+  padding: 4px 0;
+}
+
+.gn-auth .dob-day {
+  height: 38px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #1c1e21;
+  font-size: 0.92rem;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.gn-auth .dob-day.is-empty {
+  pointer-events: none;
+}
+
+.gn-auth .dob-day:not(.is-empty):not(.is-disabled):hover {
+  background: #e7f3ff;
+  color: #1877f2;
+}
+
+.gn-auth .dob-day.is-selected {
+  background: #1877f2;
+  color: #fff;
+}
+
+.gn-auth .dob-day.is-disabled,
+.gn-auth .dob-month-item.is-disabled {
+  color: #c0c4c8;
+  cursor: not-allowed;
+}
+
+.gn-auth .dob-year-panel,
+.gn-auth .dob-month-panel {
+  position: absolute;
+  inset: 12px;
+  background: #fff;
+  border-radius: 12px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+}
+
+.gn-auth .dob-year-panel[hidden],
+.gn-auth .dob-month-panel[hidden] {
+  display: none !important;
+}
+
+.gn-auth .dob-year-list {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  max-height: 260px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gn-auth .dob-year-item {
+  border: none;
+  background: #f0f2f5;
+  border-radius: 10px;
+  padding: 12px 14px;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1c1e21;
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+
+.gn-auth .dob-year-item.is-active,
+.gn-auth .dob-year-item:hover {
+  background: #1877f2;
+  color: #fff;
+}
+
+.gn-auth .dob-month-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 8px;
+  align-content: start;
+}
+
+.gn-auth .dob-month-item {
+  border: none;
+  background: #f0f2f5;
+  border-radius: 10px;
+  padding: 14px 8px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #1c1e21;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.gn-auth .dob-month-item.is-active,
+.gn-auth .dob-month-item:not(.is-disabled):hover {
+  background: #1877f2;
+  color: #fff;
+}
+
+.gn-auth .dob-popover-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #e4e6eb;
+}
+
+.gn-auth .dob-clear-btn,
+.gn-auth .dob-today-btn {
+  border: none;
+  background: transparent;
+  color: #1877f2;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-family: inherit;
+}
+
+.gn-auth .dob-clear-btn {
+  color: #606770;
+}
+
+.gn-auth .dob-clear-btn:hover,
+.gn-auth .dob-today-btn:hover {
+  background: #f0f2f5;
+}
+
+.gn-auth .dob-backdrop {
+  display: none;
+}
+
+.gn-auth .dob-backdrop[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 480px) {
+  .gn-auth .dob-backdrop:not([hidden]) {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.35);
+    z-index: 90;
+  }
+
+  .gn-auth .dob-popover {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    top: auto;
+    bottom: 12px;
+    max-width: none;
+    z-index: 100;
+    padding: 14px;
+    border-radius: 16px;
+    box-shadow: 0 -4px 32px rgba(15, 23, 42, 0.2);
+  }
+
+  .gn-auth .dob-day {
+    height: 42px;
+    font-size: 1rem;
+  }
+
+  .gn-auth .dob-year-list {
+    max-height: 280px;
+  }
+}
+
+@media (max-width: 480px) {
+  .gn-auth.auth-page {
+    padding: 12px 12px 28px;
+    align-items: flex-start;
+  }
+
+  .gn-auth .auth-card-signup {
+    padding: 22px 16px 20px;
+    border-radius: 14px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  .gn-auth .auth-card-signup .auth-logo {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    font-size: 1.25rem;
+    margin-bottom: 10px;
+  }
+
+  .gn-auth .auth-card-signup .auth-header h1 {
+    font-size: 1.28rem;
+  }
+
+  .gn-auth .auth-card-signup .form-group {
+    margin-bottom: 14px;
+  }
+
+  .gn-auth .auth-card-signup .form-group input,
+  .gn-auth .auth-card-signup .form-group select,
+  .gn-auth .auth-card-signup .password-field input {
+    height: 54px;
+    min-height: 54px;
+    border-radius: 12px;
+    font-size: 16px; /* prevents iOS zoom on focus */
+  }
+
+  .gn-auth .signup-nav {
+    margin-top: 16px;
+    gap: 8px;
+  }
+
+  .gn-auth .signup-nav .btn-auth {
+    min-height: 50px;
+  }
+}
+
+.gn-auth.signup-fb-page,
+.gn-auth.signup-fb-page.auth-page {
+  background: #f0f2f5 !important;
+  background-image: none !important;
+  align-items: flex-start;
+  min-height: 100vh;
+}
+
+.gn-auth .signup-fb-wrap {
+  padding: 24px 16px 40px;
+  width: 100%;
+  max-width: 600px !important;
+  margin: 0 auto;
+}
+
+.gn-auth .signup-fb-card {
+  max-width: 560px;
+  width: 100%;
+  margin: 0 auto;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 8px 24px rgba(0, 0, 0, 0.08);
+  border: none;
+  padding: 20px 22px 24px;
+  box-sizing: border-box;
+}
+
+.gn-auth .signup-fb-header {
+  text-align: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e4e6eb;
+  margin-bottom: 16px;
+}
+
+.gn-auth .signup-fb-header h1 {
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: #1c1e21;
+  margin: 8px 0 4px;
+}
+
+.gn-auth .signup-fb-header p {
+  color: #606770;
+  font-size: 0.95rem;
+  margin: 0 0 10px;
+}
+
+.gn-auth .signup-fb-hint {
+  font-size: 0.88rem !important;
+  line-height: 1.4;
+  color: #606770 !important;
+  margin: 0 0 12px !important;
+  max-width: 36em;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.gn-auth .signup-fb-section {
+  margin: 0 0 18px;
+  padding: 0 0 4px;
+}
+
+.gn-auth .signup-fb-section-title {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1c1e21;
+  letter-spacing: -0.01em;
+}
+
+.gn-auth .signup-fb-form .form-group {
+  min-width: 0;
+}
+
+.gn-auth .signup-fb-form .form-group label {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #1c1e21;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.gn-auth .signup-fb-form .form-group input,
+.gn-auth .signup-fb-form .form-group select,
+.gn-auth .signup-fb-form .form-group textarea {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  border-radius: 8px;
+  border: 1px solid #ccd0d5;
+  background: #f5f6f7;
+  padding: 12px 14px;
+  font-size: 0.98rem;
+  color: #1c1e21;
+}
+
+.gn-auth .signup-fb-form .form-group input:focus,
+.gn-auth .signup-fb-form .form-group select:focus,
+.gn-auth .signup-fb-form .form-group textarea:focus {
+  background: #fff;
+  border-color: #1877f2;
+  box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2);
+  outline: none;
+}
+
+.gn-auth .signup-fb-form .req {
+  color: #f02849;
+  font-weight: 700;
+}
+
+.gn-auth .form-group textarea {
+  width: 100%;
+  border: 1.5px solid var(--gn-border);
+  border-radius: var(--gn-radius-sm);
+  padding: 14px 16px;
+  font-family: var(--gn-font);
+  resize: vertical;
+  min-height: 72px;
+  box-sizing: border-box;
+}
+
+.gn-auth .form-group textarea:focus {
+  outline: none;
+  border-color: var(--gn-accent);
+  box-shadow: 0 0 0 4px rgba(66, 165, 245, 0.2);
+}
+
+.gn-auth .signup-optional-note {
+  background: #e7f3ff;
+  border: 1px solid #cce0ff;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin: 0 0 14px;
+  font-size: 0.9rem;
+  color: #465a69;
+}
+
+.gn-auth .signup-optional-note p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.gn-auth .signup-terms {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 4px 0 16px;
+  font-size: 0.92rem;
+  color: #606770;
+  cursor: pointer;
+}
+
+.gn-auth .signup-terms input {
+  margin-top: 3px;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.gn-auth .signup-fb-submit {
+  background: #42b72a !important;
+  box-shadow: none !important;
+  border-radius: 8px !important;
+  font-size: 1.05rem !important;
+  padding: 14px !important;
+  font-weight: 700 !important;
+}
+
+.gn-auth .signup-fb-submit:hover {
+  background: #36a420 !important;
+  transform: none;
+}
+
+.gn-auth .form-row {
+  display: grid;
+  gap: 12px;
+}
+
+.gn-auth .form-row-2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.gn-auth .form-row-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.gn-auth .form-section-label {
+  margin: 8px 0 4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gn-text-muted);
+}
+
+.gn-auth .label-optional {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  opacity: 0.75;
+  font-size: 0.85em;
+}
+
+@media (max-width: 640px) {
+  .gn-auth .form-row-2,
+  .gn-auth .form-row-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .gn-auth .signup-fb-card {
+    padding: 16px 14px 20px;
+  }
+}
+
 .gn-auth .password-field {
   position: relative;
   display: block;

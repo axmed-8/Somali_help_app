@@ -82,6 +82,33 @@ def login(client, email, password):
   return client.post("/login", data={"username": email, "password": password}, follow_redirects=True)
 
 
+def citizen_signup_data(**overrides):
+  data = {
+    "first_name": "Ahmed",
+    "middle_name": "",
+    "last_name": "Hassan",
+    "gender": "male",
+    "date_of_birth": "1995-05-15",
+    "email": "citizen.new@test.so",
+    "phone": "0611111111",
+    "address": "",
+    "city": "Mogadishu",
+    "emergency_contact_name": "Fatima Hassan",
+    "emergency_contact_email": "fatima.contact@test.so",
+    "emergency_contact_phone": "0612222222",
+    "emergency_contact_relation": "Spouse",
+    "national_id": "123456789012",
+    "blood_type": "",
+    "medical_conditions": "",
+    "allergies": "",
+    "password": "123456",
+    "confirm_password": "123456",
+    "agree_terms": "1",
+  }
+  data.update(overrides)
+  return data
+
+
 def test_citizen_sos_creates_emergency(app_client):
   client, ers_app = app_client
   login(client, "ahmed@example.com", "123456")
@@ -197,19 +224,24 @@ def test_user_dashboard_api(app_client):
 
 def test_hospital_registration_creates_profile(app_client):
   client, ers_app = app_client
-  client.post(
-    "/signup",
-    data={
-      "name": "Dr. Test",
-      "email": "newhospital@test.so",
-      "phone": "+252 61 700 0001",
-      "password": "123456",
-      "confirm_password": "123456",
-      "role": "hospital",
-    },
-    follow_redirects=True,
-  )
-  # Signup no longer requires email verification — login immediately
+  from werkzeug.security import generate_password_hash
+
+  udata = ers_app.load_users()
+  uid = udata["next_id"]
+  udata["next_id"] += 1
+  udata["users"].append({
+    "id": uid,
+    "name": "Dr. Test",
+    "email": "newhospital@test.so",
+    "phone": "+252 61 700 0001",
+    "password_hash": generate_password_hash("123456"),
+    "role": "hospital",
+    "status": "active",
+    "email_verified": True,
+    "created_at": ers_app.now_str(),
+    "activity": [],
+  })
+  ers_app.save_users(udata)
   login(client, "newhospital@test.so", "123456")
   r = client.post(
     "/hospital/register",
@@ -424,48 +456,125 @@ def test_call_center_role_guard(app_client):
 
 def test_signup_persists_citizen(app_client):
   client, ers_app = app_client
+  from email_service.memory_provider import OUTBOX, clear_outbox
+  import re
+
+  clear_outbox()
   r = client.post(
     "/signup",
-    data={
-      "name": "Signup Citizen",
-      "email": "signup.citizen@test.so",
-      "password": "123456",
-      "confirm_password": "123456",
-      "phone": "0619999999",
-      "role": "citizen",
-    },
+    data=citizen_signup_data(email="signup.citizen@test.so", phone="0619999999"),
     follow_redirects=True,
   )
   assert r.status_code == 200
-  assert b"account created" in r.data.lower() or b"log in" in r.data.lower()
+  assert b"verify" in r.data.lower() or b"verification" in r.data.lower()
   users = ers_app.load_users()["users"]
   user = next(u for u in users if u.get("email") == "signup.citizen@test.so")
-  assert user.get("email_verified") is True
-  # Can log in immediately
+  assert user.get("role") == "citizen"
+  assert user.get("first_name") == "Ahmed"
+  assert user.get("last_name") == "Hassan"
+  assert user.get("gender") == "male"
+  assert user.get("national_id_last4") == "9012"
+  assert user.get("national_id_hash")
+  assert user.get("national_id_encrypted")
+  assert user.get("email_verified") is False
+  assert OUTBOX
+  assert "signup.citizen@test.so" in OUTBOX[-1]["to"]
+  m = re.search(r"verification code is:\s*(\d{6})", OUTBOX[-1]["text"], re.I)
+  assert m, OUTBOX[-1]["text"]
+  # Login blocked until verified
   r = login(client, "signup.citizen@test.so", "123456")
+  assert client.get("/dashboard").status_code in (302, 401) or b"verify" in r.data.lower()
+  r = client.post(
+    "/verify-email",
+    data={"email": "signup.citizen@test.so", "otp": m.group(1)},
+    follow_redirects=True,
+  )
+  assert b"verified" in r.data.lower() or b"welcome" in r.data.lower()
+  user, _ = ers_app.get_user_by_login("signup.citizen@test.so")
+  assert user.get("email_verified") is True
+  # Auto-login after verification — no separate login step required
   assert client.get("/dashboard").status_code == 200
 
 
 def test_signup_allows_immediate_login(app_client):
+  """After OTP verification, citizen is signed in automatically."""
   client, ers_app = app_client
+  from email_service.memory_provider import OUTBOX, clear_outbox
+  import re
+
+  clear_outbox()
   email = "immediate.login@example.com"
   client.post(
     "/signup",
-    data={
-      "name": "Immediate",
-      "email": email,
-      "password": "123456",
-      "confirm_password": "123456",
-      "phone": "0618888888",
-      "role": "citizen",
-    },
+    data=citizen_signup_data(email=email, phone="0618888888", national_id=""),
     follow_redirects=True,
   )
   user, _ = ers_app.get_user_by_login(email)
-  assert user.get("email_verified") is True
+  assert user is not None
+  assert user.get("email_verified") is False
   r = login(client, email, "123456")
-  assert b"verify your email" not in r.data.lower()
+  assert client.get("/dashboard").status_code != 200 or b"verify" in r.data.lower()
+  m = re.search(r"verification code is:\s*(\d{6})", OUTBOX[-1]["text"], re.I)
+  assert m
+  client.post("/verify-email", data={"email": email, "otp": m.group(1)}, follow_redirects=True)
   assert client.get("/dashboard").status_code == 200
+  # Manual login still works after logout
+  client.get("/logout", follow_redirects=True)
+  r = login(client, email, "123456")
+  assert client.get("/dashboard").status_code == 200
+
+def test_signup_rejects_non_citizen_role(app_client):
+  client, ers_app = app_client
+  r = client.post(
+    "/signup",
+    data=citizen_signup_data(
+      email="fake.hospital@test.so",
+      role="hospital",  # forged — must be ignored
+    ),
+    follow_redirects=True,
+  )
+  assert r.status_code == 200
+  user, _ = ers_app.get_user_by_login("fake.hospital@test.so")
+  assert user is not None
+  assert user.get("role") == "citizen"
+
+
+def test_sos_notifies_emergency_contact(app_client):
+  client, ers_app = app_client
+  from email_service.memory_provider import OUTBOX, clear_outbox
+
+  clear_outbox()
+  client.post(
+    "/signup",
+    data=citizen_signup_data(
+      email="sos.citizen@test.so",
+      emergency_contact_email="sos.contact@test.so",
+      national_id="998877665544",
+    ),
+    follow_redirects=True,
+  )
+  user, udata = ers_app.get_user_by_login("sos.citizen@test.so")
+  user["email_verified"] = True
+  ers_app.save_users(udata)
+  clear_outbox()
+  login(client, "sos.citizen@test.so", "123456")
+  r = client.post(
+    "/api/send_alert",
+    json={
+      "type": "medical",
+      "latitude": 2.0469,
+      "longitude": 45.3182,
+      "location": "Hodan",
+      "notes": "chest pain",
+    },
+  )
+  assert r.status_code == 200
+  assert r.get_json()["success"] is True
+  assert any("sos.contact@test.so" in (m.get("to") or "") for m in OUTBOX)
+  assert any("emergency" in (m.get("subject") or "").lower() for m in OUTBOX)
+  body = " ".join((m.get("text") or "") for m in OUTBOX).lower()
+  assert "2.0469" in body or "gps" in body
+  assert "hodan" in body
 
 
 def test_password_reset_otp_flow(app_client):
@@ -521,14 +630,7 @@ def test_signup_rejects_disposable_email(app_client):
   client, ers_app = app_client
   r = client.post(
     "/signup",
-    data={
-      "name": "Temp User",
-      "email": "someone@mailinator.com",
-      "password": "123456",
-      "confirm_password": "123456",
-      "phone": "0610000000",
-      "role": "citizen",
-    },
+    data=citizen_signup_data(email="someone@mailinator.com", phone="0610000000", national_id=""),
     follow_redirects=True,
   )
   assert r.status_code == 200
@@ -538,33 +640,27 @@ def test_signup_rejects_disposable_email(app_client):
 
 
 def test_unverified_legacy_user_can_still_login(app_client):
-  """Unverified flag must not block login after auth policy change."""
+  """Unverified citizens cannot use the app until email OTP is verified."""
   client, ers_app = app_client
   email = "legacy.unverified@test.so"
   client.post(
     "/signup",
-    data={
-      "name": "Legacy",
-      "email": email,
-      "password": "123456",
-      "confirm_password": "123456",
-      "role": "citizen",
-    },
+    data=citizen_signup_data(email=email, national_id="112233445566"),
     follow_redirects=True,
   )
   user, udata = ers_app.get_user_by_login(email)
   user["email_verified"] = False
   ers_app.save_users(udata)
   r = login(client, email, "123456")
-  assert client.get("/dashboard").status_code == 200
-  assert b"verify your email" not in r.data.lower()
+  assert client.get("/dashboard").status_code != 200
+  assert b"verify" in r.data.lower()
 
 
 def test_invalid_verification_token(app_client):
   client, _ = app_client
   r = client.get("/verify-email/not-a-real-token", follow_redirects=True)
   assert r.status_code == 200
-  assert b"no longer required" in r.data.lower() or b"log in" in r.data.lower()
+  assert b"verification code" in r.data.lower() or b"verify" in r.data.lower()
 
 
 def test_profile_api_never_leaks_password_hash(app_client):

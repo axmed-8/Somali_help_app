@@ -1,0 +1,19 @@
+{
+  "app_name": "GurmadNet AI",
+  "sos_subtitle": "Tap SOS button to start emergency request",
+  "sos_button_text": "SOS",
+  "welcome_citizen": "Mogadishu & Somalia — 24/7 Emergency Response",
+  "call_center_hint": "Speak with an operator — your GPS is shared automatically",
+  "emergency_type_fire": "Fire",
+  "confirmation_message": "Help is on the way!",
+  "fire_dashboard_title": "KM4 Fire Station - Fire Dashboard",
+  "admin_dashboard_title": "GurmadNet AI — Admin Control Panel",
+  "emergency_type_family": "Family Help",
+  "emergency_type_medical": "Medical",
+  "police_dashboard_title": "Hamar Police - Police Dashboard",
+  "call_center_button_text": "Call Emergency Center",
+  "emergency_type_accident": "Accident",
+  "emergency_type_security": "Security",
+  "hospital_dashboard_title": "Aamin Ambulance - Hospital Dashboard",
+  "call_center_dashboard_title": "GurmadNet AI — Emergency Call Center"
+}

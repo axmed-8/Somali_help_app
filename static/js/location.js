@@ -1,28 +1,98 @@
 /**
- * Emergency Help App - Location system (Somalia / Mogadishu)
- * Uses Geolocation API, district lookup, IP fallback, and Leaflet maps.
+ * GurmadNet AI — Location system
+ * Live GPS from the device + Google Maps (geocoding, maps, routes) as the primary source.
+ * Leaflet is used only when Google Maps JS is not loaded.
  */
 var EmergencyLocation = (function () {
   "use strict";
 
-  var MOGADISHU_CENTER = { lat: 2.0469, lng: 45.3182 };
+  var mapsCfg = window.GURMADNET_MAPS || {};
+  var DEFAULT_VIEW = {
+    lat: typeof mapsCfg.defaultLat === "number" ? mapsCfg.defaultLat : 2.0469,
+    lng: typeof mapsCfg.defaultLng === "number" ? mapsCfg.defaultLng : 45.3182,
+    zoom: typeof mapsCfg.defaultZoom === "number" ? mapsCfg.defaultZoom : 14
+  };
+  // Kept as MOGADISHU_CENTER for backward-compatible exports (initial map view only — never fake GPS)
+  var MOGADISHU_CENTER = { lat: DEFAULT_VIEW.lat, lng: DEFAULT_VIEW.lng };
   var SOMALIA_BOUNDS = { latMin: -1.7, latMax: 12.0, lngMin: 40.9, lngMax: 51.6 };
-
-  var DISTRICTS = [
-    { lat: 2.03, lng: 45.33, name: "Wadajir District, Mogadishu" },
-    { lat: 2.04, lng: 45.34, name: "KM4 Junction, Mogadishu" },
-    { lat: 2.02, lng: 45.32, name: "Bakaro Market, Mogadishu" },
-    { lat: 2.05, lng: 45.35, name: "Howlwadaag, Mogadishu" },
-    { lat: 2.01, lng: 45.31, name: "Boondheere, Mogadishu" },
-    { lat: 2.045, lng: 45.325, name: "Hodan District, Mogadishu" },
-    { lat: 2.055, lng: 45.34, name: "Yaaqshiid, Mogadishu" },
-    { lat: 2.06, lng: 45.36, name: "Dayniile, Mogadishu" }
-  ];
 
   var mapInstances = {};
   var liveMarkers = {};
   var livePolylines = {};
   var activeTracking = { watchStop: null, emergencyId: null, pushTimer: null };
+  var addressCache = {};
+  var addressPending = {};
+
+  function hasGoogleMaps() {
+    return !!(window.google && window.google.maps);
+  }
+
+  function cacheKey(lat, lng) {
+    return Number(lat).toFixed(4) + "," + Number(lng).toFixed(4);
+  }
+
+  /**
+   * Live reverse geocode via Google Maps (server proxy). Never invents place names.
+   */
+  function reverseGeocode(lat, lng) {
+    if (lat == null || lng == null || isNaN(lat) || isNaN(lng)) {
+      return Promise.reject(new Error("Invalid coordinates"));
+    }
+    var key = cacheKey(lat, lng);
+    if (addressCache[key]) return Promise.resolve(addressCache[key]);
+    if (addressPending[key]) return addressPending[key];
+    addressPending[key] = fetch(
+      "/api/geocode/reverse?lat=" + encodeURIComponent(lat) + "&lng=" + encodeURIComponent(lng),
+      { credentials: "same-origin" }
+    )
+      .then(function (r) {
+        return r.json();
+      })
+      .then(function (data) {
+        delete addressPending[key];
+        if (!data || !data.success || !data.result) {
+          var fallback = Number(lat).toFixed(5) + ", " + Number(lng).toFixed(5);
+          addressCache[key] = fallback;
+          return fallback;
+        }
+        var result = data.result;
+        var label =
+          result.address ||
+          result.display_name ||
+          [result.district, result.city].filter(Boolean).join(", ") ||
+          Number(lat).toFixed(5) + ", " + Number(lng).toFixed(5);
+        addressCache[key] = label;
+        return label;
+      })
+      .catch(function () {
+        delete addressPending[key];
+        var fallback = Number(lat).toFixed(5) + ", " + Number(lng).toFixed(5);
+        addressCache[key] = fallback;
+        return fallback;
+      });
+    return addressPending[key];
+  }
+
+  /**
+   * Sync label helper — returns cached Google address or live coordinates (never a fake district).
+   */
+  function getDistrictName(lat, lng) {
+    if (lat == null || lng == null || isNaN(lat) || isNaN(lng)) {
+      return "Location unavailable";
+    }
+    var key = cacheKey(lat, lng);
+    if (addressCache[key]) return addressCache[key];
+    // Kick off live Google reverse geocode for subsequent reads
+    reverseGeocode(lat, lng);
+    return Number(lat).toFixed(5) + ", " + Number(lng).toFixed(5);
+  }
+
+  function enrichWithAddress(fix) {
+    return reverseGeocode(fix.lat, fix.lng).then(function (label) {
+      fix.district = label;
+      return fix;
+    });
+  }
 
   /**
    * Request browser/mobile GPS permission explicitly (triggers permission prompt).
@@ -33,23 +103,24 @@ var EmergencyLocation = (function () {
       enableHighAccuracy: true,
       timeout: options.timeout || 20000,
       maximumAge: 0
-    }).then(function (coords) {
-      return {
-        lat: coords.lat,
-        lng: coords.lng,
-        accuracy: coords.accuracy,
-        district: getDistrictName(coords.lat, coords.lng),
-        source: "gps",
-        permission: "granted"
-      };
-    }).catch(function (err) {
-      var msg = "Location permission denied. Enable GPS in your browser settings.";
-      if (err && err.code === 2) msg = "GPS unavailable. Try moving outdoors.";
-      if (err && err.code === 3) msg = "GPS timeout. Please try again.";
-      var error = new Error(msg);
-      error.code = err && err.code;
-      throw error;
-    });
+    })
+      .then(function (coords) {
+        return enrichWithAddress({
+          lat: coords.lat,
+          lng: coords.lng,
+          accuracy: coords.accuracy,
+          source: "gps",
+          permission: "granted"
+        });
+      })
+      .catch(function (err) {
+        var msg = "Location permission denied. Enable GPS in your browser settings.";
+        if (err && err.code === 2) msg = "GPS unavailable. Try moving outdoors.";
+        if (err && err.code === 3) msg = "GPS timeout. Please try again.";
+        var error = new Error(msg);
+        error.code = err && err.code;
+        throw error;
+      });
   }
 
   function confidenceFromAccuracy(accuracy) {
@@ -140,7 +211,7 @@ var EmergencyLocation = (function () {
    */
   function initMapProvider(containerId, lat, lng, options) {
     options = options || {};
-    if (window.google && window.google.maps) {
+    if (hasGoogleMaps()) {
       return initGoogleMap(containerId, lat, lng, options);
     }
     return initMap(containerId, lat, lng, options);
@@ -148,16 +219,21 @@ var EmergencyLocation = (function () {
 
   function initGoogleMap(containerId, lat, lng, options) {
     var el = document.getElementById(containerId);
-    if (!el || !window.google) return null;
+    if (!el || !hasGoogleMaps()) return null;
     el.innerHTML = "";
+    var centerLat = lat != null && !isNaN(lat) ? lat : DEFAULT_VIEW.lat;
+    var centerLng = lng != null && !isNaN(lng) ? lng : DEFAULT_VIEW.lng;
     var map = new google.maps.Map(el, {
-      center: { lat: lat, lng: lng },
-      zoom: options.zoom || 16,
+      center: { lat: centerLat, lng: centerLng },
+      zoom: options.zoom || DEFAULT_VIEW.zoom || 16,
       mapTypeControl: true,
-      streetViewControl: false
+      streetViewControl: false,
+      fullscreenControl: true,
+      gestureHandling: "greedy",
+      mapTypeId: "roadmap"
     });
     var marker = new google.maps.Marker({
-      position: { lat: lat, lng: lng },
+      position: { lat: centerLat, lng: centerLng },
       map: map,
       title: options.label || "Location"
     });
@@ -179,12 +255,17 @@ var EmergencyLocation = (function () {
 
   /**
    * Live dispatch map: patient markers + GPS trail polylines (hospital dashboard).
+   * Google Maps when available; Leaflet only as fallback.
    */
   function initLiveDispatchMap(containerId, emergencies, options) {
     options = options || {};
-    if (typeof L === "undefined") return null;
     var el = document.getElementById(containerId);
     if (!el) return null;
+
+    if (hasGoogleMaps()) {
+      return initLiveDispatchMapGoogle(containerId, emergencies, options);
+    }
+    if (typeof L === "undefined") return null;
 
     var mapKey = containerId;
     var existing = mapInstances[mapKey];
@@ -194,7 +275,7 @@ var EmergencyLocation = (function () {
       map = existing.map;
     } else {
       if (existing && existing.remove) existing.remove();
-      map = L.map(containerId).setView([MOGADISHU_CENTER.lat, MOGADISHU_CENTER.lng], 13);
+      map = L.map(containerId).setView([DEFAULT_VIEW.lat, DEFAULT_VIEW.lng], options.zoom || 13);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "&copy; OpenStreetMap",
         maxZoom: 19
@@ -257,6 +338,96 @@ var EmergencyLocation = (function () {
     return map;
   }
 
+  function initLiveDispatchMapGoogle(containerId, emergencies, options) {
+    options = options || {};
+    var el = document.getElementById(containerId);
+    if (!el || !hasGoogleMaps()) return null;
+    var mapKey = containerId;
+    var existing = mapInstances[mapKey];
+    var map;
+    if (existing && existing.type === "live-dispatch-google") {
+      map = existing.map;
+    } else {
+      el.innerHTML = "";
+      map = new google.maps.Map(el, {
+        center: { lat: DEFAULT_VIEW.lat, lng: DEFAULT_VIEW.lng },
+        zoom: options.zoom || 13,
+        mapTypeControl: true,
+        streetViewControl: false,
+        fullscreenControl: true,
+        gestureHandling: "greedy",
+        mapTypeId: "roadmap"
+      });
+      mapInstances[mapKey] = { type: "live-dispatch-google", map: map };
+      liveMarkers[mapKey] = {};
+      livePolylines[mapKey] = {};
+    }
+    var bounds = new google.maps.LatLngBounds();
+    var hasBounds = false;
+    (emergencies || []).forEach(function (em) {
+      var c = parseCoordinates(em);
+      if (c.lat == null || isNaN(c.lat)) return;
+      hasBounds = true;
+      bounds.extend({ lat: c.lat, lng: c.lng });
+      var id = String(em.id);
+      var isLive = em.tracking_active;
+      var popup =
+        "<strong>#" + em.id + "</strong> " + (em.caller_name || "") +
+        "<br>" + (em.phone || "") +
+        "<br><em>" + String(em.status || "").replace(/_/g, " ") + "</em>" +
+        (isLive ? "<br><span style='color:#c62828'>● LIVE GPS</span>" : "");
+      if (!liveMarkers[mapKey][id]) {
+        liveMarkers[mapKey][id] = new google.maps.Marker({
+          position: { lat: c.lat, lng: c.lng },
+          map: map,
+          title: "#" + em.id,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 9,
+            fillColor: isLive ? "#c62828" : "#1565c0",
+            fillOpacity: 1,
+            strokeColor: "#fff",
+            strokeWeight: 2
+          }
+        });
+        liveMarkers[mapKey][id].info = new google.maps.InfoWindow({ content: popup });
+        liveMarkers[mapKey][id].addListener("click", function () {
+          liveMarkers[mapKey][id].info.open(map, liveMarkers[mapKey][id]);
+        });
+      } else {
+        liveMarkers[mapKey][id].setPosition({ lat: c.lat, lng: c.lng });
+        liveMarkers[mapKey][id].info.setContent(popup);
+      }
+      var trail = (em.location_history || em.location_trail || []).filter(function (p) {
+        return p.latitude != null && p.longitude != null;
+      });
+      if (trail.length >= 2) {
+        var path = trail.map(function (p) {
+          return { lat: p.latitude, lng: p.longitude };
+        });
+        if (livePolylines[mapKey][id]) {
+          livePolylines[mapKey][id].setPath(path);
+        } else {
+          livePolylines[mapKey][id] = new google.maps.Polyline({
+            path: path,
+            geodesic: true,
+            strokeColor: "#1565c0",
+            strokeOpacity: 0.75,
+            strokeWeight: 3,
+            map: map
+          });
+        }
+      }
+    });
+    if (hasBounds) {
+      map.fitBounds(bounds, 40);
+    }
+    setTimeout(function () {
+      google.maps.event.trigger(map, "resize");
+    }, 200);
+    return map;
+  }
+
   function toRad(deg) {
     return (deg * Math.PI) / 180;
   }
@@ -268,11 +439,22 @@ var EmergencyLocation = (function () {
   }
 
   function clampToSomalia(lat, lng) {
-    if (isInSomalia(lat, lng)) return { lat: lat, lng: lng };
-    return { lat: MOGADISHU_CENTER.lat, lng: MOGADISHU_CENTER.lng };
+    // Preserve live GPS coordinates — never replace them with a static city center
+    if (lat == null || lng == null || isNaN(lat) || isNaN(lng)) {
+      return { lat: DEFAULT_VIEW.lat, lng: DEFAULT_VIEW.lng, invalid: true };
+    }
+    return { lat: lat, lng: lng, inSomalia: isInSomalia(lat, lng) };
   }
 
   function distanceKm(lat1, lng1, lat2, lng2) {
+    if (hasGoogleMaps() && google.maps.geometry && google.maps.geometry.spherical) {
+      return (
+        google.maps.geometry.spherical.computeDistanceBetween(
+          new google.maps.LatLng(lat1, lng1),
+          new google.maps.LatLng(lat2, lng2)
+        ) / 1000
+      );
+    }
     var R = 6371;
     var dLat = toRad(lat2 - lat1);
     var dLng = toRad(lng2 - lng1);
@@ -280,29 +462,6 @@ var EmergencyLocation = (function () {
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  }
-
-  /**
-   * Get district name from coordinates (nearest Mogadishu district).
-   */
-  function getDistrictName(lat, lng) {
-    if (lat == null || lng == null || isNaN(lat) || isNaN(lng)) {
-      return "Mogadishu, Somalia";
-    }
-    if (!isInSomalia(lat, lng)) {
-      return "Mogadishu, Somalia";
-    }
-    var nearest = DISTRICTS[0];
-    var minDist = distanceKm(lat, lng, nearest.lat, nearest.lng);
-    for (var i = 1; i < DISTRICTS.length; i++) {
-      var d = DISTRICTS[i];
-      var dist = distanceKm(lat, lng, d.lat, d.lng);
-      if (dist < minDist) {
-        minDist = dist;
-        nearest = d;
-      }
-    }
-    return nearest.name;
   }
 
   /**
@@ -337,56 +496,41 @@ var EmergencyLocation = (function () {
   }
 
   /**
-   * IP-based approximate location via backend (avoids CORS).
+   * IP-based approximate location via backend (live only — no fake city default).
    */
   function getApproxLocationByIP() {
-    return fetch("/api/location/ip")
+    return fetch("/api/location/ip", { credentials: "same-origin" })
       .then(function (res) {
-        return res.json();
-      })
-      .then(function (data) {
-        return {
-          lat: data.lat,
-          lng: data.lng,
-          district: data.district || getDistrictName(data.lat, data.lng),
-          source: data.source || "ip"
-        };
-      })
-      .catch(function () {
-        return {
-          lat: MOGADISHU_CENTER.lat,
-          lng: MOGADISHU_CENTER.lng,
-          district: getDistrictName(MOGADISHU_CENTER.lat, MOGADISHU_CENTER.lng),
-          source: "default"
-        };
+        return res.json().then(function (data) {
+          if (!res.ok || !data || data.success === false || data.lat == null) {
+            throw new Error((data && data.message) || "IP location unavailable");
+          }
+          return enrichWithAddress({
+            lat: data.lat,
+            lng: data.lng,
+            district: data.district,
+            source: data.source || "ip"
+          });
+        });
       });
   }
 
   /**
-   * Full flow: GPS -> IP fallback -> Mogadishu default
+   * Full flow: live GPS first, then live IP geolocation. Never invents coordinates.
    */
   function resolveUserLocation(options) {
     return getUserLocation(options)
       .then(function (coords) {
-        var clamped = clampToSomalia(coords.lat, coords.lng);
-        return {
-          lat: clamped.lat,
-          lng: clamped.lng,
-          district: getDistrictName(clamped.lat, clamped.lng),
+        return enrichWithAddress({
+          lat: coords.lat,
+          lng: coords.lng,
           accuracy: coords.accuracy,
-          source: isInSomalia(coords.lat, coords.lng) ? "gps" : "gps_clamped"
-        };
+          source: "gps",
+          inSomalia: isInSomalia(coords.lat, coords.lng)
+        });
       })
       .catch(function () {
-        return getApproxLocationByIP().then(function (loc) {
-          var clamped = clampToSomalia(loc.lat, loc.lng);
-          return {
-            lat: clamped.lat,
-            lng: clamped.lng,
-            district: getDistrictName(clamped.lat, clamped.lng),
-            source: loc.source || "default"
-          };
-        });
+        return getApproxLocationByIP();
       });
   }
 
@@ -398,18 +542,11 @@ var EmergencyLocation = (function () {
       if (emergencyOrString.latitude != null && emergencyOrString.longitude != null) {
         var lat = parseFloat(emergencyOrString.latitude);
         var lng = parseFloat(emergencyOrString.longitude);
-        if (!isInSomalia(lat, lng)) {
-          return {
-            lat: MOGADISHU_CENTER.lat,
-            lng: MOGADISHU_CENTER.lng,
-            label: emergencyOrString.district || "Mogadishu, Somalia",
-            invalid: true
-          };
-        }
         return {
           lat: lat,
           lng: lng,
-          label: emergencyOrString.district || emergencyOrString.location || ""
+          label: emergencyOrString.district || emergencyOrString.location || getDistrictName(lat, lng),
+          invalid: !isInSomalia(lat, lng)
         };
       }
       emergencyOrString = emergencyOrString.location || "";
@@ -419,24 +556,18 @@ var EmergencyLocation = (function () {
     if (match) {
       var mlat = parseFloat(match[1]);
       var mlng = parseFloat(match[2]);
-      if (!isInSomalia(mlat, mlng)) {
-        return {
-          lat: MOGADISHU_CENTER.lat,
-          lng: MOGADISHU_CENTER.lng,
-          label: str.split("(")[0].trim() || "Mogadishu, Somalia",
-          invalid: true
-        };
-      }
       return {
         lat: mlat,
         lng: mlng,
-        label: str.split("(")[0].trim()
+        label: str.split("(")[0].trim() || getDistrictName(mlat, mlng),
+        invalid: !isInSomalia(mlat, mlng)
       };
     }
     return {
-      lat: MOGADISHU_CENTER.lat,
-      lng: MOGADISHU_CENTER.lng,
-      label: str || "Mogadishu, Somalia"
+      lat: null,
+      lng: null,
+      label: str || "Location unavailable",
+      invalid: true
     };
   }
 
@@ -503,15 +634,22 @@ var EmergencyLocation = (function () {
   }
 
   function showMapModal(lat, lng, title, address) {
+    if (lat == null || lng == null || isNaN(lat) || isNaN(lng)) return;
     ensureMapModal();
     var modal = document.getElementById("emergency-map-modal");
     document.getElementById("map-modal-title").textContent = title || "Emergency location";
-    document.getElementById("map-modal-address").textContent =
+    var addrEl = document.getElementById("map-modal-address");
+    addrEl.textContent =
       address || getDistrictName(lat, lng) + " (" + lat.toFixed(5) + ", " + lng.toFixed(5) + ")";
     modal.classList.remove("hidden");
-    initMap("map-modal-container", lat, lng, {
+    initMapProvider("map-modal-container", lat, lng, {
       label: address || getDistrictName(lat, lng),
       zoom: 16
+    });
+    reverseGeocode(lat, lng).then(function (label) {
+      if (!address) {
+        addrEl.textContent = label + " (" + lat.toFixed(5) + ", " + lng.toFixed(5) + ")";
+      }
     });
   }
 
@@ -520,13 +658,20 @@ var EmergencyLocation = (function () {
     if (modal) modal.classList.add("hidden");
     if (mapInstances["map-modal-container"]) {
       var old = mapInstances["map-modal-container"];
-      if (old.map && old.map.remove) old.map.remove();
+      if (old.type === "google") {
+        // Google maps: clear container
+        var el = document.getElementById("map-modal-container");
+        if (el) el.innerHTML = "";
+      } else if (old.map && old.map.remove) {
+        old.map.remove();
+      }
       delete mapInstances["map-modal-container"];
     }
   }
 
   function showEmergencyOnMap(emergency) {
     var coords = parseCoordinates(emergency);
+    if (coords.lat == null || coords.lng == null) return;
     showMapModal(
       coords.lat,
       coords.lng,
@@ -549,7 +694,7 @@ var EmergencyLocation = (function () {
       function (position) {
         var lat = position.coords.latitude;
         var lng = position.coords.longitude;
-        onUpdate({
+        var fix = {
           lat: lat,
           lng: lng,
           accuracy: position.coords.accuracy,
@@ -557,12 +702,17 @@ var EmergencyLocation = (function () {
           heading: position.coords.heading,
           district: getDistrictName(lat, lng),
           source: "gps"
+        };
+        onUpdate(fix);
+        reverseGeocode(lat, lng).then(function (label) {
+          fix.district = label;
+          onUpdate(fix);
         });
       },
       function () {},
       {
         enableHighAccuracy: true,
-        maximumAge: options.maximumAge || 5000,
+        maximumAge: options.maximumAge || 0,
         timeout: options.timeout || 20000
       }
     );
@@ -572,28 +722,64 @@ var EmergencyLocation = (function () {
   }
 
   function initOverviewMap(containerId, emergencies) {
-    if (typeof L === "undefined") return null;
     var el = document.getElementById(containerId);
     if (!el) return null;
 
+    if (hasGoogleMaps()) {
+      el.innerHTML = "";
+      var gmap = new google.maps.Map(el, {
+        center: { lat: DEFAULT_VIEW.lat, lng: DEFAULT_VIEW.lng },
+        zoom: 13,
+        mapTypeControl: true,
+        streetViewControl: false,
+        mapTypeId: "roadmap"
+      });
+      var gbounds = new google.maps.LatLngBounds();
+      var ghas = false;
+      (emergencies || []).forEach(function (em) {
+        var c = parseCoordinates(em);
+        if (c.lat == null || isNaN(c.lat)) return;
+        ghas = true;
+        gbounds.extend({ lat: c.lat, lng: c.lng });
+        var marker = new google.maps.Marker({
+          position: { lat: c.lat, lng: c.lng },
+          map: gmap,
+          title: "#" + (em.id || "")
+        });
+        var info = new google.maps.InfoWindow({
+          content:
+            "<strong>#" + (em.id || "") + "</strong> " + (em.type || "") +
+            "<br>" + (c.label || em.location || "")
+        });
+        marker.addListener("click", function () {
+          info.open(gmap, marker);
+        });
+      });
+      if (ghas) gmap.fitBounds(gbounds, 30);
+      mapInstances[containerId] = { type: "google", map: gmap };
+      setTimeout(function () {
+        google.maps.event.trigger(gmap, "resize");
+      }, 300);
+      return gmap;
+    }
+
+    if (typeof L === "undefined") return null;
     var mapKey = containerId;
-    if (mapInstances[mapKey]) {
+    if (mapInstances[mapKey] && mapInstances[mapKey].remove) {
       mapInstances[mapKey].remove();
       delete mapInstances[mapKey];
     }
 
-    var map = L.map(containerId).setView(
-      [MOGADISHU_CENTER.lat, MOGADISHU_CENTER.lng],
-      13
-    );
+    var map = L.map(containerId).setView([DEFAULT_VIEW.lat, DEFAULT_VIEW.lng], 13);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; OpenStreetMap',
+      attribution: "&copy; OpenStreetMap",
       maxZoom: 19
     }).addTo(map);
 
     var bounds = [];
     (emergencies || []).forEach(function (em) {
       var c = parseCoordinates(em);
+      if (c.lat == null || isNaN(c.lat)) return;
       var marker = L.marker([c.lat, c.lng]).addTo(map);
       marker.bindPopup(
         "<strong>#" + (em.id || "") + "</strong> " + (em.type || "") +
@@ -740,8 +926,9 @@ var EmergencyLocation = (function () {
     }
 
     function fetchOsrmRoute(from, to) {
+      // Server prefers Google Directions when API key is configured
       return fetch(
-        "/api/route/osrm?from=" + from.lat + "," + from.lng + "&to=" + to.lat + "," + to.lng,
+        "/api/route?from=" + from.lat + "," + from.lng + "&to=" + to.lat + "," + to.lng,
         { credentials: "same-origin" }
       ).then(function (r) { return r.json(); });
     }
@@ -972,11 +1159,34 @@ var EmergencyLocation = (function () {
       var trail = (data.trail || []).filter(function (p) {
         return validPoint(p.latitude, p.longitude);
       });
-      if (trail.length >= 2 && state.type === "leaflet-dash" && state.map) {
-        var pts = trail.map(function (p) { return [p.latitude, p.longitude]; });
-        if (state.trailLine) state.trailLine.setLatLngs(pts);
-        else {
-          state.trailLine = L.polyline(pts, { color: "#c62828", weight: 3, opacity: 0.55, dashArray: "5, 5" }).addTo(state.map);
+      if (trail.length >= 2 && state.map) {
+        if (state.type === "google") {
+          var gPath = trail.map(function (p) {
+            return { lat: p.latitude, lng: p.longitude };
+          });
+          if (state.trailLine) {
+            state.trailLine.setPath(gPath);
+          } else {
+            state.trailLine = new google.maps.Polyline({
+              path: gPath,
+              geodesic: true,
+              strokeColor: "#c62828",
+              strokeOpacity: 0.6,
+              strokeWeight: 3,
+              map: state.map
+            });
+          }
+        } else if (state.type === "leaflet-dash") {
+          var pts = trail.map(function (p) { return [p.latitude, p.longitude]; });
+          if (state.trailLine) state.trailLine.setLatLngs(pts);
+          else {
+            state.trailLine = L.polyline(pts, {
+              color: "#c62828",
+              weight: 3,
+              opacity: 0.55,
+              dashArray: "5, 5"
+            }).addTo(state.map);
+          }
         }
       }
       fitAll();
@@ -1005,8 +1215,9 @@ var EmergencyLocation = (function () {
       clearEmergency: function () {
         ["emergency", "hospital", "ambulance", "police", "fire"].forEach(removeMarker);
         clearAllRoutes();
-        if (state.trailLine && state.map) {
-          state.map.removeLayer(state.trailLine);
+        if (state.trailLine) {
+          if (state.type === "google") state.trailLine.setMap(null);
+          else if (state.map && state.map.removeLayer) state.map.removeLayer(state.trailLine);
           state.trailLine = null;
         }
         state.lastPatient = null;
@@ -1033,10 +1244,12 @@ var EmergencyLocation = (function () {
 
   return {
     MOGADISHU_CENTER: MOGADISHU_CENTER,
+    DEFAULT_VIEW: DEFAULT_VIEW,
     SOMALIA_BOUNDS: SOMALIA_BOUNDS,
     isInSomalia: isInSomalia,
     clampToSomalia: clampToSomalia,
-    DISTRICTS: DISTRICTS,
+    hasGoogleMaps: hasGoogleMaps,
+    reverseGeocode: reverseGeocode,
     getUserLocation: getUserLocation,
     requestLocationPermission: requestLocationPermission,
     getDistrictName: getDistrictName,
@@ -1058,6 +1271,7 @@ var EmergencyLocation = (function () {
     initPatientHospitalMap: initPatientHospitalMap,
     watchUserLocation: watchUserLocation,
     confidenceFromAccuracy: confidenceFromAccuracy,
-    createDashboardMap: createDashboardMap
+    createDashboardMap: createDashboardMap,
+    distanceKm: distanceKm
   };
 })();

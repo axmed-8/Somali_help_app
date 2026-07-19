@@ -108,29 +108,46 @@ for path in ("/login", "/signup", "/forgot-password", "/call-center/login"):
 r = client.get("/reset-password/not-a-token", follow_redirects=True)
 check("Invalid reset token handled", r.status_code == 200)
 
-# ---- Signup + immediate login (no email verification gate) ----
+# ---- Signup + login (citizen-only) ----
+import re
 clear_outbox()
 email = "e2e.audit@test.so"
 r = client.post(
     "/signup",
     data={
-        "name": "E2E Audit",
+        "first_name": "E2E",
+        "middle_name": "",
+        "last_name": "Audit",
+        "gender": "male",
+        "date_of_birth": "1991-07-07",
         "email": email,
+        "phone": "0615555555",
+        "address": "",
+        "city": "",
+        "emergency_contact_name": "E2E Contact",
+        "emergency_contact_email": "e2e.contact@test.so",
+        "emergency_contact_phone": "0616666666",
+        "emergency_contact_relation": "Friend",
+        "national_id": "",
+        "blood_type": "",
+        "medical_conditions": "",
+        "allergies": "",
         "password": "123456",
         "confirm_password": "123456",
-        "role": "citizen",
-        "phone": "061",
+        "agree_terms": "1",
     },
     follow_redirects=True,
 )
-check("Signup", r.status_code == 200 and b"account created" in r.data.lower())
+check("Signup", r.status_code == 200 and (b"account created" in r.data.lower() or b"verification" in r.data.lower()))
 user, _ = ers.get_user_by_login(email)
-check("Signup ready", user and user.get("email_verified") is True)
+check("Signup citizen", user and user.get("role") == "citizen")
+m = re.search(r"verification code is:\s*(\d{6})", OUTBOX[-1]["text"], re.I) if OUTBOX else None
+if m:
+    client.post("/verify-email", data={"email": email, "otp": m.group(1)}, follow_redirects=True)
 r = login(email, "123456")
-check("Login after signup", b"verify your email" not in r.data.lower())
+check("Login after signup", b"invalid email or password" not in r.data.lower())
 check("Dashboard after signup", client.get("/dashboard").status_code == 200)
 client.get("/logout", follow_redirects=True)
-import re
 
 # ---- Role pages ----
 role_pages = {

@@ -97,7 +97,8 @@
     var u = em.dispatch_unit || {};
     teamContact = u.contact_number || "";
     var teamName = u.team_name || em.team || "Assigning…";
-    var vehicle = u.vehicle_number || "Response unit";
+    var vehicle = u.vehicle_number || null;
+    var unitLabel = vehicle || teamName || "No data available";
     document.getElementById("info-eta").textContent = em.eta_minutes != null ? "~" + em.eta_minutes + " min" : "—";
     document.getElementById("info-distance").textContent = em.distance_km != null ? em.distance_km + " km" : "—";
     updateEtaRing(em.eta_minutes);
@@ -108,15 +109,15 @@
     if (mapYou && currentUserLoc) mapYou.textContent = currentUserLoc.district || "Live GPS";
     if (mapEm) mapEm.textContent = em.location || "Emergency site";
     var mapHospital = document.getElementById("map-detail-hospital");
-    if (mapHospital) mapHospital.textContent = (em.hospital && em.hospital.name) || teamName || "—";
-    if (mapTeam) mapTeam.textContent = vehicle + " · " + teamName;
+    if (mapHospital) mapHospital.textContent = (em.hospital && em.hospital.name) || teamName || "No data available";
+    if (mapTeam) mapTeam.textContent = vehicle ? vehicle + " · " + teamName : teamName;
     var mapStatus = document.getElementById("map-detail-status");
     if (mapStatus) mapStatus.textContent = em.display_stage_label || em.status || "—";
 
     var sheetTeam = document.getElementById("sheet-team-name");
     var sheetEta = document.getElementById("sheet-eta");
     var sheetDist = document.getElementById("sheet-dist");
-    if (sheetTeam) sheetTeam.textContent = vehicle;
+    if (sheetTeam) sheetTeam.textContent = unitLabel;
     if (sheetEta) sheetEta.textContent = em.eta_minutes != null ? em.eta_minutes + " min" : "—";
     if (sheetDist) sheetDist.textContent = em.distance_km != null ? em.distance_km + " km" : "—";
 
@@ -178,12 +179,12 @@
     if (el) {
       el.innerHTML = filtered.length
         ? filtered.map(notifHtml).join("")
-        : "<p style='color:var(--gn-text-muted);font-size:0.85rem;'>No notifications.</p>";
+        : "<p style='color:var(--gn-text-muted);font-size:0.85rem;'>No data available</p>";
     }
     var prev = document.getElementById("ers-notifications-preview");
     if (prev) {
       prev.innerHTML = allNotifications.slice(0, 3).map(notifHtml).join("") ||
-        "<p style='color:var(--gn-text-muted);font-size:0.82rem;'>No notifications yet.</p>";
+        "<p style='color:var(--gn-text-muted);font-size:0.82rem;'>No data available</p>";
     }
   }
 
@@ -191,7 +192,7 @@
     var el = document.getElementById("ers-history-list");
     if (!el) return;
     if (!recent || !recent.length) {
-      el.innerHTML = "<p style='color:var(--gn-text-muted);font-size:0.82rem;'>No history yet.</p>";
+      el.innerHTML = "<p style='color:var(--gn-text-muted);font-size:0.82rem;'>No data available</p>";
       return;
     }
     var completed = ["resolved", "completed", "cancelled", "no_hospital_available"];
@@ -270,7 +271,9 @@
       var u = tracking.dispatch_unit || {};
       var mapTeam = document.getElementById("map-detail-team");
       if (mapTeam) {
-        mapTeam.textContent = (u.vehicle_number || "Unit") + " · " + (u.team_name || tracking.team_label || "Team");
+        mapTeam.textContent = u.vehicle_number
+          ? u.vehicle_number + " · " + (u.team_name || tracking.team_label || "Team")
+          : (u.team_name || tracking.team_label || "No data available");
       }
       var mapStatus = document.getElementById("map-detail-status");
       if (mapStatus) mapStatus.textContent = tracking.display_stage_label || tracking.status || "—";
@@ -330,12 +333,19 @@
         refreshMapTracking();
       }
     }).catch(function () {
-      var c = EmergencyLocation.MOGADISHU_CENTER;
+      var perm = document.getElementById("dash-map-permission");
+      if (perm) {
+        perm.textContent =
+          "Enable device GPS for live location. Map shows the default region until GPS is available.";
+      }
+      // Initial map viewport only — not treated as the user's GPS position
+      var c = EmergencyLocation.DEFAULT_VIEW || EmergencyLocation.MOGADISHU_CENTER;
       dashMap = EmergencyLocation.createDashboardMap("dash-tracking-map");
       dashMapFull = EmergencyLocation.createDashboardMap("dash-tracking-map-full");
       dashMap.init(c.lat, c.lng);
       dashMapFull.init(c.lat, c.lng);
       mapsReady = true;
+      beginLocationWatch();
     });
   }
 

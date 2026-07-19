@@ -1,0 +1,7 @@
+{# Google Maps JS — primary map provider when API key is configured #}
+<script>
+  window.GURMADNET_MAPS = {{ maps_config|default({"provider": "leaflet", "apiKeyPresent": false, "defaultLat": 2.0469, "defaultLng": 45.3182, "defaultZoom": 14})|tojson }};
+</script>
+{% if use_google_maps and google_maps_key %}
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_key }}&libraries=geometry,places"></script>
+{% endif %}

@@ -1,0 +1,77 @@
+{
+  "items": [
+    {
+      "id": 1,
+      "reason": "banadir: closest suitable hospital, ETA 3 min. Ambulance available.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-14 14:28:25",
+      "analysis_id": 1,
+      "emergency_id": 20,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 1,
+        "name": "banadir",
+        "phone": "613919191",
+        "latitude": 2.034484,
+        "longitude": 45.298842,
+        "distance_km": 0.24,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 2,
+      "reason": "kalkaal: closest suitable hospital, ETA 3 min. Ambulance available.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-15 10:28:18",
+      "analysis_id": 2,
+      "emergency_id": 21,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 3,
+        "name": "kalkaal",
+        "phone": "6155555555",
+        "latitude": 2.036904,
+        "longitude": 45.301941,
+        "distance_km": 2.12,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    }
+  ],
+  "next_id": 3
+}

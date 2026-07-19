@@ -117,7 +117,13 @@ var HospitalApp = (function () {
   }
 
   function moveMarker(lat, lng) {
-    if (regMap && regMarker) {
+    if (!regMap || !regMarker) return;
+    if (window.google && window.google.maps && regMarker.setPosition) {
+      regMarker.setPosition({ lat: lat, lng: lng });
+      regMap.panTo({ lat: lat, lng: lng });
+      return;
+    }
+    if (regMarker.setLatLng) {
       regMarker.setLatLng([lat, lng]);
       regMap.panTo([lat, lng]);
     }
@@ -204,14 +210,60 @@ var HospitalApp = (function () {
   }
 
   function initMainMap(lat, lng) {
-    if (typeof L === "undefined") return;
+    var elMap = el("register-map");
+    if (!elMap) return;
     if (regMap) {
-      regMap.remove();
+      try {
+        if (regMap.remove) regMap.remove();
+      } catch (e) {}
       regMap = null;
+      regMarker = null;
     }
+
+    if (window.google && window.google.maps) {
+      elMap.innerHTML = "";
+      regMap = new google.maps.Map(elMap, {
+        center: { lat: lat, lng: lng },
+        zoom: 14,
+        mapTypeControl: true,
+        streetViewControl: false,
+        mapTypeId: "roadmap",
+        gestureHandling: "greedy",
+      });
+      regMarker = new google.maps.Marker({
+        position: { lat: lat, lng: lng },
+        map: regMap,
+        draggable: true,
+        title: "Hospital location",
+      });
+      regMarker.addListener("dragend", function () {
+        var p = regMarker.getPosition();
+        state.userConfirmed = true;
+        onLocationPicked(p.lat(), p.lng(), { skipReverse: false, userConfirmed: true });
+      });
+      regMap.addListener("click", function (e) {
+        state.userConfirmed = true;
+        onLocationPicked(e.latLng.lat(), e.latLng.lng(), {
+          skipReverse: false,
+          userConfirmed: true,
+        });
+      });
+      // Compatibility helpers used elsewhere (Leaflet-style)
+      regMap.setView = function (coords, zoom) {
+        regMap.setCenter({ lat: coords[0], lng: coords[1] });
+        if (zoom) regMap.setZoom(zoom);
+        if (regMarker) regMarker.setPosition({ lat: coords[0], lng: coords[1] });
+      };
+      setTimeout(function () {
+        google.maps.event.trigger(regMap, "resize");
+      }, 300);
+      return;
+    }
+
+    if (typeof L === "undefined") return;
     regMap = L.map("register-map").setView([lat, lng], 14);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "&copy; OpenStreetMap"
+      attribution: "&copy; OpenStreetMap",
     }).addTo(regMap);
     regMarker = L.marker([lat, lng], { draggable: true }).addTo(regMap);
     regMarker.on("dragend", function () {
@@ -223,7 +275,9 @@ var HospitalApp = (function () {
       state.userConfirmed = true;
       onLocationPicked(e.latlng.lat, e.latlng.lng, { skipReverse: false, userConfirmed: true });
     });
-    setTimeout(function () { regMap.invalidateSize(); }, 300);
+    setTimeout(function () {
+      regMap.invalidateSize();
+    }, 300);
   }
 
   function escapeHtml(s) {
@@ -255,7 +309,12 @@ var HospitalApp = (function () {
       var li = document.createElement("li");
       li.setAttribute("role", "option");
       li.tabIndex = 0;
-      var badge = item.source === "known_hospital" ? " ✓ Verified" : "";
+      var badge =
+        item.source === "google"
+          ? " · Google Maps"
+          : item.source === "known_hospital"
+            ? " ✓ Verified"
+            : "";
       li.innerHTML =
         "<strong>" + escapeHtml(item.name) + badge + "</strong>" +
         "<span>" + escapeHtml(item.display_name || item.address || "") + "</span>" +

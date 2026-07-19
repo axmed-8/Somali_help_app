@@ -163,7 +163,7 @@ def send_email(to_email, subject, text_body, html_body=None, from_email=None, pr
 
 
 def send_verification_email(to_email, verify_url, user_name=None):
-    """Send Step-1 email verification message via configured provider."""
+    """Legacy link-based verification email (kept for compatibility)."""
     app_name = os.environ.get("APP_NAME", "GurmadNet AI")
     greeting = f"Hello {user_name}," if user_name else "Hello,"
     subject = f"Verify your {app_name} email address"
@@ -184,6 +184,88 @@ def send_verification_email(to_email, verify_url, user_name=None):
         "<p>If you did not create this account, you can ignore this email.</p>"
     )
     return send_email(to_email, subject, text_body, html_body=html_body)
+
+
+def send_email_verification_otp_email(to_email, otp_code, user_name=None, minutes=30):
+    """Send a one-time email verification code after citizen registration."""
+    app_name = os.environ.get("APP_NAME", "GurmadNet AI")
+    greeting = f"Hello {user_name}," if user_name else "Hello,"
+    subject = f"Your {app_name} email verification code"
+    text_body = (
+        f"{greeting}\n\n"
+        f"Your email verification code is: {otp_code}\n\n"
+        f"Enter this code to activate your {app_name} account.\n"
+        f"This code expires in {minutes} minutes and can be used only once.\n\n"
+        "If you did not create this account, you can ignore this email.\n"
+    )
+    html_body = (
+        f"<p>{greeting}</p>"
+        f"<p>Your email verification code is:</p>"
+        f"<p style=\"font-size:28px;font-weight:700;letter-spacing:4px;\">{otp_code}</p>"
+        f"<p>Enter this code to activate your <strong>{app_name}</strong> account.</p>"
+        f"<p>This code expires in {minutes} minutes and can be used only once.</p>"
+        "<p>If you did not create this account, you can ignore this email.</p>"
+    )
+    return send_email(to_email, subject, text_body, html_body=html_body)
+
+
+def send_emergency_contact_alert_email(
+    to_email,
+    contact_name=None,
+    citizen_name=None,
+    citizen_phone=None,
+    emergency_type=None,
+    location=None,
+    notes=None,
+    emergency_id=None,
+    occurred_at=None,
+    latitude=None,
+    longitude=None,
+):
+    """Notify a citizen's registered emergency contact when SOS is submitted."""
+    app_name = os.environ.get("APP_NAME", "GurmadNet AI")
+    greeting = f"Hello {contact_name}," if contact_name else "Hello,"
+    etype = (emergency_type or "emergency").replace("_", " ").title()
+    when = occurred_at or ""
+    gps = ""
+    if latitude is not None and longitude is not None:
+        try:
+            gps = f"{float(latitude):.6f}, {float(longitude):.6f}"
+        except (TypeError, ValueError):
+            gps = f"{latitude}, {longitude}"
+    subject = f"{app_name}: Emergency alert for {citizen_name or 'a registered user'}"
+    text_body = (
+        f"{greeting}\n\n"
+        f"This is an automated alert from {app_name}.\n\n"
+        f"{citizen_name or 'A registered user'} has submitted an SOS emergency.\n\n"
+        f"Citizen name: {citizen_name or '—'}\n"
+        f"Phone number: {citizen_phone or 'Not provided'}\n"
+        f"Emergency type: {etype}\n"
+        f"Date & time: {when or '—'}\n"
+        f"Location: {location or 'Not available'}\n"
+        f"GPS: {gps or 'Not available'}\n"
+        f"Notes: {notes or '—'}\n"
+        f"Emergency ID: {emergency_id or '—'}\n\n"
+        "Please try to reach them if you can.\n"
+    )
+    html_body = (
+        f"<p>{greeting}</p>"
+        f"<p>This is an automated alert from <strong>{app_name}</strong>.</p>"
+        f"<p><strong>{citizen_name or 'A registered user'}</strong> has submitted an SOS emergency.</p>"
+        f"<ul>"
+        f"<li><strong>Citizen name:</strong> {citizen_name or '—'}</li>"
+        f"<li><strong>Phone number:</strong> {citizen_phone or 'Not provided'}</li>"
+        f"<li><strong>Emergency type:</strong> {etype}</li>"
+        f"<li><strong>Date &amp; time:</strong> {when or '—'}</li>"
+        f"<li><strong>Location:</strong> {location or 'Not available'}</li>"
+        f"<li><strong>GPS:</strong> {gps or 'Not available'}</li>"
+        f"<li><strong>Notes:</strong> {notes or '—'}</li>"
+        f"<li><strong>Emergency ID:</strong> {emergency_id or '—'}</li>"
+        f"</ul>"
+        "<p>Please try to reach them if you can.</p>"
+    )
+    return send_email(to_email, subject, text_body, html_body=html_body)
+
 
 def send_password_reset_otp_email(to_email, otp_code, user_name=None, minutes=10):
     """Send a one-time password-reset code (OTP) via configured provider."""

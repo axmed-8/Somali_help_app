@@ -90,8 +90,16 @@
         pageWatchStop = EmergencyLocation.watchUserLocation(applyLocation, { maximumAge: 5000 });
       })
       .catch(function (err) {
-        if (statusEl) statusEl.textContent = err.message || "GPS denied";
-        return EmergencyLocation.getApproxLocationByIP().then(applyLocation);
+        if (statusEl) statusEl.textContent = err.message || "GPS denied — trying network location…";
+        return EmergencyLocation.getApproxLocationByIP()
+          .then(applyLocation)
+          .catch(function (ipErr) {
+            if (statusEl) {
+              statusEl.textContent =
+                (ipErr && ipErr.message) ||
+                "Location unavailable. Enable GPS for accurate emergency positioning.";
+            }
+          });
       });
   }
 

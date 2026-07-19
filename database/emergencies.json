@@ -129,7 +129,7 @@
       "operator_id": 2,
       "operator_name": "Call Center Operator",
       "request_mode": "call_center",
-      "tracking_active": true,
+      "tracking_active": false,
       "last_location_update": "2026-07-12 17:26:28",
       "assigned_team_label": "Medical Response Team",
       "status_history": [
@@ -308,7 +308,7 @@
       "operator_id": 2,
       "operator_name": "Call Center Operator",
       "request_mode": "call_center",
-      "tracking_active": true,
+      "tracking_active": false,
       "last_location_update": "2026-07-12 17:27:39",
       "assigned_team_label": "Medical Response Team",
       "status_history": [
@@ -375,7 +375,7 @@
       "operator_id": 2,
       "operator_name": "Call Center Operator",
       "request_mode": "call_center",
-      "tracking_active": true,
+      "tracking_active": false,
       "last_location_update": "2026-07-12 17:40:30",
       "assigned_team_label": "Medical Response Team",
       "status_history": [
@@ -554,7 +554,7 @@
       "operator_id": 2,
       "operator_name": "Call Center Operator",
       "request_mode": "call_center",
-      "tracking_active": true,
+      "tracking_active": false,
       "last_location_update": "2026-07-12 17:40:57",
       "assigned_team_label": "Medical Response Team",
       "status_history": [

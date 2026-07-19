@@ -1,0 +1,141 @@
+{
+  "hospitals": [
+    {
+      "id": 1,
+      "name": "banadir",
+      "city": "Muqdisho مقديشو",
+      "region": "Banadir",
+      "district": "Wadajir وداجير مدينة",
+      "address": "Digfer Road طريق دكفر, Wadajir وداجير مدينة, Muqdisho مقديشو",
+      "latitude": 2.034484,
+      "longitude": 45.298842,
+      "phone": "613919191",
+      "ambulance_available": true,
+      "ambulance_count": 3,
+      "emergency_capacity": 10,
+      "rating": 4.0,
+      "operating_status": "open",
+      "contact_email": "banadir.123@gmail.com",
+      "owner_user_id": null,
+      "location_verified": true,
+      "created_at": "2026-06-11 22:46:47",
+      "updated_at": "2026-06-13 11:43:25",
+      "emergency_contacts": [
+        "6155555555",
+        "6177777777"
+      ],
+      "services": [
+        "Emergency",
+        "Trauma",
+        "General",
+        "Surgery",
+        "ICU",
+        "Pediatrics",
+        "Ambulance",
+        "Laboratory",
+        "Radiology",
+        "Pharmacy"
+      ],
+      "specialties": [
+        "Emergency",
+        "Trauma",
+        "General",
+        "Surgery",
+        "ICU",
+        "Pediatrics",
+        "Ambulance",
+        "Laboratory",
+        "Radiology",
+        "Pharmacy"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Madina Hospita",
+      "city": "Muqdisho مقديشو",
+      "region": "Banadir",
+      "district": "Wadajir وداجير مدينة",
+      "address": "Digfer Road طريق دكفر, Wadajir وداجير مدينة, Muqdisho مقديشو",
+      "latitude": 2.03018,
+      "longitude": 45.297493,
+      "phone": "61666666666",
+      "ambulance_available": true,
+      "ambulance_count": 2,
+      "emergency_capacity": 10,
+      "rating": 4.0,
+      "operating_status": "open",
+      "contact_email": "Madina123@mail.com",
+      "owner_user_id": null,
+      "location_verified": true,
+      "created_at": "2026-06-11 23:06:41",
+      "updated_at": "2026-06-11 23:06:41",
+      "emergency_contacts": [
+        "61233333"
+      ],
+      "services": [
+        "Emergency",
+        "Trauma",
+        "General",
+        "Surgery",
+        "ICU",
+        "Maternity",
+        "Pediatrics",
+        "Ambulance",
+        "Laboratory",
+        "Radiology",
+        "Pharmacy"
+      ],
+      "specialties": [
+        "Emergency",
+        "Trauma",
+        "General",
+        "Surgery",
+        "ICU",
+        "Maternity",
+        "Pediatrics",
+        "Ambulance",
+        "Laboratory",
+        "Radiology",
+        "Pharmacy"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "kalkaal",
+      "city": "Muqdisho مقديشو",
+      "region": "Banadir",
+      "district": "Guryaha Ruushka",
+      "address": "Digfer Road طريق دكفر, Guryaha Ruushka, Muqdisho مقديشو",
+      "latitude": 2.036904,
+      "longitude": 45.301941,
+      "phone": "6155555555",
+      "ambulance_available": true,
+      "ambulance_count": 2,
+      "emergency_capacity": 10,
+      "rating": 4.0,
+      "operating_status": "open",
+      "contact_email": "kalkaal@gamil.com",
+      "owner_user_id": null,
+      "location_verified": true,
+      "created_at": "2026-06-13 21:01:37",
+      "updated_at": "2026-06-13 21:01:37",
+      "emergency_contacts": [
+        "613333333",
+        "614444444"
+      ],
+      "services": [
+        "Emergency",
+        "Trauma",
+        "General",
+        "ICU"
+      ],
+      "specialties": [
+        "Emergency",
+        "Trauma",
+        "General",
+        "ICU"
+      ]
+    }
+  ],
+  "next_id": 4
+}

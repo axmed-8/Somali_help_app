@@ -6,6 +6,7 @@
   <title>{{ hospital.name }} — Hospital Dashboard</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% include "_google_maps.html" %}
 </head>
 <body class="dashboard-hospital">
   <div class="dashboard-container">
@@ -44,7 +45,7 @@
               <div class="stat-label">Total requests today</div>
             </div>
             <div class="stat-card">
-              <div class="stat-value">{{ settings.ambulance_response_time }} min</div>
+              <div class="stat-value" id="stat-avg">No data available</div>
               <div class="stat-label">Average response time</div>
             </div>
             <div class="stat-card">
@@ -262,7 +263,7 @@
 
             if (list.length === 0) {
               container.innerHTML =
-                '<div class="empty-alerts">No live medical alerts. Waiting for SOS requests...</div>';
+                '<div class="empty-alerts">No data available</div>';
             } else {
               list.forEach(function (em) {
                 container.appendChild(renderCard(em));
@@ -274,7 +275,14 @@
               const now = new Date();
               return d.toDateString() === now.toDateString();
             });
-            document.getElementById("stat-total").textContent = today.length || list.length;
+            document.getElementById("stat-total").textContent = today.length;
+            var avgEl = document.getElementById("stat-avg");
+            if (avgEl) {
+              avgEl.textContent =
+                data.avg_response_time != null
+                  ? data.avg_response_time + " min"
+                  : "No data available";
+            }
 
             document.getElementById("refresh-time").textContent =
               "Last updated " + new Date().toLocaleTimeString();
@@ -430,7 +438,7 @@
             const list = data.emergencies || [];
             if (list.length === 0) {
               container.innerHTML =
-                '<div class="empty-alerts">No resolved requests in history yet.</div>';
+                '<div class="empty-alerts">No data available</div>';
             } else {
               list.forEach(function (em) {
                 container.appendChild(renderCard(em));

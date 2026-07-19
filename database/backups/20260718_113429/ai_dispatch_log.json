@@ -1,0 +1,43 @@
+{
+  "items": [
+    {
+      "id": 1,
+      "notes": "Parallel AI analysis after sos dispatch path",
+      "call_id": null,
+      "created_at": "2026-07-14 14:28:25",
+      "analysis_id": 1,
+      "operator_id": null,
+      "emergency_id": 20,
+      "dispatched_to": [
+        "hospital"
+      ],
+      "emergency_ids": [
+        20
+      ],
+      "human_decision": "auto_sos",
+      "recommendation_id": 1,
+      "assigned_hospital_id": 1,
+      "assigned_hospital_name": "banadir"
+    },
+    {
+      "id": 2,
+      "notes": "Parallel AI analysis after sos dispatch path",
+      "call_id": null,
+      "created_at": "2026-07-15 10:28:18",
+      "analysis_id": 2,
+      "operator_id": null,
+      "emergency_id": 21,
+      "dispatched_to": [
+        "hospital"
+      ],
+      "emergency_ids": [
+        21
+      ],
+      "human_decision": "auto_sos",
+      "recommendation_id": 2,
+      "assigned_hospital_id": 3,
+      "assigned_hospital_name": "kalkaal"
+    }
+  ],
+  "next_id": 3
+}

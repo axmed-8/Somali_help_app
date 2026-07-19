@@ -1,0 +1,277 @@
+{
+  "users": [
+    {
+      "id": 15,
+      "username": "axmednuurc4",
+      "name": "Ahmett Nuur Apdy",
+      "first_name": "",
+      "middle_name": "",
+      "last_name": "",
+      "email": "axmednuurc4@gmail.com",
+      "phone": "613910872",
+      "password_hash": "scrypt:32768:8:1$2hbzAF3Q9sOf5UBD$b94c93cc1b11b63cc3545c916ab4253bd061fc8fe903ef0abb17e80666a25a220c60516b403928a73355ad534d220dcbcda1a564dec4dae2f71f7bdcf982d035",
+      "role": "admin",
+      "status": "active",
+      "profile_photo": "",
+      "emergency_contact_name": "",
+      "emergency_contact_phone": "",
+      "emergency_contact_relation": "",
+      "emergency_contact_email": "",
+      "address": "",
+      "city": "",
+      "date_of_birth": "",
+      "gender": "",
+      "national_id_last4": "",
+      "national_id_hash": null,
+      "national_id_encrypted": null,
+      "blood_type": "",
+      "medical_notes": "",
+      "allergies": "",
+      "hospital_id": null,
+      "reset_token": null,
+      "reset_expires": null,
+      "email_verified": false,
+      "email_verify_token": null,
+      "email_verify_expires": null,
+      "created_at": "2026-07-17 03:28:34",
+      "last_login": "2026-07-18 10:35:28",
+      "last_seen_call_center": null,
+      "saved_locations": [],
+      "activity": [
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-18 10:35:28"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-18 09:38:37"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-17 15:26:51"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-17 15:23:50"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-17 13:16:09"
+        },
+        {
+          "action": "Account created (pending email verification)",
+          "timestamp": "2026-07-17 03:28:34"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "username": "nurmawmaw1",
+      "name": "Nur Abdi Hassan",
+      "first_name": "",
+      "middle_name": "",
+      "last_name": "",
+      "email": "nurmawmaw1@gmail.com",
+      "phone": "615613297",
+      "password_hash": "scrypt:32768:8:1$iRb8Eih8BI5NJT6f$4499b2bc1e385e461ac0baa78b3e48e7245027a6b1d12f717329d9cc7ffb1f0f384725351516eee999393eafd3802da7312b65458089ea6204e78d3ec87e66aa",
+      "role": "citizen",
+      "status": "active",
+      "profile_photo": "",
+      "emergency_contact_name": "",
+      "emergency_contact_phone": "",
+      "emergency_contact_relation": "",
+      "emergency_contact_email": "",
+      "address": "",
+      "city": "",
+      "date_of_birth": "",
+      "gender": "",
+      "national_id_last4": "",
+      "national_id_hash": null,
+      "national_id_encrypted": null,
+      "blood_type": "",
+      "medical_notes": "",
+      "allergies": "",
+      "hospital_id": null,
+      "reset_token": null,
+      "reset_expires": null,
+      "email_verified": true,
+      "email_verify_token": null,
+      "email_verify_expires": null,
+      "created_at": "2026-07-17 12:35:09",
+      "last_login": "2026-07-18 09:19:13",
+      "last_seen_call_center": null,
+      "saved_locations": [],
+      "activity": [
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-18 09:19:13"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-18 09:17:54"
+        },
+        {
+          "action": "Password reset via OTP",
+          "timestamp": "2026-07-17 16:37:27"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-17 16:07:17"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-17 12:35:22"
+        },
+        {
+          "action": "Account created",
+          "timestamp": "2026-07-17 12:35:09"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "username": "nurmawmaw9",
+      "name": "Nur Abdi Hassan",
+      "first_name": "",
+      "middle_name": "",
+      "last_name": "",
+      "email": "nurmawmaw9@gmail.com",
+      "phone": "6166666666",
+      "password_hash": "scrypt:32768:8:1$QA5LNujkT37eVywk$9972b72408f7340bfb566421d9dd1252edd861661d0d23b5825b19edaf3f4090bfaac73ee7725684df174c309dd1d9ec040c38bdcc20e756d331e681298ba8d1",
+      "role": "citizen",
+      "status": "active",
+      "profile_photo": "",
+      "emergency_contact_name": "",
+      "emergency_contact_phone": "",
+      "emergency_contact_relation": "",
+      "emergency_contact_email": "",
+      "address": "",
+      "city": "",
+      "date_of_birth": "",
+      "gender": "",
+      "national_id_last4": "",
+      "national_id_hash": null,
+      "national_id_encrypted": null,
+      "blood_type": "",
+      "medical_notes": "",
+      "allergies": "",
+      "hospital_id": null,
+      "reset_token": null,
+      "reset_expires": null,
+      "email_verified": true,
+      "email_verify_token": null,
+      "email_verify_expires": null,
+      "created_at": "2026-07-17 13:00:56",
+      "last_login": "2026-07-17 13:02:37",
+      "last_seen_call_center": null,
+      "saved_locations": [],
+      "activity": [
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-17 13:02:37"
+        },
+        {
+          "action": "Account created",
+          "timestamp": "2026-07-17 13:00:56"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "username": "maano",
+      "name": "maano",
+      "first_name": "",
+      "middle_name": "",
+      "last_name": "",
+      "email": "maano@gmail.com",
+      "phone": "6166666666",
+      "password_hash": "scrypt:32768:8:1$EaNNNxhpOnHLkDTY$e954ab68b39fdeb5e5a9cbd942a619a2492b11819d2f79633e1cbe78d7eab8603597eda38da6b3eeacbd94cc0d93367452c75ef75fb54f449bf53ba6243dcd90",
+      "role": "citizen",
+      "status": "active",
+      "profile_photo": "",
+      "emergency_contact_name": "",
+      "emergency_contact_phone": "",
+      "emergency_contact_relation": "",
+      "emergency_contact_email": "",
+      "address": "",
+      "city": "",
+      "date_of_birth": "",
+      "gender": "",
+      "national_id_last4": "",
+      "national_id_hash": null,
+      "national_id_encrypted": null,
+      "blood_type": "",
+      "medical_notes": "",
+      "allergies": "",
+      "hospital_id": null,
+      "reset_token": null,
+      "reset_expires": null,
+      "email_verified": true,
+      "email_verify_token": null,
+      "email_verify_expires": null,
+      "created_at": "2026-07-17 13:03:15",
+      "last_login": null,
+      "last_seen_call_center": null,
+      "saved_locations": [],
+      "activity": [
+        {
+          "action": "Account created",
+          "timestamp": "2026-07-17 13:03:15"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "username": "axmdk793",
+      "name": "jaanan cabdule mulki",
+      "first_name": "jaanan",
+      "middle_name": "cabdule",
+      "last_name": "mulki",
+      "email": "axmdk793@gmail.com",
+      "phone": "615613297",
+      "password_hash": "scrypt:32768:8:1$GWTiI03aWsjeEfU6$dfb7324fb5a0a424a9d802f81f7ad9ebebeb09ea1295bc98dca8c449384aa40c2c2166916889699c6d35881d7de6cfe31caa91aff0db4920e8c297f5763592c7",
+      "role": "citizen",
+      "status": "active",
+      "profile_photo": "",
+      "emergency_contact_name": "axmd k",
+      "emergency_contact_phone": "613910872",
+      "emergency_contact_relation": "Spouse",
+      "emergency_contact_email": "axmdk793@gmail.com",
+      "address": "hodan",
+      "city": "mugadisho",
+      "date_of_birth": "2004-11-14",
+      "gender": "male",
+      "national_id_last4": "7590",
+      "national_id_hash": "6b48e3bbf5894d84732f475c3313c6e7f7ba9bde9b0fa2337989c627fb980014",
+      "national_id_encrypted": "nKk3Tl2LAcZ8D-EJyHY5ayP9nhs=",
+      "blood_type": "A+",
+      "medical_notes": "",
+      "allergies": "",
+      "hospital_id": null,
+      "reset_token": null,
+      "reset_expires": null,
+      "email_verified": true,
+      "email_verify_token": null,
+      "email_verify_expires": null,
+      "created_at": "2026-07-18 09:26:12",
+      "last_login": "2026-07-18 09:26:34",
+      "last_seen_call_center": null,
+      "saved_locations": [],
+      "activity": [
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-18 09:26:34"
+        },
+        {
+          "action": "Email verified",
+          "timestamp": "2026-07-18 09:26:34"
+        },
+        {
+          "action": "Account created",
+          "timestamp": "2026-07-18 09:26:12"
+        }
+      ]
+    }
+  ],
+  "next_id": 20
+}

@@ -1,0 +1,161 @@
+{
+  "messages": [
+    {
+      "id": 1,
+      "request_id": 18,
+      "sender_role": "citizen",
+      "sender_id": 2,
+      "text": "I need help now",
+      "msg_type": "text",
+      "status": "sent",
+      "timestamp": "2026-06-09 13:55:35",
+      "delivered_at": null,
+      "seen_at": null
+    },
+    {
+      "id": 2,
+      "request_id": 18,
+      "sender_role": "citizen",
+      "sender_id": 2,
+      "text": "I am safe for now",
+      "msg_type": "text",
+      "status": "sent",
+      "timestamp": "2026-06-09 13:55:42",
+      "delivered_at": null,
+      "seen_at": null
+    },
+    {
+      "id": 3,
+      "request_id": 18,
+      "sender_role": "citizen",
+      "sender_id": 2,
+      "text": "I am safe for now",
+      "msg_type": "text",
+      "status": "sent",
+      "timestamp": "2026-06-09 13:55:43",
+      "delivered_at": null,
+      "seen_at": null
+    },
+    {
+      "id": 4,
+      "request_id": 18,
+      "sender_role": "citizen",
+      "sender_id": 2,
+      "text": "Please hurry",
+      "msg_type": "text",
+      "status": "sent",
+      "timestamp": "2026-06-09 13:56:16",
+      "delivered_at": null,
+      "seen_at": null
+    },
+    {
+      "id": 5,
+      "request_id": 1,
+      "sender_role": "citizen",
+      "sender_id": 2,
+      "text": "My condition is worsening",
+      "msg_type": "text",
+      "status": "sent",
+      "timestamp": "2026-06-09 17:53:59",
+      "delivered_at": null,
+      "seen_at": null
+    },
+    {
+      "id": 6,
+      "request_id": 1,
+      "sender_role": "citizen",
+      "sender_id": 2,
+      "text": "I need help now",
+      "msg_type": "text",
+      "status": "sent",
+      "timestamp": "2026-06-09 17:54:00",
+      "delivered_at": null,
+      "seen_at": null
+    },
+    {
+      "id": 7,
+      "request_id": 2,
+      "sender_role": "citizen",
+      "sender_id": 2,
+      "text": "I need help now",
+      "msg_type": "text",
+      "status": "sent",
+      "timestamp": "2026-06-10 11:47:55",
+      "delivered_at": null,
+      "seen_at": null
+    },
+    {
+      "id": 8,
+      "request_id": 3,
+      "sender_role": "citizen",
+      "sender_id": 2,
+      "text": "I need help now",
+      "msg_type": "text",
+      "status": "sent",
+      "timestamp": "2026-06-10 12:00:56",
+      "delivered_at": null,
+      "seen_at": null
+    },
+    {
+      "id": 9,
+      "request_id": 3,
+      "sender_role": "citizen",
+      "sender_id": 2,
+      "text": "i caawi",
+      "msg_type": "text",
+      "status": "sent",
+      "timestamp": "2026-06-10 12:01:05",
+      "delivered_at": null,
+      "seen_at": null
+    },
+    {
+      "id": 10,
+      "request_id": 4,
+      "sender_role": "citizen",
+      "sender_id": 2,
+      "text": "I'm at the location",
+      "msg_type": "text",
+      "status": "sent",
+      "timestamp": "2026-06-10 12:09:06",
+      "delivered_at": null,
+      "seen_at": null
+    },
+    {
+      "id": 11,
+      "request_id": 11,
+      "sender_role": "citizen",
+      "sender_id": 8,
+      "text": "I need help now",
+      "msg_type": "text",
+      "status": "sent",
+      "timestamp": "2026-06-13 11:31:39",
+      "delivered_at": null,
+      "seen_at": null
+    },
+    {
+      "id": 12,
+      "request_id": 14,
+      "sender_role": "citizen",
+      "sender_id": 2,
+      "text": "I need help now",
+      "msg_type": "text",
+      "status": "sent",
+      "timestamp": "2026-06-13 21:08:54",
+      "delivered_at": null,
+      "seen_at": null
+    },
+    {
+      "id": 13,
+      "request_id": 20,
+      "sender_role": "citizen",
+      "sender_id": 13,
+      "text": "qasaeo",
+      "msg_type": "text",
+      "status": "sent",
+      "timestamp": "2026-07-14 14:32:47",
+      "delivered_at": null,
+      "seen_at": null
+    }
+  ],
+  "next_id": 14
+}

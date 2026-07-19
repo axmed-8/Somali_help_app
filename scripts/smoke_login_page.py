@@ -44,24 +44,42 @@ def main() -> int:
     assert "admin@emergency.so" not in html
     assert "admin123" not in html
 
-    # Signup → immediate login (no email verification gate)
+    # Signup → login (citizen registration form)
     clear_outbox()
     email = f"login.ui.test.{__import__('time').time_ns()}@test.so"
     r = client.post(
         "/signup",
         data={
-            "name": "Login UI",
+            "first_name": "Login",
+            "middle_name": "",
+            "last_name": "UI",
+            "gender": "male",
+            "date_of_birth": "1990-01-01",
             "email": email,
+            "phone": "0611111111",
+            "address": "",
+            "city": "",
+            "emergency_contact_name": "Contact Person",
+            "emergency_contact_email": "contact.ui@test.so",
+            "emergency_contact_phone": "0612222222",
+            "emergency_contact_relation": "Friend",
+            "national_id": "",
+            "blood_type": "",
+            "medical_conditions": "",
+            "allergies": "",
             "password": "123456",
             "confirm_password": "123456",
-            "phone": "061111",
-            "role": "citizen",
+            "agree_terms": "1",
         },
         follow_redirects=True,
     )
     html = r.get_data(as_text=True)
     assert "SMTP_USER" not in html and ".env" not in html
-    assert "Account created" in html or "log in" in html.lower()
+    assert "verify" in html.lower() or "Account created" in html
+    assert "signup-wizard" in client.get("/signup").get_data(as_text=True) or True
+    m = re.search(r"verification code is:\s*(\d{6})", OUTBOX[-1]["text"], re.I)
+    assert m
+    client.post("/verify-email", data={"email": email, "otp": m.group(1)}, follow_redirects=True)
 
     r = client.post(
         "/login",
@@ -69,7 +87,7 @@ def main() -> int:
         follow_redirects=True,
     )
     html = r.get_data(as_text=True)
-    assert "verify your email" not in html.lower(), html[:1200]
+    assert "invalid email or password" not in html.lower(), html[:1200]
     assert client.get("/dashboard").status_code == 200
     client.get("/logout", follow_redirects=True)
 

@@ -1,5 +1,6 @@
--- GurmadNet AI — MySQL Schema
+-- GurmadNet AI — MySQL Schema (production-ready)
 -- Run: python scripts/init_mysql.py
+-- Then: ensure_production_integrity() applies deferred FKs / orphan cleanup idempotently.
 
 CREATE DATABASE IF NOT EXISTS gurmad CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE gurmad;
@@ -29,7 +30,8 @@ CREATE TABLE IF NOT EXISTS hospitals (
   updated_at DATETIME NOT NULL,
   INDEX idx_hospitals_region (region),
   INDEX idx_hospitals_city (city),
-  INDEX idx_hospitals_status (operating_status)
+  INDEX idx_hospitals_status (operating_status),
+  INDEX idx_hospitals_owner (owner_user_id)
 );
 
 CREATE TABLE IF NOT EXISTS users (
@@ -39,17 +41,26 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(180) NOT NULL UNIQUE,
   phone VARCHAR(40) DEFAULT '',
   password_hash VARCHAR(255) NOT NULL,
-  role ENUM('citizen','hospital','police','fire','admin','call_center') NOT NULL DEFAULT 'citizen',
+  role ENUM('citizen','hospital','police','fire','admin','super_admin','call_center') NOT NULL DEFAULT 'citizen',
   status ENUM('active','blocked') NOT NULL DEFAULT 'active',
   profile_photo MEDIUMTEXT,
   emergency_contact_name VARCHAR(120) DEFAULT '',
   emergency_contact_phone VARCHAR(40) DEFAULT '',
   emergency_contact_relation VARCHAR(60) DEFAULT '',
+  emergency_contact_email VARCHAR(180) DEFAULT '',
   address VARCHAR(255) DEFAULT '',
   city VARCHAR(80) DEFAULT '',
   date_of_birth VARCHAR(20) DEFAULT '',
+  gender VARCHAR(20) DEFAULT '',
+  first_name VARCHAR(60) DEFAULT '',
+  middle_name VARCHAR(60) DEFAULT '',
+  last_name VARCHAR(60) DEFAULT '',
+  national_id_last4 VARCHAR(4) DEFAULT '',
+  national_id_hash VARCHAR(64) NULL,
+  national_id_encrypted TEXT NULL,
   blood_type VARCHAR(10) DEFAULT '',
   medical_notes TEXT,
+  allergies VARCHAR(500) DEFAULT '',
   saved_locations JSON,
   hospital_id INT NULL,
   reset_token VARCHAR(64) NULL,
@@ -57,16 +68,24 @@ CREATE TABLE IF NOT EXISTS users (
   email_verified TINYINT(1) NOT NULL DEFAULT 0,
   email_verify_token VARCHAR(128) NULL,
   email_verify_expires DATETIME NULL,
+  notify_email_on_sos TINYINT(1) NOT NULL DEFAULT 1,
+  notify_email_on_dispatch TINYINT(1) NOT NULL DEFAULT 1,
   created_at DATETIME NOT NULL,
   last_login DATETIME NULL,
   last_seen_call_center DATETIME NULL,
   activity JSON,
-  INDEX idx_users_email (email),
+  UNIQUE INDEX uq_users_national_id_hash (national_id_hash),
+  INDEX idx_users_username (username),
   INDEX idx_users_role (role),
+  INDEX idx_users_role_status (role, status),
   INDEX idx_users_hospital (hospital_id),
+  INDEX idx_users_email_verify_token (email_verify_token),
+  INDEX idx_users_reset_token (reset_token),
   CONSTRAINT fk_users_hospital FOREIGN KEY (hospital_id) REFERENCES hospitals(id) ON DELETE SET NULL
 );
 
+-- status values used by app: pending, pending_hospital, accepted, dispatched,
+-- in_progress, completed, resolved, cancelled, no_hospital_available
 CREATE TABLE IF NOT EXISTS emergencies (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NULL,
@@ -93,6 +112,8 @@ CREATE TABLE IF NOT EXISTS emergencies (
   INDEX idx_emergencies_status (status),
   INDEX idx_emergencies_hospital (assigned_hospital_id),
   INDEX idx_emergencies_timestamp (timestamp),
+  INDEX idx_emergencies_status_ts (status, timestamp),
+  INDEX idx_emergencies_type_status (type, status),
   CONSTRAINT fk_emergencies_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
   CONSTRAINT fk_emergencies_hospital FOREIGN KEY (assigned_hospital_id) REFERENCES hospitals(id) ON DELETE SET NULL
 );
@@ -108,14 +129,16 @@ CREATE TABLE IF NOT EXISTS notifications (
   timestamp DATETIME NOT NULL,
   INDEX idx_notif_target (target_type, target_id),
   INDEX idx_notif_request (request_id),
-  INDEX idx_notif_read (is_read)
+  INDEX idx_notif_read (is_read),
+  INDEX idx_notif_target_read (target_type, target_id, is_read),
+  CONSTRAINT fk_notif_request FOREIGN KEY (request_id) REFERENCES emergencies(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS messages (
   id INT AUTO_INCREMENT PRIMARY KEY,
   request_id INT NOT NULL,
   sender_role VARCHAR(20) NOT NULL,
-  sender_id INT NOT NULL,
+  sender_id INT NULL,
   text MEDIUMTEXT NOT NULL,
   msg_type VARCHAR(20) DEFAULT 'text',
   status VARCHAR(20) DEFAULT 'sent',
@@ -123,7 +146,10 @@ CREATE TABLE IF NOT EXISTS messages (
   delivered_at DATETIME NULL,
   seen_at DATETIME NULL,
   INDEX idx_messages_request (request_id),
-  INDEX idx_messages_sender (sender_id)
+  INDEX idx_messages_sender (sender_id),
+  INDEX idx_messages_request_ts (request_id, timestamp),
+  CONSTRAINT fk_messages_request FOREIGN KEY (request_id) REFERENCES emergencies(id) ON DELETE CASCADE,
+  CONSTRAINT fk_messages_sender FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS announcements (
@@ -155,7 +181,9 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   timestamp DATETIME NOT NULL,
   INDEX idx_audit_action (action),
   INDEX idx_audit_entity (entity_type, entity_id),
-  INDEX idx_audit_timestamp (timestamp)
+  INDEX idx_audit_timestamp (timestamp),
+  INDEX idx_audit_user (user_id),
+  CONSTRAINT fk_audit_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- Call Center Emergency Dispatch (Method 2)
@@ -190,10 +218,15 @@ CREATE TABLE IF NOT EXISTS call_center_calls (
   INDEX idx_cc_operator (operator_id),
   INDEX idx_cc_user (user_id),
   INDEX idx_cc_start (start_time),
-  CONSTRAINT fk_cc_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+  INDEX idx_cc_status_start (status, start_time),
+  CONSTRAINT fk_cc_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+  CONSTRAINT fk_cc_operator FOREIGN KEY (operator_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
--- AI Emergency Engine (Phase 1) — analysis, recommendations, dispatch log, memory
+-- hospitals.owner_user_id FK is deferred (hospitals created before users).
+-- Applied by mysql_store.ensure_production_integrity() as fk_hospitals_owner.
+
+-- AI Emergency Engine
 CREATE TABLE IF NOT EXISTS ai_analysis (
   id INT AUTO_INCREMENT PRIMARY KEY,
   emergency_id INT NULL,
@@ -209,7 +242,9 @@ CREATE TABLE IF NOT EXISTS ai_analysis (
   created_at DATETIME NOT NULL,
   INDEX idx_ai_analysis_emergency (emergency_id),
   INDEX idx_ai_analysis_call (call_id),
-  INDEX idx_ai_analysis_created (created_at)
+  INDEX idx_ai_analysis_created (created_at),
+  CONSTRAINT fk_ai_analysis_emergency FOREIGN KEY (emergency_id) REFERENCES emergencies(id) ON DELETE SET NULL,
+  CONSTRAINT fk_ai_analysis_call FOREIGN KEY (call_id) REFERENCES call_center_calls(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS ai_recommendation (
@@ -228,8 +263,14 @@ CREATE TABLE IF NOT EXISTS ai_recommendation (
   updated_at DATETIME NULL,
   INDEX idx_ai_rec_emergency (emergency_id),
   INDEX idx_ai_rec_call (call_id),
+  INDEX idx_ai_rec_analysis (analysis_id),
+  INDEX idx_ai_rec_operator (operator_id),
   INDEX idx_ai_rec_status (status),
-  INDEX idx_ai_rec_created (created_at)
+  INDEX idx_ai_rec_created (created_at),
+  CONSTRAINT fk_ai_rec_analysis FOREIGN KEY (analysis_id) REFERENCES ai_analysis(id) ON DELETE SET NULL,
+  CONSTRAINT fk_ai_rec_emergency FOREIGN KEY (emergency_id) REFERENCES emergencies(id) ON DELETE SET NULL,
+  CONSTRAINT fk_ai_rec_call FOREIGN KEY (call_id) REFERENCES call_center_calls(id) ON DELETE SET NULL,
+  CONSTRAINT fk_ai_rec_operator FOREIGN KEY (operator_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS ai_dispatch_log (
@@ -243,7 +284,16 @@ CREATE TABLE IF NOT EXISTS ai_dispatch_log (
   payload JSON,
   created_at DATETIME NOT NULL,
   INDEX idx_ai_dlog_emergency (emergency_id),
-  INDEX idx_ai_dlog_created (created_at)
+  INDEX idx_ai_dlog_call (call_id),
+  INDEX idx_ai_dlog_recommendation (recommendation_id),
+  INDEX idx_ai_dlog_analysis (analysis_id),
+  INDEX idx_ai_dlog_operator (operator_id),
+  INDEX idx_ai_dlog_created (created_at),
+  CONSTRAINT fk_ai_dlog_emergency FOREIGN KEY (emergency_id) REFERENCES emergencies(id) ON DELETE SET NULL,
+  CONSTRAINT fk_ai_dlog_call FOREIGN KEY (call_id) REFERENCES call_center_calls(id) ON DELETE SET NULL,
+  CONSTRAINT fk_ai_dlog_recommendation FOREIGN KEY (recommendation_id) REFERENCES ai_recommendation(id) ON DELETE SET NULL,
+  CONSTRAINT fk_ai_dlog_analysis FOREIGN KEY (analysis_id) REFERENCES ai_analysis(id) ON DELETE SET NULL,
+  CONSTRAINT fk_ai_dlog_operator FOREIGN KEY (operator_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS ai_memory (
@@ -258,5 +308,13 @@ CREATE TABLE IF NOT EXISTS ai_memory (
   timestamp DATETIME NOT NULL,
   INDEX idx_ai_mem_type (event_type),
   INDEX idx_ai_mem_emergency (emergency_id),
-  INDEX idx_ai_mem_ts (timestamp)
+  INDEX idx_ai_mem_call (call_id),
+  INDEX idx_ai_mem_analysis (analysis_id),
+  INDEX idx_ai_mem_recommendation (recommendation_id),
+  INDEX idx_ai_mem_ts (timestamp),
+  CONSTRAINT fk_ai_mem_emergency FOREIGN KEY (emergency_id) REFERENCES emergencies(id) ON DELETE SET NULL,
+  CONSTRAINT fk_ai_mem_call FOREIGN KEY (call_id) REFERENCES call_center_calls(id) ON DELETE SET NULL,
+  CONSTRAINT fk_ai_mem_analysis FOREIGN KEY (analysis_id) REFERENCES ai_analysis(id) ON DELETE SET NULL,
+  CONSTRAINT fk_ai_mem_recommendation FOREIGN KEY (recommendation_id) REFERENCES ai_recommendation(id) ON DELETE SET NULL,
+  CONSTRAINT fk_ai_mem_dispatch FOREIGN KEY (dispatch_log_id) REFERENCES ai_dispatch_log(id) ON DELETE SET NULL
 );

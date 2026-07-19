@@ -53,7 +53,7 @@
       return c.status === "ringing" || c.status === "answered" || c.status === "in_progress" || c.status === "dispatched";
     });
     if (!ringing.length) {
-      box.innerHTML = '<div class="empty-alerts">No live calls. Waiting for citizens…</div>';
+      box.innerHTML = '<div class="empty-alerts">No data available</div>';
       return;
     }
     box.innerHTML = "";
@@ -524,21 +524,53 @@
   }
 
   function initSessionMap(call) {
-    if (typeof L === "undefined" || call.latitude == null) return;
+    if (call.latitude == null || call.longitude == null) return;
     var el = document.getElementById("session-map");
     if (!el) return;
     el.innerHTML = "";
     if (sessionMap) {
-      try { sessionMap.remove(); } catch (e) {}
+      try {
+        if (sessionMap.remove) sessionMap.remove();
+      } catch (e) {}
       sessionMap = null;
     }
+
+    if (window.google && window.google.maps) {
+      sessionMap = new google.maps.Map(el, {
+        center: { lat: call.latitude, lng: call.longitude },
+        zoom: 15,
+        mapTypeControl: true,
+        streetViewControl: false,
+        mapTypeId: "roadmap",
+        gestureHandling: "greedy",
+      });
+      var marker = new google.maps.Marker({
+        position: { lat: call.latitude, lng: call.longitude },
+        map: sessionMap,
+        title: call.caller_name || "Caller",
+      });
+      var info = new google.maps.InfoWindow({
+        content: esc(call.caller_name) + "<br>" + esc(call.address),
+      });
+      info.open(sessionMap, marker);
+      setTimeout(function () {
+        google.maps.event.trigger(sessionMap, "resize");
+      }, 200);
+      return;
+    }
+
+    if (typeof L === "undefined") return;
     sessionMap = L.map("session-map").setView([call.latitude, call.longitude], 15);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "&copy; OpenStreetMap"
+      attribution: "&copy; OpenStreetMap",
     }).addTo(sessionMap);
-    L.marker([call.latitude, call.longitude]).addTo(sessionMap)
-      .bindPopup(esc(call.caller_name) + "<br>" + esc(call.address)).openPopup();
-    setTimeout(function () { sessionMap.invalidateSize(); }, 200);
+    L.marker([call.latitude, call.longitude])
+      .addTo(sessionMap)
+      .bindPopup(esc(call.caller_name) + "<br>" + esc(call.address))
+      .openPopup();
+    setTimeout(function () {
+      sessionMap.invalidateSize();
+    }, 200);
   }
 
   function startDurationTimer() {

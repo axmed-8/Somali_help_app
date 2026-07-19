@@ -1,4 +1,5 @@
 import csv
+import base64
 import hashlib
 import hmac
 import importlib.util
@@ -6,7 +7,9 @@ import io
 import json
 import logging
 import os
+import re
 import secrets
+import sys
 import tempfile
 import threading
 import urllib.parse
@@ -16,6 +19,42 @@ from functools import wraps
 
 # Load .env (SMTP_*) before email_service / other config readers
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+_EMAIL_ENV_KEYS = (
+    "EMAIL_PROVIDER",
+    "SMTP_HOST",
+    "SMTP_PORT",
+    "SMTP_USER",
+    "SMTP_PASSWORD",
+    "SMTP_FROM",
+    "SMTP_USE_TLS",
+    "EMAIL_VERIFICATION_HOURS",
+    "EMAIL_VERIFICATION_MINUTES",
+    "GURMADNET_DB",
+)
+
+
+def _apply_email_env_from_dotenv(*, force=False):
+    """
+    Apply email/SMTP keys from project .env.
+    force=True overwrites stale shell vars (e.g. EMAIL_PROVIDER=memory left by pytest).
+    """
+    env_path = os.path.join(BASE_DIR, ".env")
+    try:
+        from dotenv import dotenv_values
+    except ImportError:
+        return
+    vals = dotenv_values(env_path) or {}
+    for key in _EMAIL_ENV_KEYS:
+        raw = vals.get(key)
+        if raw is None:
+            continue
+        val = str(raw).strip()
+        if not val:
+            continue
+        if force or not str(os.environ.get(key) or "").strip():
+            os.environ[key] = val
+
+
 try:
     from dotenv import load_dotenv
 
@@ -23,10 +62,15 @@ try:
 except ImportError:
     pass
 
+# Local `python app.py` must use .env SMTP even if the shell still has
+# EMAIL_PROVIDER=memory from a previous pytest run. Pytest keeps memory via fixture.
+if "pytest" not in sys.modules:
+    _apply_email_env_from_dotenv(force=True)
 from flask import (
     Flask,
     Response,
     flash,
+    has_request_context,
     jsonify,
     redirect,
     render_template,
@@ -45,6 +89,8 @@ from email_service.service import (
     allow_test_email_domains,
     is_valid_email_format,
     normalize_email,
+    send_email_verification_otp_email,
+    send_emergency_contact_alert_email,
     send_password_reset_otp_email,
     signup_email_rejection_reason,
 )
@@ -180,7 +226,128 @@ TYPE_LABELS = {
 }
 
 STATUS_VALUES = ["pending", "dispatched", "in_progress", "completed", "cancelled", "resolved", "pending_hospital", "accepted"]
-VALID_ROLES = ["citizen", "hospital", "police", "fire", "admin", "call_center"]
+VALID_ROLES = [
+    "citizen",
+    "hospital",
+    "police",
+    "fire",
+    "admin",
+    "super_admin",
+    "call_center",
+]
+
+# Staff who can access /admin (permissions differ by role)
+STAFF_ADMIN_ROLES = frozenset({"super_admin", "admin"})
+PRIVILEGED_ROLES = frozenset({"super_admin", "admin"})
+OPS_USER_ROLES = frozenset({"citizen", "hospital", "police", "fire", "call_center"})
+# Super Admin "Create staff" button may only create these roles
+SUPER_CREATE_ROLES = frozenset({"admin", "hospital", "police", "fire"})
+
+# Role → capability set for the admin dashboard / APIs
+ADMIN_PERMISSIONS = {
+    "super_admin": frozenset({
+        "dashboard",
+        "users_ops",
+        "users_admins",
+        "emergencies_view",
+        "emergencies_update",
+        "emergencies_delete",
+        "emergencies_export",
+        "settings_ops",
+        "settings_system",
+        "content_edit",
+        "content_reset",
+        "appearance",
+        "audit",
+        "backup",
+        "call_center",
+        "ai",
+        "reports",
+        "monitoring",
+    }),
+    "admin": frozenset({
+        "dashboard",
+        "users_ops",
+        "emergencies_view",
+        "emergencies_update",
+        "emergencies_export",
+        "settings_ops",
+        "content_edit",
+        "appearance",
+        "call_center",
+        "ai",
+        "reports",
+        "monitoring",
+        # Regular Admin cannot: users_admins, emergencies_delete,
+        # settings_system, content_reset, audit, backup
+    }),
+}
+
+# Settings keys only Super Admin may change (ops Admin uses a small allow-list)
+SUPER_ONLY_SETTINGS = frozenset({
+    "sos_enabled",
+    "maintenance_mode",
+    "max_emergencies_per_day",
+    "ai_enabled",
+    "ai_provider",
+    "google_maps_api_key",
+    "hospital_response_timeout_sec",
+    "app_name",
+    "app_description",
+    "app_logo_url",
+    "app_favicon_url",
+    "default_language",
+    "timezone",
+    "contact_phone",
+    "contact_email",
+    "contact_address",
+    "contact_website",
+    "emergency_hotline",
+    "smtp_enabled",
+    "smtp_host",
+    "smtp_port",
+    "smtp_user",
+    "smtp_password",
+    "smtp_from",
+    "smtp_use_tls",
+    "email_verification_minutes",
+    "security_force_https",
+    "security_login_max_attempts",
+    "security_lockout_minutes",
+    "auth_require_email_verification",
+    "auth_allow_citizen_signup",
+    "password_min_length",
+    "password_require_upper",
+    "password_require_digit",
+    "password_require_special",
+    "session_timeout_minutes",
+    "ai_confidence_threshold",
+    "ai_auto_suggest",
+    "priority_medical",
+    "priority_fire",
+    "priority_police",
+    "priority_accident",
+    "priority_family_help",
+    "notify_email_enabled",
+    "notify_admin_on_sos",
+    "notify_citizen_status",
+    "sms_provider",
+    "sms_api_key",
+    "sms_api_url",
+    "sms_sender_id",
+    "maps_provider",
+    "maps_default_lat",
+    "maps_default_lng",
+    "maps_default_zoom",
+    "openai_api_key",
+    "external_api_key",
+    "upload_max_mb",
+    "upload_allowed_extensions",
+    "db_backup_retention_days",
+    "theme_mode",
+    "brand_primary_color",
+    "brand_accent_color",
+})
 
 ROLE_HOME = {
     "citizen": "/dashboard",
@@ -188,10 +355,48 @@ ROLE_HOME = {
     "police": "/police",
     "fire": "/fire",
     "admin": "/admin",
+    "super_admin": "/admin",
     "call_center": "/call-center",
 }
 
 ROLE_API_TYPE = {"hospital": "medical", "police": "police", "fire": "fire"}
+
+
+def _session_role():
+    return session.get("role")
+
+
+def _is_staff_admin(role=None):
+    return (role if role is not None else _session_role()) in STAFF_ADMIN_ROLES
+
+
+def _is_super_admin(role=None):
+    return (role if role is not None else _session_role()) == "super_admin"
+
+
+def _admin_permissions(role=None):
+    role = role if role is not None else _session_role()
+    return ADMIN_PERMISSIONS.get(role) or frozenset()
+
+
+def _has_admin_perm(perm, role=None):
+    return perm in _admin_permissions(role)
+
+
+def _forbid_admin(message="You do not have permission for this action."):
+    if _wants_json_response():
+        return jsonify({"success": False, "message": message}), 403
+    flash(message, "error")
+    return redirect(ROLE_HOME.get(_session_role(), "/login"))
+
+
+def _require_admin_perm(perm):
+    """Return a Flask response if the current admin lacks `perm`, else None."""
+    if not _is_staff_admin():
+        return _forbid_admin()
+    if not _has_admin_perm(perm):
+        return _forbid_admin("Super Admin access is required for this action.")
+    return None
 
 def _resolve_use_mysql():
     if os.environ.get("GURMADNET_DB", "").lower() == "json":
@@ -226,6 +431,8 @@ if USE_MYSQL:
         _ms_boot.ensure_call_center_schema()
         _ms_boot.ensure_ai_schema()
         _ms_boot.ensure_email_verification_schema()
+        _ms_boot.ensure_citizen_profile_schema()
+        _ms_boot.ensure_admin_profile_schema()
     except Exception as _cc_schema_exc:
         import logging as _logging
 
@@ -239,9 +446,9 @@ DEFAULT_CONTENT = {
     "sos_button_text": "SOS",
     "sos_subtitle": "Tap SOS button to start emergency request",
     "confirmation_message": "Help is on the way!",
-    "hospital_dashboard_title": "Aamin Ambulance - Hospital Dashboard",
-    "police_dashboard_title": "Hamar Police - Police Dashboard",
-    "fire_dashboard_title": "KM4 Fire Station - Fire Dashboard",
+    "hospital_dashboard_title": "Hospital Dashboard",
+    "police_dashboard_title": "Police Operations Dashboard",
+    "fire_dashboard_title": "Fire & Rescue Dashboard",
     "admin_dashboard_title": "GurmadNet AI — Admin Control Panel",
     "call_center_dashboard_title": "GurmadNet AI — Emergency Call Center",
     "welcome_citizen": "Mogadishu & Somalia — 24/7 Emergency Response",
@@ -255,6 +462,7 @@ DEFAULT_CONTENT = {
 }
 
 DEFAULT_SETTINGS = {
+    # --- legacy / ops ---
     "sos_enabled": True,
     "ambulance_response_time": 8,
     "police_response_time": 6,
@@ -279,7 +487,294 @@ DEFAULT_SETTINGS = {
     "call_center_heartbeat_sec": 45,
     "ai_enabled": True,
     "ai_provider": "rule_based",
+    # --- general / branding ---
+    "app_name": "GurmadNet AI",
+    "app_description": "National Emergency Response Platform for Somalia",
+    "app_logo_url": "",
+    "app_favicon_url": "",
+    "default_language": "en",
+    "timezone": "Africa/Mogadishu",
+    # --- contact ---
+    "contact_phone": "+252613910872",
+    "contact_email": "",
+    "contact_address": "Mogadishu, Somalia",
+    "contact_website": "",
+    "emergency_hotline": "+252613910872",
+    # --- SMTP / email (runtime override; .env remains fallback) ---
+    "smtp_enabled": True,
+    "smtp_host": "",
+    "smtp_port": 587,
+    "smtp_user": "",
+    "smtp_password": "",
+    "smtp_from": "",
+    "smtp_use_tls": True,
+    "email_verification_minutes": 30,
+    # --- security / auth / password / session ---
+    "security_force_https": False,
+    "security_login_max_attempts": 5,
+    "security_lockout_minutes": 15,
+    "auth_require_email_verification": True,
+    "auth_allow_citizen_signup": True,
+    "password_min_length": 6,
+    "password_require_upper": False,
+    "password_require_digit": False,
+    "password_require_special": False,
+    "session_timeout_minutes": 120,
+    # --- AI ---
+    "ai_confidence_threshold": 0.55,
+    "ai_auto_suggest": True,
+    # --- emergency priorities ---
+    "priority_medical": 1,
+    "priority_fire": 1,
+    "priority_police": 1,
+    "priority_accident": 2,
+    "priority_family_help": 3,
+    # --- notifications ---
+    "notify_email_enabled": True,
+    "notify_admin_on_sos": True,
+    "notify_citizen_status": True,
+    # --- SMS gateway ---
+    "sms_provider": "none",
+    "sms_api_key": "",
+    "sms_api_url": "",
+    "sms_sender_id": "GurmadNet",
+    # --- maps ---
+    "maps_provider": "google",
+    "maps_default_lat": 2.0469,
+    "maps_default_lng": 45.3182,
+    "maps_default_zoom": 14,
+    # --- API keys (masked in UI) ---
+    "openai_api_key": "",
+    "external_api_key": "",
+    # --- uploads ---
+    "upload_max_mb": 5,
+    "upload_allowed_extensions": "jpg,jpeg,png,gif,webp,pdf",
+    # --- database (read-only display mostly) ---
+    "db_backup_retention_days": 30,
+    # --- theme ---
+    "theme_mode": "dark",
+    "brand_primary_color": "#2563eb",
+    "brand_accent_color": "#22c55e",
 }
+
+# Keys that must never be returned in plain text to the client
+SECRET_SETTING_KEYS = frozenset({
+    "smtp_password",
+    "google_maps_api_key",
+    "sms_api_key",
+    "openai_api_key",
+    "external_api_key",
+})
+
+# Super Admin System Configuration form definition (UI schema)
+SYSTEM_SETTINGS_GROUPS = [
+    {
+        "id": "general",
+        "title": "General System Settings",
+        "description": "Application identity and defaults",
+        "fields": [
+            {"key": "app_name", "label": "App Name", "type": "text"},
+            {"key": "app_description", "label": "Description", "type": "textarea"},
+            {"key": "app_logo_url", "label": "Logo URL / path", "type": "text", "hint": "e.g. /static/uploads/logo.png"},
+            {"key": "app_favicon_url", "label": "Favicon URL / path", "type": "text"},
+            {"key": "default_language", "label": "Default language", "type": "select",
+             "options": [{"value": "en", "label": "English"}, {"value": "so", "label": "Somali"}]},
+            {"key": "timezone", "label": "Timezone", "type": "text"},
+        ],
+    },
+    {
+        "id": "contact",
+        "title": "Contact Information",
+        "description": "Public contact details shown across the platform",
+        "fields": [
+            {"key": "emergency_hotline", "label": "Emergency hotline", "type": "tel"},
+            {"key": "contact_phone", "label": "Phone", "type": "tel"},
+            {"key": "contact_email", "label": "Email", "type": "email"},
+            {"key": "contact_address", "label": "Address", "type": "textarea"},
+            {"key": "contact_website", "label": "Website", "type": "text"},
+        ],
+    },
+    {
+        "id": "smtp",
+        "title": "SMTP / Email Settings",
+        "description": "Overrides .env when filled. Leave password blank to keep the current value.",
+        "fields": [
+            {"key": "smtp_enabled", "label": "Enable email sending", "type": "checkbox"},
+            {"key": "smtp_host", "label": "SMTP host", "type": "text"},
+            {"key": "smtp_port", "label": "SMTP port", "type": "number", "min": 1},
+            {"key": "smtp_user", "label": "SMTP username", "type": "text"},
+            {"key": "smtp_password", "label": "SMTP password", "type": "password"},
+            {"key": "smtp_from", "label": "From address", "type": "email"},
+            {"key": "smtp_use_tls", "label": "Use TLS", "type": "checkbox"},
+            {"key": "email_verification_minutes", "label": "Email OTP validity (minutes)", "type": "number", "min": 5},
+        ],
+    },
+    {
+        "id": "security",
+        "title": "Security Settings",
+        "fields": [
+            {"key": "security_force_https", "label": "Prefer HTTPS links", "type": "checkbox"},
+            {"key": "security_login_max_attempts", "label": "Max login attempts", "type": "number", "min": 3},
+            {"key": "security_lockout_minutes", "label": "Lockout duration (minutes)", "type": "number", "min": 1},
+            {"key": "maintenance_mode", "label": "Maintenance mode", "type": "checkbox"},
+            {"key": "sos_enabled", "label": "Enable SOS system", "type": "checkbox"},
+        ],
+    },
+    {
+        "id": "auth",
+        "title": "Authentication Settings",
+        "fields": [
+            {"key": "auth_allow_citizen_signup", "label": "Allow citizen self-registration", "type": "checkbox"},
+            {"key": "auth_require_email_verification", "label": "Require email verification for citizens", "type": "checkbox"},
+        ],
+    },
+    {
+        "id": "password",
+        "title": "Password Policy",
+        "fields": [
+            {"key": "password_min_length", "label": "Minimum length", "type": "number", "min": 4},
+            {"key": "password_require_upper", "label": "Require uppercase letter", "type": "checkbox"},
+            {"key": "password_require_digit", "label": "Require digit", "type": "checkbox"},
+            {"key": "password_require_special", "label": "Require special character", "type": "checkbox"},
+        ],
+    },
+    {
+        "id": "session",
+        "title": "Session Timeout",
+        "fields": [
+            {"key": "session_timeout_minutes", "label": "Session timeout (minutes)", "type": "number", "min": 15},
+        ],
+    },
+    {
+        "id": "ai",
+        "title": "AI Configuration",
+        "fields": [
+            {"key": "ai_enabled", "label": "Enable AI assistance", "type": "checkbox"},
+            {"key": "ai_provider", "label": "AI provider", "type": "select",
+             "options": [
+                 {"value": "rule_based", "label": "Rule-based"},
+                 {"value": "openai", "label": "OpenAI"},
+             ]},
+            {"key": "ai_confidence_threshold", "label": "Confidence threshold (0–1)", "type": "number", "min": 0, "max": 1, "step": 0.05},
+            {"key": "ai_auto_suggest", "label": "Auto-suggest recommendations", "type": "checkbox"},
+            {"key": "openai_api_key", "label": "OpenAI API key", "type": "password"},
+        ],
+    },
+    {
+        "id": "emergency",
+        "title": "Emergency Priority Settings",
+        "description": "1 = highest priority",
+        "fields": [
+            {"key": "priority_medical", "label": "Medical priority", "type": "number", "min": 1, "max": 5},
+            {"key": "priority_fire", "label": "Fire priority", "type": "number", "min": 1, "max": 5},
+            {"key": "priority_police", "label": "Police / security priority", "type": "number", "min": 1, "max": 5},
+            {"key": "priority_accident", "label": "Accident priority", "type": "number", "min": 1, "max": 5},
+            {"key": "priority_family_help", "label": "Family help priority", "type": "number", "min": 1, "max": 5},
+            {"key": "ambulance_response_time", "label": "Target ambulance response (min)", "type": "number", "min": 1},
+            {"key": "police_response_time", "label": "Target police response (min)", "type": "number", "min": 1},
+            {"key": "fire_response_time", "label": "Target fire response (min)", "type": "number", "min": 1},
+            {"key": "hospital_response_timeout_sec", "label": "Hospital accept timeout (sec)", "type": "number", "min": 30},
+            {"key": "max_emergencies_per_day", "label": "Max emergencies / day", "type": "number", "min": 1},
+            {"key": "refresh_interval", "label": "Dashboard refresh (sec)", "type": "number", "min": 3},
+        ],
+    },
+    {
+        "id": "notifications",
+        "title": "Notification Settings",
+        "fields": [
+            {"key": "notify_email_enabled", "label": "Email notifications", "type": "checkbox"},
+            {"key": "notify_admin_on_sos", "label": "Notify admins on new SOS", "type": "checkbox"},
+            {"key": "notify_citizen_status", "label": "Notify citizens on status changes", "type": "checkbox"},
+        ],
+    },
+    {
+        "id": "sms",
+        "title": "SMS Settings",
+        "fields": [
+            {"key": "sms_notifications", "label": "Enable SMS notifications", "type": "checkbox"},
+            {"key": "sms_provider", "label": "SMS provider", "type": "select",
+             "options": [
+                 {"value": "none", "label": "None / disabled"},
+                 {"value": "custom", "label": "Custom HTTP API"},
+             ]},
+            {"key": "sms_api_url", "label": "SMS API URL", "type": "text"},
+            {"key": "sms_api_key", "label": "SMS API key", "type": "password"},
+            {"key": "sms_sender_id", "label": "Sender ID", "type": "text"},
+        ],
+    },
+    {
+        "id": "maps",
+        "title": "Maps & Location Settings",
+        "description": "Google Maps is the primary live source for GPS maps, addresses, places, routes, and distances. Enable Maps JavaScript, Geocoding, Places, and Directions APIs on your Google Cloud key.",
+        "fields": [
+            {"key": "maps_provider", "label": "Maps provider", "type": "select",
+             "options": [
+                 {"value": "google", "label": "Google Maps (recommended)"},
+                 {"value": "leaflet", "label": "Leaflet fallback (only if no Google key)"},
+             ]},
+            {"key": "google_maps_api_key", "label": "Google Maps API key", "type": "password",
+             "hint": "Required for live Google geocoding, routes, and map tiles"},
+            {"key": "maps_default_lat", "label": "Default map latitude (initial view only)", "type": "number", "step": 0.0001},
+            {"key": "maps_default_lng", "label": "Default map longitude (initial view only)", "type": "number", "step": 0.0001},
+            {"key": "maps_default_zoom", "label": "Default zoom", "type": "number", "min": 1, "max": 20},
+        ],
+    },
+    {
+        "id": "api_keys",
+        "title": "API Keys Management",
+        "description": "Sensitive values are masked. Leave blank to keep the existing secret.",
+        "fields": [
+            {"key": "external_api_key", "label": "External integrations API key", "type": "password"},
+        ],
+    },
+    {
+        "id": "call_center",
+        "title": "Call Center Settings",
+        "fields": [
+            {"key": "call_center_enabled", "label": "Enable Call Center", "type": "checkbox"},
+            {"key": "call_center_phone", "label": "Primary phone", "type": "tel"},
+            {"key": "call_center_phone_secondary", "label": "Secondary phone", "type": "tel"},
+            {"key": "call_center_priority_medical", "label": "Priority medical", "type": "number", "min": 1, "max": 5},
+            {"key": "call_center_priority_fire", "label": "Priority fire", "type": "number", "min": 1, "max": 5},
+            {"key": "call_center_priority_police", "label": "Priority police", "type": "number", "min": 1, "max": 5},
+            {"key": "call_center_auto_nearest", "label": "Auto-select nearest unit", "type": "checkbox"},
+            {"key": "call_center_heartbeat_sec", "label": "Operator heartbeat (sec)", "type": "number", "min": 15},
+        ],
+    },
+    {
+        "id": "branding",
+        "title": "System Branding & Theme",
+        "fields": [
+            {"key": "theme_mode", "label": "Default theme", "type": "select",
+             "options": [
+                 {"value": "dark", "label": "Dark"},
+                 {"value": "light", "label": "Light"},
+             ]},
+            {"key": "dark_mode", "label": "Prefer dark mode (legacy flag)", "type": "checkbox"},
+            {"key": "brand_primary_color", "label": "Primary brand color", "type": "color"},
+            {"key": "brand_accent_color", "label": "Accent color", "type": "color"},
+            {"key": "color_hospital", "label": "Hospital role color", "type": "color"},
+            {"key": "color_police", "label": "Police role color", "type": "color"},
+            {"key": "color_fire", "label": "Fire role color", "type": "color"},
+        ],
+    },
+    {
+        "id": "uploads",
+        "title": "File Upload Settings",
+        "fields": [
+            {"key": "upload_max_mb", "label": "Max upload size (MB)", "type": "number", "min": 1, "max": 50},
+            {"key": "upload_allowed_extensions", "label": "Allowed extensions (comma-separated)", "type": "text"},
+        ],
+    },
+    {
+        "id": "database",
+        "title": "Database & Backup Settings",
+        "description": "Operational controls. Create backups from Backup & Restore.",
+        "fields": [
+            {"key": "db_backup_retention_days", "label": "Backup retention (days)", "type": "number", "min": 1},
+        ],
+    },
+]
 
 
 def ensure_database_dir():
@@ -365,12 +860,41 @@ def normalize_emergency_record(em):
     em.setdefault("status_history", [])
     em.setdefault("assigned_hospital_id", None)
     em.setdefault("assigned_hospital_name", "")
+    # Terminal SOS must never keep live tracking / map "live" flags
+    if (em.get("status") or "").lower() in COMPLETED_STATUSES:
+        em["tracking_active"] = False
     return em
+
+
+ACTIVE_SOS_STATUSES = frozenset({
+    "pending",
+    "dispatched",
+    "in_progress",
+    "pending_hospital",
+    "accepted",
+})
+
+
+def _stop_sos_tracking(em):
+    """Clear live GPS tracking when an SOS reaches a terminal state."""
+    if not em:
+        return
+    em["tracking_active"] = False
+
+
+def _is_active_sos(em):
+    return (em.get("status") or "").lower() in ACTIVE_SOS_STATUSES
 
 
 def _ai_engine():
     """Provider-agnostic AI Emergency Engine (never talks to a vendor SDK directly)."""
-    return get_ai_engine(read_json, save_json)
+    settings = load_settings()
+    provider = (settings.get("ai_provider") or os.environ.get("AI_PROVIDER") or "rule_based")
+    provider = str(provider).strip().lower()
+    eng = get_ai_engine(read_json, save_json, provider_name=provider)
+    if getattr(eng, "provider_name", None) != provider:
+        eng = get_ai_engine(read_json, save_json, provider_name=provider, reset=True)
+    return eng
 
 
 def _ai_context_from_emergency(emergency, source="sos", extra=None):
@@ -618,8 +1142,8 @@ def _notify(target_type, target_id, message, request_id=None, ntype="system_aler
 def _notify_admins(message, request_id=None, ntype="system_alert"):
     udata = load_users()
     for u in udata["users"]:
-        if u.get("role") == "admin" and u.get("status") == "active":
-            _notify("admin", u["id"], message, request_id, ntype)
+        if u.get("role") in STAFF_ADMIN_ROLES and u.get("status") == "active":
+            _notify(u.get("role") or "admin", u["id"], message, request_id, ntype)
 
 
 def _auto_dispatch_emergency(emergency):
@@ -691,11 +1215,166 @@ def _get_user_hospital(user):
     return hid, hl.get_hospital_by_id(hdata, hid)
 
 
-def _link_user_to_hospital(user_id, hospital_id):
+def _hospital_name_map():
+    """id → name for admin UI / API enrichment."""
+    hdata = hl.load_hospitals(read_json, save_json)
+    return {
+        h["id"]: (h.get("name") or f"Hospital #{h['id']}")
+        for h in hdata.get("hospitals") or []
+    }
+
+
+def _link_user_to_hospital(user_id, hospital_id, set_owner=True):
+    """Bind hospital login account ↔ facility row (both directions)."""
+    try:
+        hospital_id = int(hospital_id)
+    except (TypeError, ValueError):
+        return False
     user, udata = get_user_by_id(user_id)
-    if user:
-        user["hospital_id"] = hospital_id
+    if not user:
+        return False
+    hdata = hl.load_hospitals(read_json, save_json)
+    hospital = hl.get_hospital_by_id(hdata, hospital_id)
+    if not hospital:
+        return False
+
+    user["hospital_id"] = hospital_id
+    if user.get("role") != "hospital":
+        user["role"] = "hospital"
+    save_users(udata)
+
+    if set_owner:
+        oid = hospital.get("owner_user_id")
+        if not oid or int(oid) == int(user_id):
+            hospital["owner_user_id"] = int(user_id)
+            if not (hospital.get("contact_email") or "").strip():
+                hospital["contact_email"] = user.get("email") or ""
+            hl.save_hospitals(hdata, save_json)
+    return True
+
+
+def _unlink_user_from_hospital(user_id):
+    """Clear user.hospital_id and hospital.owner_user_id when this user owned it."""
+    user, udata = get_user_by_id(user_id)
+    if not user:
+        return
+    hid = user.get("hospital_id")
+    if hid:
+        user["hospital_id"] = None
         save_users(udata)
+    hdata = hl.load_hospitals(read_json, save_json)
+    changed = False
+    for h in hdata.get("hospitals") or []:
+        if h.get("owner_user_id") == user_id:
+            h["owner_user_id"] = None
+            changed = True
+        if hid and h.get("id") == hid and h.get("owner_user_id") == user_id:
+            h["owner_user_id"] = None
+            changed = True
+    if changed:
+        hl.save_hospitals(hdata, save_json)
+
+
+def _sync_hospital_account_links():
+    """
+    Repair one-way / broken hospital↔user links:
+    - owner_user_id → ensure that user.hospital_id matches
+    - user.hospital_id → ensure owner_user_id if empty
+    - match contact_email ↔ user.email when both sides unlinked
+    """
+    udata = load_users()
+    hdata = hl.load_hospitals(read_json, save_json)
+    users_by_id = {u["id"]: u for u in udata.get("users") or []}
+    hospitals = hdata.get("hospitals") or []
+    users_changed = False
+    hospitals_changed = False
+
+    # 1) Owner → user.hospital_id
+    for h in hospitals:
+        oid = h.get("owner_user_id")
+        if not oid:
+            continue
+        u = users_by_id.get(oid)
+        if not u:
+            h["owner_user_id"] = None
+            hospitals_changed = True
+            continue
+        if u.get("hospital_id") != h["id"]:
+            u["hospital_id"] = h["id"]
+            if u.get("role") != "hospital":
+                u["role"] = "hospital"
+            users_changed = True
+
+    # 2) Hospital users with hospital_id → claim owner if empty
+    for u in udata.get("users") or []:
+        if str(u.get("role", "")).lower() != "hospital":
+            continue
+        hid = u.get("hospital_id")
+        if not hid:
+            continue
+        h = hl.get_hospital_by_id(hdata, hid)
+        if not h:
+            u["hospital_id"] = None
+            users_changed = True
+            continue
+        if not h.get("owner_user_id"):
+            h["owner_user_id"] = u["id"]
+            hospitals_changed = True
+
+    def _digits(val):
+        return "".join(ch for ch in str(val or "") if ch.isdigit())
+
+    # 3) Email / phone match for fully unlinked pairs
+    unlinked_hospital_users = [
+        u
+        for u in (udata.get("users") or [])
+        if str(u.get("role", "")).lower() == "hospital" and not u.get("hospital_id")
+    ]
+    email_to_hospital_user = {
+        (u.get("email") or "").strip().lower(): u
+        for u in unlinked_hospital_users
+        if (u.get("email") or "").strip()
+    }
+
+    for h in hospitals:
+        if h.get("owner_user_id"):
+            continue
+        cem = (h.get("contact_email") or "").strip().lower()
+        u = email_to_hospital_user.get(cem) if cem else None
+        if not u:
+            # Match user phone against hospital phone / emergency_contacts
+            h_phones = {_digits(h.get("phone"))}
+            for c in h.get("emergency_contacts") or []:
+                d = _digits(c)
+                if d:
+                    h_phones.add(d)
+            h_phones.discard("")
+            for candidate in unlinked_hospital_users:
+                if candidate.get("hospital_id"):
+                    continue
+                up = _digits(candidate.get("phone"))
+                if not up:
+                    continue
+                if any(
+                    up == hp or up in hp or hp in up
+                    for hp in h_phones
+                    if len(hp) >= 7 and len(up) >= 7
+                ):
+                    u = candidate
+                    break
+        if not u:
+            continue
+        u["hospital_id"] = h["id"]
+        h["owner_user_id"] = u["id"]
+        users_changed = True
+        hospitals_changed = True
+        email_to_hospital_user.pop((u.get("email") or "").strip().lower(), None)
+
+    if users_changed:
+        save_users(udata)
+    if hospitals_changed:
+        hl.save_hospitals(hdata, save_json)
+    return {"users_changed": users_changed, "hospitals_changed": hospitals_changed}
 
 
 def _role_home(user):
@@ -790,6 +1469,7 @@ def _create_healthcare_emergency(data, request_mode="emergency"):
         emergency["escalation_index"] = 0
         if not emergency["escalation_queue"]:
             emergency["status"] = "no_hospital_available"
+            _stop_sos_tracking(emergency)
             _append_status(emergency, "no_hospital_available", "No hospitals available")
         else:
             hospital = hl.assign_next_hospital(emergency, hdata, timeout)
@@ -822,12 +1502,25 @@ def normalize_user_record(user):
     user.setdefault("emergency_contact_name", "")
     user.setdefault("emergency_contact_phone", "")
     user.setdefault("emergency_contact_relation", "")
+    user.setdefault("emergency_contact_email", "")
     user.setdefault("address", "")
     user.setdefault("city", "")
     user.setdefault("date_of_birth", "")
+    user.setdefault("gender", "")
+    user.setdefault("first_name", "")
+    user.setdefault("middle_name", "")
+    user.setdefault("last_name", "")
+    user.setdefault("national_id_last4", "")
+    user.setdefault("national_id_hash", None)
+    user.setdefault("national_id_encrypted", None)
     user.setdefault("blood_type", "")
     user.setdefault("medical_notes", "")
+    user.setdefault("allergies", "")
     user.setdefault("saved_locations", [])
+    user.setdefault("notify_email_on_sos", True)
+    user.setdefault("notify_email_on_dispatch", True)
+    user["notify_email_on_sos"] = bool(user.get("notify_email_on_sos", True))
+    user["notify_email_on_dispatch"] = bool(user.get("notify_email_on_dispatch", True))
     # Email verification (Step 1). Missing field → verified for legacy/seeded accounts.
     if "email_verified" not in user:
         user["email_verified"] = True
@@ -835,7 +1528,115 @@ def normalize_user_record(user):
         user["email_verified"] = bool(user.get("email_verified"))
     user.setdefault("email_verify_token", None)
     user.setdefault("email_verify_expires", None)
+    # Never expose raw national ID if somehow present
+    user.pop("national_id", None)
     return user
+
+
+def _compose_full_name(first_name, middle_name, last_name):
+    parts = [p for p in (first_name, middle_name, last_name) if (p or "").strip()]
+    return " ".join(parts).strip()
+
+
+def _normalize_national_id(raw):
+    return re.sub(r"\D+", "", (raw or "").strip())
+
+
+def _hash_national_id(digits):
+    key = (app.secret_key or "").encode("utf-8")
+    return hmac.new(key, digits.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def _encrypt_national_id(digits):
+    """Protect full national ID at rest (reversible with app secret)."""
+    if not digits:
+        return None
+    key = hashlib.sha256((str(app.secret_key or "") + ":national-id").encode("utf-8")).digest()
+    raw = digits.encode("utf-8")
+    # Stream XOR with repeating key + HMAC tag for integrity
+    xored = bytes(b ^ key[i % len(key)] for i, b in enumerate(raw))
+    tag = hmac.new(key, xored, hashlib.sha256).digest()[:16]
+    return base64.urlsafe_b64encode(tag + xored).decode("ascii")
+
+
+def _national_id_fields(raw):
+    """Return (last4, hash, encrypted) or (empty, None, None) when absent."""
+    digits = _normalize_national_id(raw)
+    if not digits:
+        return "", None, None
+    if len(digits) < 4:
+        raise ValueError("National ID must contain at least 4 digits.")
+    return digits[-4:], _hash_national_id(digits), _encrypt_national_id(digits)
+
+
+def _parse_date_of_birth(value):
+    raw = (value or "").strip()
+    if not raw:
+        raise ValueError("Date of birth is required.")
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"):
+        try:
+            dob = datetime.strptime(raw[:10], fmt)
+            break
+        except ValueError:
+            dob = None
+    if not dob:
+        raise ValueError("Enter a valid date of birth.")
+    if dob.date() > datetime.now().date():
+        raise ValueError("Date of birth cannot be in the future.")
+    if dob.year < 1900:
+        raise ValueError("Enter a valid date of birth.")
+    return dob.strftime("%Y-%m-%d")
+
+
+def _validate_phone_required(phone, label="Phone number"):
+    cleaned = (phone or "").strip()
+    digits = re.sub(r"\D+", "", cleaned)
+    if len(digits) < 7:
+        raise ValueError(f"{label} is required.")
+    return cleaned
+
+
+def _notify_emergency_contact(user, emergency):
+    """Email the registered emergency contact when a citizen submits SOS."""
+    if not user:
+        return
+    to_email = normalize_email(user.get("emergency_contact_email") or "")
+    if not to_email or not is_valid_email_format(to_email):
+        _logger.warning(
+            "No emergency contact email for user_id=%s emergency_id=%s phone=%s",
+            user.get("id"),
+            emergency.get("id"),
+            user.get("emergency_contact_phone"),
+        )
+        return
+    try:
+        result = send_emergency_contact_alert_email(
+            to_email=to_email,
+            contact_name=(user.get("emergency_contact_name") or "").strip() or None,
+            citizen_name=user_name(user),
+            citizen_phone=user.get("phone") or emergency.get("phone"),
+            emergency_type=emergency.get("type"),
+            location=emergency.get("location") or emergency.get("district"),
+            notes=emergency.get("notes"),
+            emergency_id=emergency.get("id"),
+            occurred_at=emergency.get("timestamp") or now_str(),
+            latitude=emergency.get("latitude"),
+            longitude=emergency.get("longitude"),
+        )
+        if not result.get("success"):
+            _logger.error(
+                "Emergency contact email failed to=%s error=%s",
+                to_email,
+                result.get("error"),
+            )
+        else:
+            _logger.info(
+                "Emergency contact notified to=%s emergency_id=%s",
+                to_email,
+                emergency.get("id"),
+            )
+    except Exception:
+        _logger.exception("Emergency contact notify failed emergency_id=%s", emergency.get("id"))
 
 
 def _user_is_email_verified(user):
@@ -847,25 +1648,68 @@ def _user_is_email_verified(user):
     return bool(user.get("email_verified"))
 
 
+def _email_verify_minutes():
+    return int(os.environ.get("EMAIL_VERIFICATION_MINUTES", "30"))
+
+
 def _issue_email_verification(user):
-    """Attach a secure verification token to the user (does not send email)."""
-    hours = int(os.environ.get("EMAIL_VERIFICATION_HOURS", "24"))
-    token = secrets.token_urlsafe(32)
+    """Attach a one-time 6-digit email verification OTP (hashed). Returns plain OTP."""
+    minutes = _email_verify_minutes()
+    otp = f"{secrets.randbelow(1_000_000):06d}"
     user["email_verified"] = False
-    user["email_verify_token"] = token
+    user["email_verify_token"] = _hash_password_otp(otp)
     user["email_verify_expires"] = (
-        datetime.now() + timedelta(hours=hours)
+        datetime.now() + timedelta(minutes=minutes)
     ).strftime("%Y-%m-%d %H:%M:%S")
-    return token
+    user["email_verify_attempts"] = 0
+    return otp
 
 
-def _send_user_verification_email(user, token):
-    """Send verification email via configurable provider. Returns send() result."""
-    verify_url = url_for("verify_email", token=token, _external=True)
-    result = send_verification_email(
+def _verify_email_otp(user, otp_code):
+    """Validate signup email OTP. Returns (ok, error_message)."""
+    if not user:
+        return False, "Invalid or expired code."
+    stored = user.get("email_verify_token")
+    expires = parse_dt(user.get("email_verify_expires"))
+    if not stored or expires < datetime.now():
+        user["email_verify_token"] = None
+        user["email_verify_expires"] = None
+        user.pop("email_verify_attempts", None)
+        return False, "This code has expired. Request a new one."
+    attempts = int(user.get("email_verify_attempts") or 0)
+    if attempts >= 5:
+        user["email_verify_token"] = None
+        user["email_verify_expires"] = None
+        user.pop("email_verify_attempts", None)
+        return False, "Too many incorrect attempts. Request a new code."
+    candidate = (otp_code or "").strip().replace(" ", "")
+    if not candidate.isdigit() or len(candidate) != 6:
+        user["email_verify_attempts"] = attempts + 1
+        return False, "Enter the 6-digit code from your email."
+    expected = _hash_password_otp(candidate)
+    if len(str(stored)) != len(expected) or not hmac.compare_digest(str(stored), expected):
+        user["email_verify_attempts"] = attempts + 1
+        left = 5 - int(user.get("email_verify_attempts") or 0)
+        if left <= 0:
+            user["email_verify_token"] = None
+            user["email_verify_expires"] = None
+            user.pop("email_verify_attempts", None)
+            return False, "Too many incorrect attempts. Request a new code."
+        return False, f"Incorrect code. {left} attempt(s) remaining."
+    user["email_verified"] = True
+    user["email_verify_token"] = None
+    user["email_verify_expires"] = None
+    user.pop("email_verify_attempts", None)
+    return True, None
+
+
+def _send_user_verification_email(user, otp_code):
+    """Send verification OTP email. Returns send() result."""
+    result = send_email_verification_otp_email(
         to_email=user.get("email"),
-        verify_url=verify_url,
+        otp_code=otp_code,
         user_name=user_name(user),
+        minutes=_email_verify_minutes(),
     )
     if not result.get("success"):
         _logger.error(
@@ -881,13 +1725,13 @@ def _flash_email_send_failure(context="verification"):
     """User-facing email failure only — never expose SMTP/.env/exception details."""
     if context == "signup":
         flash(
-            "Account created, but we could not send the verification email. "
-            "Please use Resend verification on the login page, or try again later.",
+            "Account created, but we could not send the verification code. "
+            "Please use Resend code on the verification page, or try again later.",
             "warning",
         )
     else:
         flash(
-            "We could not send the verification email right now. "
+            "We could not send the verification code right now. "
             "Please try again in a few minutes or contact support.",
             "error",
         )
@@ -934,11 +1778,18 @@ def public_user_profile(user):
             "emergency_contact_name",
             "emergency_contact_phone",
             "emergency_contact_relation",
+            "emergency_contact_email",
             "address",
             "city",
             "date_of_birth",
+            "gender",
+            "first_name",
+            "middle_name",
+            "last_name",
+            "national_id_last4",
             "blood_type",
             "medical_notes",
+            "allergies",
             "created_at",
             "last_login",
             "saved_locations",
@@ -947,6 +1798,7 @@ def public_user_profile(user):
         )
         if k in u or k in (
             "id", "name", "email", "phone", "role", "status", "email_verified",
+            "national_id_last4", "first_name", "last_name", "gender", "allergies",
         )
     }
 
@@ -1051,7 +1903,7 @@ def _can_access_emergency(em, role, user=None):
     """Citizen owner, assigned hospital, responder role, or admin."""
     if not em:
         return False
-    if role == "admin":
+    if role in STAFF_ADMIN_ROLES:
         return True
     if role == "citizen":
         return em.get("user_id") == session.get("user_id")
@@ -1062,6 +1914,28 @@ def _can_access_emergency(em, role, user=None):
     if role in ROLE_API_TYPE:
         return matches_filter(em.get("type"), ROLE_API_TYPE[role])
     return False
+
+
+def _live_place_label(lat, lng, fallback=""):
+    """Resolve a human place name from Google Maps reverse geocoding (live)."""
+    if lat is None or lng is None:
+        return fallback or ""
+    api_key = _google_maps_api_key()
+    if not (api_key and _use_google_maps()):
+        return fallback or ""
+    try:
+        result = _google_geocode_reverse(float(lat), float(lng), api_key)
+        if not result:
+            return fallback or ""
+        return (
+            result.get("address")
+            or result.get("display_name")
+            or result.get("district")
+            or fallback
+            or ""
+        )
+    except Exception:
+        return fallback or ""
 
 
 def build_location_fix(data):
@@ -1094,11 +1968,16 @@ def build_location_fix(data):
         heading = None
     if lat is not None and lng is not None and not hl.is_in_somalia(lat, lng):
         lat, lng = None, None
+    district = (data.get("district") or "").strip()
+    # Prefer live Google place names over bare coordinates / empty labels
+    looks_like_coords = bool(re.match(r"^-?\d+\.?\d*\s*,\s*-?\d+\.?\d*$", district))
+    if lat is not None and lng is not None and (not district or looks_like_coords):
+        district = _live_place_label(lat, lng, district) or district
     return {
         "timestamp": now_str(),
         "latitude": lat,
         "longitude": lng,
-        "district": data.get("district") or "",
+        "district": district,
         "building": data.get("building") or "",
         "floor": data.get("floor") or "",
         "room": data.get("room") or "",
@@ -1132,6 +2011,149 @@ def load_settings():
 
 def save_settings(settings):
     save_json(SETTINGS_FILE, settings)
+    _apply_runtime_settings(settings)
+
+
+def _apply_runtime_settings(settings=None):
+    """Push selected settings into process env so email/AI pick them up without restart."""
+    settings = settings or load_settings()
+    # SMTP — only override when host/user provided from dashboard
+    if settings.get("smtp_host"):
+        os.environ["SMTP_HOST"] = str(settings.get("smtp_host") or "")
+    if settings.get("smtp_port") is not None:
+        os.environ["SMTP_PORT"] = str(settings.get("smtp_port") or 587)
+    if settings.get("smtp_user"):
+        os.environ["SMTP_USER"] = str(settings.get("smtp_user") or "")
+    if settings.get("smtp_password"):
+        os.environ["SMTP_PASSWORD"] = str(settings.get("smtp_password") or "")
+    if settings.get("smtp_from"):
+        os.environ["SMTP_FROM"] = str(settings.get("smtp_from") or "")
+    if "smtp_use_tls" in settings:
+        os.environ["SMTP_USE_TLS"] = "true" if settings.get("smtp_use_tls") else "false"
+    if settings.get("smtp_enabled") is False:
+        os.environ["EMAIL_PROVIDER"] = "memory"
+    elif settings.get("smtp_host"):
+        os.environ["EMAIL_PROVIDER"] = "smtp"
+    if settings.get("ai_provider"):
+        os.environ["AI_PROVIDER"] = str(settings.get("ai_provider") or "rule_based")
+    if settings.get("openai_api_key"):
+        os.environ["OPENAI_API_KEY"] = str(settings.get("openai_api_key") or "")
+    if settings.get("google_maps_api_key"):
+        os.environ["GOOGLE_MAPS_API_KEY"] = str(settings.get("google_maps_api_key") or "")
+    if settings.get("app_name"):
+        os.environ["APP_NAME"] = str(settings.get("app_name") or "GurmadNet AI")
+    try:
+        minutes = int(settings.get("session_timeout_minutes") or 120)
+    except (TypeError, ValueError):
+        minutes = 120
+    app.permanent_session_lifetime = timedelta(minutes=max(15, minutes))
+    try:
+        from email_service.factory import clear_email_provider_cache
+
+        clear_email_provider_cache()
+    except Exception:
+        pass
+
+
+def _public_settings_view(settings):
+    """Settings for API responses — secrets masked."""
+    out = dict(settings)
+    for key in SECRET_SETTING_KEYS:
+        if out.get(key):
+            out[key] = ""
+            out[key + "_set"] = True
+        else:
+            out[key + "_set"] = False
+    return out
+
+
+def _coerce_setting_value(key, value):
+    default = DEFAULT_SETTINGS.get(key)
+    if isinstance(default, bool):
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return bool(value)
+        return str(value).strip().lower() in ("1", "true", "yes", "on")
+    if isinstance(default, int) and not isinstance(default, bool):
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+    if isinstance(default, float):
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+    if value is None:
+        return ""
+    return value
+
+
+def _sync_branding_to_content(settings):
+    """Keep CMS app_name in sync with system settings when Super Admin saves."""
+    name = (settings.get("app_name") or "").strip()
+    if not name:
+        return
+    content = load_content()
+    if content.get("app_name") != name:
+        content["app_name"] = name
+        save_content(content)
+
+
+def _password_policy_error(password):
+    """Return an error message if password fails configured policy, else None."""
+    settings = load_settings()
+    pw = password or ""
+    try:
+        min_len = int(settings.get("password_min_length") or 6)
+    except (TypeError, ValueError):
+        min_len = 6
+    min_len = max(4, min_len)
+    if len(pw) < min_len:
+        return f"Password must be at least {min_len} characters."
+    if settings.get("password_require_upper") and not any(c.isupper() for c in pw):
+        return "Password must include an uppercase letter."
+    if settings.get("password_require_digit") and not any(c.isdigit() for c in pw):
+        return "Password must include a digit."
+    if settings.get("password_require_special") and not re.search(r"[^A-Za-z0-9]", pw):
+        return "Password must include a special character."
+    return None
+
+
+def _account_lockout_active(user):
+    locked_until = user.get("locked_until")
+    if not locked_until:
+        return False
+    try:
+        return parse_dt(locked_until) > datetime.now()
+    except Exception:
+        return False
+
+
+def _register_failed_login(user, udata):
+    settings = load_settings()
+    try:
+        max_attempts = int(settings.get("security_login_max_attempts") or 5)
+    except (TypeError, ValueError):
+        max_attempts = 5
+    try:
+        lock_mins = int(settings.get("security_lockout_minutes") or 15)
+    except (TypeError, ValueError):
+        lock_mins = 15
+    fails = int(user.get("failed_logins") or 0) + 1
+    user["failed_logins"] = fails
+    if fails >= max(1, max_attempts):
+        user["locked_until"] = (datetime.now() + timedelta(minutes=max(1, lock_mins))).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+        user["failed_logins"] = 0
+    save_users(udata)
+
+
+def _clear_failed_logins(user):
+    user["failed_logins"] = 0
+    user.pop("locked_until", None)
 
 
 def now_str():
@@ -1156,6 +2178,29 @@ def parse_dt(value):
         return datetime.min
 
 
+def _avg_response_minutes(emergencies):
+    """Measured dispatch latency from status_history. None when no samples exist."""
+    samples = []
+    for e in emergencies or []:
+        hist = e.get("status_history") or []
+        start = parse_dt(e.get("timestamp")) if e.get("timestamp") else None
+        if not start or start == datetime.min:
+            continue
+        dispatched_at = None
+        for h in hist:
+            st = (h.get("status") or "").lower()
+            if st in ("dispatched", "accepted", "in_progress") and h.get("timestamp"):
+                dispatched_at = parse_dt(h.get("timestamp"))
+                break
+        if dispatched_at and dispatched_at != datetime.min and dispatched_at >= start:
+            mins = (dispatched_at - start).total_seconds() / 60.0
+            if 0 <= mins <= 180:
+                samples.append(mins)
+    if not samples:
+        return None
+    return round(sum(samples) / len(samples), 1)
+
+
 def seed_defaults():
     """Initialize schema/content only — never creates demo or seed user accounts."""
     if USE_MYSQL:
@@ -1164,16 +2209,75 @@ def seed_defaults():
 
             _ms.ensure_call_center_schema()
             _ms.ensure_email_verification_schema()
+            _ms.ensure_citizen_profile_schema()
+            _ms.ensure_admin_profile_schema()
+            _ms.ensure_ai_schema()
+            integrity = _ms.ensure_production_integrity()
+            if integrity.get("changes"):
+                logging.getLogger(__name__).info(
+                    "MySQL integrity changes: %s", integrity.get("changes")
+                )
         except Exception:
-            pass
+            logging.getLogger(__name__).exception("MySQL schema ensure failed")
 
-    if not os.path.exists(CONTENT_FILE):
-        save_content(DEFAULT_CONTENT.copy())
-    if not os.path.exists(SETTINGS_FILE):
-        save_settings(DEFAULT_SETTINGS.copy())
+    try:
+        sync = _sync_hospital_account_links()
+        if sync.get("users_changed") or sync.get("hospitals_changed"):
+            logging.getLogger(__name__).info("Hospital↔user link sync: %s", sync)
+    except Exception:
+        logging.getLogger(__name__).exception("Hospital account link sync failed")
+
+    # Seed CMS / settings only when empty — never overwrite live MySQL data
+    if USE_MYSQL:
+        try:
+            from database import mysql_store as _ms
+
+            if not _ms.content_row_exists():
+                save_content(DEFAULT_CONTENT.copy())
+            if not _ms.settings_row_exists():
+                save_settings(DEFAULT_SETTINGS.copy())
+        except Exception:
+            logging.getLogger(__name__).exception("MySQL content/settings seed check failed")
+    else:
+        content_path = _json_file_path(CONTENT_FILE)
+        settings_path = _json_file_path(SETTINGS_FILE)
+        if not os.path.exists(content_path):
+            save_content(DEFAULT_CONTENT.copy())
+        if not os.path.exists(settings_path):
+            save_settings(DEFAULT_SETTINGS.copy())
+
+    # Drop legacy demo branding left in CMS from earlier seed content
+    try:
+        content = load_content()
+        demo_titles = {
+            "hospital_dashboard_title": "Aamin Ambulance - Hospital Dashboard",
+            "police_dashboard_title": "Hamar Police - Police Dashboard",
+            "fire_dashboard_title": "KM4 Fire Station - Fire Dashboard",
+        }
+        changed = False
+        for key, old in demo_titles.items():
+            if content.get(key) == old:
+                content[key] = DEFAULT_CONTENT[key]
+                changed = True
+        if changed:
+            save_content(content)
+    except Exception:
+        pass
     hl.seed_hospitals_if_empty(read_json, save_json)
     hl.migrate_all_hospitals(read_json, save_json)
     seed_announcements_if_empty()
+    if USE_MYSQL:
+        try:
+            from database import mysql_store as _ms
+
+            _ms.ensure_super_admin_role()
+        except Exception:
+            logging.getLogger(__name__).exception("MySQL super_admin role ensure failed")
+    _migrate_legacy_admins_to_super()
+    try:
+        _apply_runtime_settings()
+    except Exception:
+        logging.getLogger(__name__).exception("Runtime settings apply failed")
 
 
 def get_user_by_login(login):
@@ -1211,6 +2315,7 @@ def current_user():
 
 def login_user(user):
     user = normalize_user_record(user)
+    session.permanent = True
     session["user_id"] = user["id"]
     session["role"] = user["role"]
     session["name"] = user["name"]
@@ -1224,7 +2329,7 @@ def login_required(f):
         if not session.get("user_id"):
             return _auth_challenge("Please log in to continue.")
         settings = load_settings()
-        if settings.get("maintenance_mode") and session.get("role") != "admin":
+        if settings.get("maintenance_mode") and not _is_staff_admin():
             if _wants_json_response():
                 return jsonify({"success": False, "message": "System is under maintenance."}), 503
             flash("System is under maintenance. Try again later.", "error")
@@ -1241,7 +2346,7 @@ def role_required(*roles):
             if not session.get("user_id"):
                 return _auth_challenge("Please log in to continue.")
             settings = load_settings()
-            if settings.get("maintenance_mode") and session.get("role") != "admin":
+            if settings.get("maintenance_mode") and not _is_staff_admin():
                 if _wants_json_response():
                     return jsonify({"success": False, "message": "System is under maintenance."}), 503
                 flash("System is under maintenance.", "error")
@@ -1258,8 +2363,37 @@ def role_required(*roles):
     return decorator
 
 
+def _sync_session_role():
+    """Refresh session role from DB (e.g. after admin → super_admin migration)."""
+    uid = session.get("user_id")
+    if not uid:
+        return
+    user, _ = get_user_by_id(uid)
+    if not user:
+        return
+    if user.get("role") and user.get("role") != session.get("role"):
+        session["role"] = user["role"]
+    if user.get("name"):
+        session["name"] = user["name"]
+    if user.get("email"):
+        session["email"] = user["email"]
+
+
 def admin_required(f):
-    return role_required("admin")(f)
+    """Allow Super Admin or regular Admin into the admin area."""
+    guarded = role_required("super_admin", "admin")(f)
+
+    @wraps(f)
+    def wrapped(*args, **kwargs):
+        _sync_session_role()
+        return guarded(*args, **kwargs)
+
+    return wrapped
+
+
+def super_admin_required(f):
+    """Restrict a route to Super Admin only."""
+    return role_required("super_admin")(f)
 
 
 def call_center_required(f):
@@ -1299,14 +2433,60 @@ def emergencies_today_count():
     )
 
 
+def _google_maps_api_key():
+    settings = load_settings()
+    return (
+        (settings.get("google_maps_api_key") or "").strip()
+        or (os.environ.get("GOOGLE_MAPS_API_KEY") or "").strip()
+    )
+
+
+def _use_google_maps(settings=None):
+    """Google Maps is primary whenever an API key is configured."""
+    settings = settings or load_settings()
+    key = (settings.get("google_maps_api_key") or "").strip() or (
+        os.environ.get("GOOGLE_MAPS_API_KEY") or ""
+    ).strip()
+    if not key:
+        return False
+    provider = str(settings.get("maps_provider") or "google").strip().lower()
+    return provider != "leaflet"
+
+
 @app.context_processor
 def inject_globals():
+    settings = load_settings()
+    content = load_content()
+    # Prefer system setting app_name when set
+    if settings.get("app_name"):
+        content = dict(content)
+        content["app_name"] = settings.get("app_name") or content.get("app_name")
+    gmaps_key = _google_maps_api_key()
+    use_gmaps = _use_google_maps(settings)
+    try:
+        default_lat = float(settings.get("maps_default_lat") or 2.0469)
+        default_lng = float(settings.get("maps_default_lng") or 45.3182)
+        default_zoom = int(settings.get("maps_default_zoom") or 14)
+    except (TypeError, ValueError):
+        default_lat, default_lng, default_zoom = 2.0469, 45.3182, 14
+    maps_config = {
+        "provider": "google" if use_gmaps else "leaflet",
+        "apiKeyPresent": bool(gmaps_key),
+        "defaultLat": default_lat,
+        "defaultLng": default_lng,
+        "defaultZoom": default_zoom,
+    }
     return {
-        "content": load_content(),
-        "settings": load_settings(),
+        "content": content,
+        "settings": settings,
         "auth_user": current_user(),
-        "google_maps_key": load_settings().get("google_maps_api_key", ""),
+        "google_maps_key": gmaps_key,
+        "use_google_maps": use_gmaps,
+        "maps_config": maps_config,
         "csrf_token": generate_csrf,
+        "app_logo_url": settings.get("app_logo_url") or "",
+        "app_favicon_url": settings.get("app_favicon_url") or "",
+        "brand_primary_color": settings.get("brand_primary_color") or "#2563eb",
     }
 
 
@@ -1431,7 +2611,21 @@ def login():
 
         if user and user.get("status") == "blocked":
             flash("Your account has been blocked. Contact admin.", "error")
+        elif user and _account_lockout_active(user):
+            flash("Too many failed attempts. Try again later.", "error")
         elif user and check_password_hash(user["password_hash"], password):
+            if (
+                user.get("role") == "citizen"
+                and load_settings().get("auth_require_email_verification", True)
+                and not _user_is_email_verified(user)
+            ):
+                flash(
+                    "Please verify your email before logging in. "
+                    "Enter the code we sent to your inbox.",
+                    "error",
+                )
+                return redirect(url_for("verify_email_code", email=user.get("email")))
+            _clear_failed_logins(user)
             user["last_login"] = now_str()
             log_activity(user, "Logged in")
             save_users(udata)
@@ -1442,6 +2636,8 @@ def login():
                 return redirect(nxt)
             return redirect(_role_home(user))
         else:
+            if user:
+                _register_failed_login(user, udata)
             flash("Invalid email or password. Please try again.", "error")
 
     return _render_login_page()
@@ -1560,8 +2756,9 @@ def reset_password(token):
     if request.method == "POST":
         pw = request.form.get("password", "")
         confirm = request.form.get("confirm_password", "")
-        if len(pw) < 6:
-            flash("Password must be at least 6 characters.", "error")
+        pw_err = _password_policy_error(pw)
+        if pw_err:
+            flash(pw_err, "error")
         elif pw != confirm:
             flash("Passwords do not match.", "error")
         else:
@@ -1576,75 +2773,199 @@ def reset_password(token):
     return render_template("reset_password.html", token=token)
 
 
+VALID_EMERGENCY_RELATIONS = (
+    "Father", "Mother", "Brother", "Sister", "Spouse", "Friend", "Other",
+)
+
+
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if session.get("user_id"):
         user = current_user()
         return redirect(_role_home(user))
 
+    if not load_settings().get("auth_allow_citizen_signup", True):
+        flash("Citizen registration is currently disabled.", "error")
+        return redirect(url_for("login"))
+
     if request.method == "POST":
-        name = request.form.get("name", "").strip() or request.form.get("full_name", "").strip()
+        first_name = (request.form.get("first_name") or "").strip()
+        middle_name = (request.form.get("middle_name") or "").strip()
+        last_name = (request.form.get("last_name") or "").strip()
+        gender = (request.form.get("gender") or "").strip().lower()
         email = normalize_email(request.form.get("email", ""))
-        phone = request.form.get("phone", "").strip()
         password = request.form.get("password", "")
         confirm = request.form.get("confirm_password", "")
-        role = request.form.get("role", "citizen")
+        address = (request.form.get("address") or "").strip()
+        city = (request.form.get("city") or "").strip()
+        blood_type = (request.form.get("blood_type") or "").strip()
+        medical_conditions = (request.form.get("medical_conditions") or "").strip()
+        allergies = (request.form.get("allergies") or "").strip()
+        agree = request.form.get("agree_terms") in ("1", "on", "true", "yes")
+        role = "citizen"
         email_reject = signup_email_rejection_reason(email)
+        contact_email = normalize_email(request.form.get("emergency_contact_email", ""))
+        contact_name = (request.form.get("emergency_contact_name") or "").strip()
+        contact_relation = (request.form.get("emergency_contact_relation") or "").strip()
 
-        if role == "admin" or role == "call_center":
-            flash("Cannot register as admin or call center operator.", "error")
-        elif not name or not email or not password:
-            flash("All required fields must be filled.", "error")
-        elif email_reject:
-            flash(email_reject, "error")
-        elif len(password) < 6:
-            flash("Password must be at least 6 characters.", "error")
-        elif password != confirm:
-            flash("Passwords do not match.", "error")
-        elif role not in VALID_ROLES or role in ("admin", "call_center"):
-            flash("Invalid role.", "error")
+        try:
+            phone = _validate_phone_required(request.form.get("phone"), "Phone number")
+            contact_phone = _validate_phone_required(
+                request.form.get("emergency_contact_phone"),
+                "Emergency contact phone",
+            )
+            dob = _parse_date_of_birth(request.form.get("date_of_birth"))
+            nid_last4, nid_hash, nid_enc = _national_id_fields(request.form.get("national_id"))
+        except ValueError as exc:
+            flash(str(exc), "error")
+            return render_template("signup.html")
+
+        if not first_name or not last_name:
+            flash("First name and last name are required.", "error")
+        elif gender not in ("male", "female"):
+            flash("Please select a gender.", "error")
+        elif not email or email_reject:
+            flash(email_reject or "Please enter a valid email address.", "error")
+        elif not contact_name:
+            flash("Emergency contact name is required.", "error")
+        elif contact_relation not in VALID_EMERGENCY_RELATIONS:
+            flash("Please select a valid emergency contact relationship.", "error")
+        elif contact_email and not is_valid_email_format(contact_email):
+            flash("Please enter a valid emergency contact email, or leave it blank.", "error")
+        elif not agree:
+            flash("Please agree to the Terms and Privacy Policy.", "error")
         else:
-            udata = load_users()
-            if any(u["email"].lower() == email for u in udata["users"]):
-                flash("Email already registered.", "error")
+            pw_err = _password_policy_error(password)
+            if pw_err:
+                flash(pw_err, "error")
+            elif password != confirm:
+                flash("Passwords do not match.", "error")
             else:
-                uid = udata["next_id"]
-                udata["next_id"] += 1
-                user = {
-                    "id": uid,
-                    "name": name,
-                    "email": email,
-                    "phone": phone or "",
-                    "password_hash": generate_password_hash(password),
-                    "role": role,
-                    "status": "active",
-                    "email_verified": True,
-                    "email_verify_token": None,
-                    "email_verify_expires": None,
-                    "created_at": now_str(),
-                    "last_login": None,
-                    "activity": [{"action": "Account created", "timestamp": now_str()}],
-                }
-                udata["users"].append(user)
-                save_users(udata)
-                flash("Account created. You can log in now.", "success")
-                return redirect(url_for("login"))
+                udata = load_users()
+                if any(u["email"].lower() == email for u in udata["users"]):
+                    flash("Email already registered.", "error")
+                elif nid_hash and any(u.get("national_id_hash") == nid_hash for u in udata["users"]):
+                    flash("This National ID is already registered.", "error")
+                else:
+                    uid = udata["next_id"]
+                    udata["next_id"] += 1
+                    full_name = _compose_full_name(first_name, middle_name, last_name)
+                    user = {
+                        "id": uid,
+                        "name": full_name,
+                        "first_name": first_name,
+                        "middle_name": middle_name,
+                        "last_name": last_name,
+                        "gender": gender,
+                        "date_of_birth": dob,
+                        "email": email,
+                        "phone": phone,
+                        "address": address,
+                        "city": city,
+                        "blood_type": blood_type,
+                        "medical_notes": medical_conditions,
+                        "allergies": allergies,
+                        "emergency_contact_name": contact_name,
+                        "emergency_contact_phone": contact_phone,
+                        "emergency_contact_relation": contact_relation,
+                        "emergency_contact_email": contact_email,
+                        "national_id_last4": nid_last4,
+                        "national_id_hash": nid_hash,
+                        "national_id_encrypted": nid_enc,
+                        "password_hash": generate_password_hash(password),
+                        "role": role,
+                        "status": "active",
+                        "created_at": now_str(),
+                        "last_login": None,
+                        "activity": [{"action": "Account created", "timestamp": now_str()}],
+                    }
+                    settings = load_settings()
+                    udata["users"].append(user)
+                    if settings.get("auth_require_email_verification", True):
+                        otp = _issue_email_verification(user)
+                        save_users(udata)
+                        result = _send_user_verification_email(user, otp)
+                        if result.get("success"):
+                            flash(
+                                "Account created. Enter the verification code sent to your email.",
+                                "success",
+                            )
+                        else:
+                            _flash_email_send_failure("signup")
+                        return redirect(url_for("verify_email_code", email=email))
+                    user["email_verified"] = True
+                    save_users(udata)
+                    flash("Account created. You can log in now.", "success")
+                    return redirect(url_for("login"))
 
     return render_template("signup.html")
 
 
+@app.route("/verify-email", methods=["GET", "POST"])
+def verify_email_code():
+    """Verify citizen email with a one-time code after registration."""
+    email = normalize_email(
+        request.values.get("email") or request.args.get("email") or ""
+    )
+    if request.method == "GET":
+        return render_template("verify_email.html", email=email)
+
+    if not is_valid_email_format(email):
+        flash("Please enter a valid email address.", "error")
+        return redirect(url_for("login"))
+
+    otp_code = request.form.get("otp") or request.form.get("code") or ""
+    user, udata = get_user_by_login(email)
+    if not user:
+        flash("Invalid or expired code.", "error")
+        return render_template("verify_email.html", email=email)
+    if user.get("email_verified"):
+        flash("This email is already verified. You can log in.", "success")
+        return redirect(url_for("login"))
+
+    ok, err = _verify_email_otp(user, otp_code)
+    if not ok:
+        save_users(udata)
+        flash(err, "error")
+        return render_template("verify_email.html", email=email)
+
+    user["last_login"] = now_str()
+    log_activity(user, "Email verified")
+    log_activity(user, "Logged in")
+    save_users(udata)
+    login_user(user)
+    flash("Email verified. Welcome, " + user_name(user) + "!", "success")
+    return redirect(_role_home(user))
+
 @app.route("/verify-email/<token>")
 def verify_email(token):
-    """Legacy route — email verification is no longer required for login."""
-    flash("Email verification is no longer required. You can log in directly.", "success")
-    return redirect(url_for("login"))
+    """Legacy link route — redirect users to the OTP verification page."""
+    flash("Please enter the verification code from your email.", "success")
+    return redirect(url_for("verify_email_code"))
 
 
 @app.route("/resend-verification", methods=["POST"])
 def resend_verification():
-    """Legacy route — kept so old UI posts do not 404."""
-    flash("Email verification is no longer required. You can log in with your password.", "success")
-    return redirect(url_for("login"))
+    email = normalize_email(request.form.get("email") or request.args.get("email") or "")
+    if not is_valid_email_format(email):
+        flash("Please enter a valid email address.", "error")
+        return redirect(url_for("login"))
+    user, udata = get_user_by_login(email)
+    if not user:
+        flash("If that email is registered, a verification code has been sent.", "success")
+        return redirect(url_for("verify_email_code", email=email))
+    if user.get("email_verified"):
+        flash("This email is already verified. You can log in.", "success")
+        return redirect(url_for("login"))
+    otp = _issue_email_verification(user)
+    save_users(udata)
+    result = _send_user_verification_email(user, otp)
+    if result.get("success"):
+        flash("Verification code sent. Please check your inbox.", "success")
+    else:
+        _flash_email_send_failure("resend")
+    return redirect(url_for("verify_email_code", email=email))
+
 
 @app.route("/logout")
 def logout():
@@ -1796,65 +3117,278 @@ def _nominatim_request(path, params):
         return json.loads(resp.read().decode())
 
 
+def _google_maps_http_get(url):
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": "GurmadNetAI/1.0 (Somalia emergency response)"},
+    )
+    with urllib.request.urlopen(req, timeout=12) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def _parse_google_address_components(components):
+    """Extract city/district/region from Google Geocoding address_components."""
+    by_type = {}
+    for comp in components or []:
+        for t in comp.get("types") or []:
+            by_type[t] = comp.get("long_name") or ""
+    city = (
+        by_type.get("locality")
+        or by_type.get("administrative_area_level_2")
+        or by_type.get("postal_town")
+        or ""
+    )
+    district = (
+        by_type.get("sublocality")
+        or by_type.get("sublocality_level_1")
+        or by_type.get("neighborhood")
+        or by_type.get("administrative_area_level_3")
+        or ""
+    )
+    region = by_type.get("administrative_area_level_1") or ""
+    street = by_type.get("route") or ""
+    street_no = by_type.get("street_number") or ""
+    road = f"{street_no} {street}".strip()
+    parts = [p for p in (road, district, city) if p]
+    return {
+        "address": ", ".join(parts) if parts else "",
+        "city": city,
+        "district": district,
+        "region": region,
+    }
+
+
+def _google_geocode_search(query, api_key):
+    """Live Google Geocoding search restricted to Somalia."""
+    params = urllib.parse.urlencode({
+        "address": _normalize_somalia_query(query),
+        "key": api_key,
+        "region": "so",
+        "components": "country:SO",
+        "language": "en",
+    })
+    payload = _google_maps_http_get(
+        f"https://maps.googleapis.com/maps/api/geocode/json?{params}"
+    )
+    status = payload.get("status")
+    if status not in ("OK", "ZERO_RESULTS"):
+        raise RuntimeError(payload.get("error_message") or f"Google Geocoding: {status}")
+    results = []
+    for row in payload.get("results") or []:
+        loc = (row.get("geometry") or {}).get("location") or {}
+        try:
+            lat, lng = float(loc.get("lat")), float(loc.get("lng"))
+        except (TypeError, ValueError):
+            continue
+        if not _somalia_bounds_ok(lat, lng):
+            continue
+        parsed = _parse_google_address_components(row.get("address_components"))
+        formatted = row.get("formatted_address") or ""
+        name = formatted.split(",")[0] if formatted else (parsed.get("district") or "Location")
+        results.append({
+            "lat": lat,
+            "lng": lng,
+            "display_name": formatted,
+            "name": name,
+            "address": parsed["address"] or formatted,
+            "city": parsed["city"] or "Mogadishu",
+            "district": parsed["district"],
+            "region": parsed["region"] or "Banadir",
+            "source": "google",
+            "match_score": 95,
+            "place_id": row.get("place_id") or "",
+        })
+    return results
+
+
+def _google_geocode_reverse(lat, lng, api_key):
+    """Live Google reverse geocoding for a coordinate pair."""
+    params = urllib.parse.urlencode({
+        "latlng": f"{lat},{lng}",
+        "key": api_key,
+        "language": "en",
+        "result_type": "street_address|route|neighborhood|sublocality|locality",
+    })
+    payload = _google_maps_http_get(
+        f"https://maps.googleapis.com/maps/api/geocode/json?{params}"
+    )
+    status = payload.get("status")
+    if status == "ZERO_RESULTS":
+        # Broader reverse lookup without result_type filter
+        params = urllib.parse.urlencode({
+            "latlng": f"{lat},{lng}",
+            "key": api_key,
+            "language": "en",
+        })
+        payload = _google_maps_http_get(
+            f"https://maps.googleapis.com/maps/api/geocode/json?{params}"
+        )
+        status = payload.get("status")
+    if status not in ("OK", "ZERO_RESULTS"):
+        raise RuntimeError(payload.get("error_message") or f"Google Geocoding: {status}")
+    rows = payload.get("results") or []
+    if not rows:
+        return None
+    row = rows[0]
+    parsed = _parse_google_address_components(row.get("address_components"))
+    formatted = row.get("formatted_address") or ""
+    return {
+        "lat": lat,
+        "lng": lng,
+        "display_name": formatted,
+        "name": formatted.split(",")[0] if formatted else (parsed.get("district") or "Selected location"),
+        "address": parsed["address"] or formatted,
+        "city": parsed["city"] or "Mogadishu",
+        "district": parsed["district"],
+        "region": parsed["region"] or "Banadir",
+        "source": "google",
+        "place_id": row.get("place_id") or "",
+    }
+
+
+def _google_directions_route(lat1, lng1, lat2, lng2, api_key):
+    """Live Google Directions polyline + distance/duration."""
+    params = urllib.parse.urlencode({
+        "origin": f"{lat1},{lng1}",
+        "destination": f"{lat2},{lng2}",
+        "mode": "driving",
+        "key": api_key,
+        "region": "so",
+        "language": "en",
+    })
+    payload = _google_maps_http_get(
+        f"https://maps.googleapis.com/maps/api/directions/json?{params}"
+    )
+    status = payload.get("status")
+    if status != "OK":
+        raise RuntimeError(payload.get("error_message") or f"Google Directions: {status}")
+    routes = payload.get("routes") or []
+    if not routes:
+        raise RuntimeError("No Google route found.")
+    route = routes[0]
+    leg = (route.get("legs") or [{}])[0]
+    distance_m = float((leg.get("distance") or {}).get("value") or 0)
+    duration_s = float((leg.get("duration") or {}).get("value") or 0)
+    # Decode overview polyline for Leaflet fallback consumers ([lng, lat] pairs)
+    overview = (route.get("overview_polyline") or {}).get("points") or ""
+    coords = _decode_google_polyline(overview)
+    return {
+        "coordinates": coords,
+        "distance_km": round(distance_m / 1000, 2),
+        "duration_minutes": max(1, int(round(duration_s / 60))),
+        "source": "google",
+        "polyline": overview,
+    }
+
+
+def _decode_google_polyline(polyline_str):
+    """Decode Google encoded polyline into [[lng, lat], ...] GeoJSON-style coords."""
+    if not polyline_str:
+        return []
+    coordinates = []
+    index = lat = lng = 0
+    length = len(polyline_str)
+    while index < length:
+        for coord_name in ("lat", "lng"):
+            result = shift = 0
+            while True:
+                if index >= length:
+                    break
+                b = ord(polyline_str[index]) - 63
+                index += 1
+                result |= (b & 0x1F) << shift
+                shift += 5
+                if b < 0x20:
+                    break
+            delta = ~(result >> 1) if (result & 1) else (result >> 1)
+            if coord_name == "lat":
+                lat += delta
+            else:
+                lng += delta
+        coordinates.append([lng / 1e5, lat / 1e5])
+    return coordinates
+
+
 @app.route("/api/geocode/search")
-@role_required("hospital")
+@login_required
 def geocode_search():
-    """Search Somalia locations — known hospitals first, then Nominatim (Somalia only)."""
+    """Search locations — Google Maps Geocoding first, then known hospitals / Nominatim."""
     q = (request.args.get("q") or "").strip()
     if len(q) < 2:
         return jsonify({"success": True, "results": [], "rejected": 0})
-    results = _known_hospital_results(q)
-    seen = {(round(r["lat"], 5), round(r["lng"], 5)) for r in results}
+    results = []
+    seen = set()
     rejected = 0
-    try:
-        somalia_q = _normalize_somalia_query(q)
-        rows = _nominatim_request("search", {
-            "q": somalia_q,
-            "format": "json",
-            "addressdetails": 1,
-            "countrycodes": "so",
-            "limit": 15,
-            "viewbox": f"{hl.SOMALIA_LNG_MIN},{hl.SOMALIA_LAT_MAX},{hl.SOMALIA_LNG_MAX},{hl.SOMALIA_LAT_MIN}",
-            "bounded": 1,
-        })
-        nominatim_candidates = []
-        for row in rows:
-            if not _nominatim_in_somalia(row):
-                rejected += 1
-                continue
-            lat, lng = float(row["lat"]), float(row["lon"])
-            key = (round(lat, 5), round(lng, 5))
-            if key in seen:
-                continue
-            seen.add(key)
-            parsed = _parse_nominatim_address(row.get("address", {}))
-            name = row.get("name") or (row.get("display_name", "").split(",")[0])
-            nominatim_candidates.append({
-                "lat": lat,
-                "lng": lng,
-                "display_name": row.get("display_name", ""),
-                "name": name,
-                "address": parsed["address"] or row.get("display_name", ""),
-                "city": parsed["city"] or "Mogadishu",
-                "district": parsed["district"],
-                "region": parsed["region"] or "Banadir",
-                "source": "nominatim",
-                "match_score": _score_geocode_match(q, row, name),
+    api_key = _google_maps_api_key()
+    if api_key and _use_google_maps():
+        try:
+            for row in _google_geocode_search(q, api_key):
+                key = (round(row["lat"], 5), round(row["lng"], 5))
+                if key in seen:
+                    continue
+                seen.add(key)
+                results.append(row)
+        except Exception:
+            logging.getLogger(__name__).exception("Google geocode search failed")
+
+    # Keep verified hospital directory as supplemental matches
+    for row in _known_hospital_results(q):
+        key = (round(row["lat"], 5), round(row["lng"], 5))
+        if key in seen:
+            continue
+        seen.add(key)
+        results.append(row)
+
+    if not results:
+        try:
+            somalia_q = _normalize_somalia_query(q)
+            rows = _nominatim_request("search", {
+                "q": somalia_q,
+                "format": "json",
+                "addressdetails": 1,
+                "countrycodes": "so",
+                "limit": 15,
+                "viewbox": f"{hl.SOMALIA_LNG_MIN},{hl.SOMALIA_LAT_MAX},{hl.SOMALIA_LNG_MAX},{hl.SOMALIA_LAT_MIN}",
+                "bounded": 1,
             })
-        nominatim_candidates.sort(key=lambda x: -x["match_score"])
-        results.extend(nominatim_candidates)
-    except Exception as exc:
-        if not results:
-            return jsonify({
-                "success": False,
-                "message": _safe_client_message(exc),
-                "results": [],
-                "rejected": rejected,
-            }), 502
+            nominatim_candidates = []
+            for row in rows:
+                if not _nominatim_in_somalia(row):
+                    rejected += 1
+                    continue
+                lat, lng = float(row["lat"]), float(row["lon"])
+                key = (round(lat, 5), round(lng, 5))
+                if key in seen:
+                    continue
+                seen.add(key)
+                parsed = _parse_nominatim_address(row.get("address", {}))
+                name = row.get("name") or (row.get("display_name", "").split(",")[0])
+                nominatim_candidates.append({
+                    "lat": lat,
+                    "lng": lng,
+                    "display_name": row.get("display_name", ""),
+                    "name": name,
+                    "address": parsed["address"] or row.get("display_name", ""),
+                    "city": parsed["city"] or "Mogadishu",
+                    "district": parsed["district"],
+                    "region": parsed["region"] or "Banadir",
+                    "source": "nominatim",
+                    "match_score": _score_geocode_match(q, row, name),
+                })
+            nominatim_candidates.sort(key=lambda x: -x["match_score"])
+            results.extend(nominatim_candidates)
+        except Exception as exc:
+            if not results:
+                return jsonify({
+                    "success": False,
+                    "message": _safe_client_message(exc),
+                    "results": [],
+                    "rejected": rejected,
+                }), 502
     if not results:
         return jsonify({
             "success": False,
-            "message": "Location must be in Somalia.",
+            "message": "No matching locations found in Somalia. Check your Google Maps API key and query.",
             "results": [],
             "rejected": rejected,
         })
@@ -1862,14 +3396,15 @@ def geocode_search():
         "success": True,
         "results": results[:12],
         "rejected": rejected,
+        "provider": "google" if (results and results[0].get("source") == "google") else "fallback",
         "require_selection": len(results) > 1,
     })
 
 
 @app.route("/api/geocode/reverse")
-@role_required("hospital")
+@login_required
 def geocode_reverse():
-    """Reverse geocode coordinates within Somalia."""
+    """Reverse geocode live coordinates via Google Maps (primary)."""
     try:
         lat = float(request.args.get("lat", ""))
         lng = float(request.args.get("lng", ""))
@@ -1879,6 +3414,16 @@ def geocode_reverse():
         hl.validate_coordinates(lat, lng)
     except ValueError as exc:
         return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
+
+    api_key = _google_maps_api_key()
+    if api_key and _use_google_maps():
+        try:
+            result = _google_geocode_reverse(lat, lng, api_key)
+            if result:
+                return jsonify({"success": True, "result": result, "provider": "google"})
+        except Exception:
+            logging.getLogger(__name__).exception("Google reverse geocode failed")
+
     try:
         rows = _nominatim_request("reverse", {
             "lat": lat,
@@ -1898,6 +3443,7 @@ def geocode_reverse():
         parsed = _parse_nominatim_address(addr)
         return jsonify({
             "success": True,
+            "provider": "nominatim",
             "result": {
                 "lat": lat,
                 "lng": lng,
@@ -1907,10 +3453,14 @@ def geocode_reverse():
                 "city": parsed["city"] or "Mogadishu",
                 "district": parsed["district"],
                 "region": parsed["region"] or "Banadir",
+                "source": "nominatim",
             },
         })
     except Exception as exc:
-        return jsonify({"success": False, "message": _safe_client_message(exc, "Upstream service unavailable.")}), 502
+        return jsonify({
+            "success": False,
+            "message": _safe_client_message(exc, "Geocoding unavailable. Configure Google Maps API key."),
+        }), 502
 
 
 @app.route("/hospital")
@@ -2039,43 +3589,62 @@ def fire_dashboard():
 
 
 @app.route("/admin")
-@role_required("admin")
+@admin_required
 def admin_dashboard():
-    return render_template("admin_dashboard.html", user=current_user())
+    user = current_user()
+    role = (user or {}).get("role") or _session_role()
+    return render_template(
+        "admin_dashboard.html",
+        user=user,
+        admin_role=role,
+        is_super_admin=role == "super_admin",
+        admin_permissions=sorted(_admin_permissions(role)),
+    )
 
 
 @app.route("/api/location/ip")
 @login_required
 def location_ip():
-    """Approximate location when GPS is denied (authenticated users only)."""
-    default = {
-        "lat": 2.0469,
-        "lng": 45.3182,
-        "district": "KM4 Junction, Mogadishu",
-        "source": "default",
-    }
+    """Approximate location when GPS is denied — live IP geolocation only (no fake coords)."""
     try:
         req = urllib.request.Request(
-            "http://ip-api.com/json/?fields=status,lat,lon,city,country",
-            headers={"User-Agent": "EmergencyHelpApp/1.0"},
+            "http://ip-api.com/json/?fields=status,lat,lon,city,country,regionName",
+            headers={"User-Agent": "GurmadNetAI/1.0"},
         )
         with urllib.request.urlopen(req, timeout=4) as resp:
             payload = json.loads(resp.read().decode())
-        if payload.get("status") == "success":
-            lat = float(payload.get("lat", default["lat"]))
-            lng = float(payload.get("lon", default["lng"]))
-            city = payload.get("city") or "Mogadishu"
-            country = payload.get("country") or "Somalia"
-            district = f"{city}, {country}"
-            if "somalia" not in country.lower() and "mogadishu" not in city.lower():
-                lat, lng = default["lat"], default["lng"]
-                district = default["district"]
-            return jsonify(
-                {"lat": lat, "lng": lng, "district": district, "source": "ip"}
-            )
-    except (OSError, ValueError, json.JSONDecodeError):
-        pass
-    return jsonify(default)
+        if payload.get("status") != "success":
+            return jsonify({
+                "success": False,
+                "message": "Could not determine location from network. Enable GPS.",
+            }), 404
+        lat = float(payload["lat"])
+        lng = float(payload["lon"])
+        city = payload.get("city") or ""
+        country = payload.get("country") or ""
+        district = ", ".join([p for p in (city, country) if p]) or f"{lat:.5f}, {lng:.5f}"
+        # Prefer Google reverse geocode for a live place name when key is set
+        api_key = _google_maps_api_key()
+        if api_key and _use_google_maps() and hl.is_in_somalia(lat, lng):
+            try:
+                g = _google_geocode_reverse(lat, lng, api_key)
+                if g:
+                    district = g.get("address") or g.get("display_name") or district
+            except Exception:
+                pass
+        return jsonify({
+            "success": True,
+            "lat": lat,
+            "lng": lng,
+            "district": district,
+            "source": "ip",
+            "in_somalia": hl.is_in_somalia(lat, lng),
+        })
+    except (OSError, ValueError, json.JSONDecodeError, KeyError):
+        return jsonify({
+            "success": False,
+            "message": "Location unavailable. Enable device GPS for accurate positioning.",
+        }), 503
 
 
 @app.route("/api/hospitals", methods=["GET"])
@@ -2209,16 +3778,30 @@ def api_patient_request_status():
     _run_escalations()
     rid = request.args.get("id", type=int)
     edata = load_emergencies()
+    uid = session.get("user_id")
     em = None
     if rid:
         em, _ = get_emergency_by_id(rid)
+        if em and em.get("user_id") != uid:
+            em = None
     else:
+        # Prefer latest active SOS; ignore completed / cancelled / no_hospital
         for e in reversed(edata["emergencies"]):
-            if e.get("user_id") == session.get("user_id"):
+            if e.get("user_id") != uid:
+                continue
+            if _is_active_sos(e):
                 em = e
                 break
-    if not em or em.get("user_id") != session.get("user_id"):
+        if em is None:
+            for e in reversed(edata["emergencies"]):
+                if e.get("user_id") == uid:
+                    em = e
+                    break
+    if not em or em.get("user_id") != uid:
         return jsonify({"success": True, "active": False})
+    active = _is_active_sos(em)
+    if not active:
+        _stop_sos_tracking(em)
     hdata = hl.load_hospitals(read_json, save_json)
     hospital = hl.get_hospital_by_id(hdata, em.get("assigned_hospital_id"))
     dist = em.get("hospital_distance_km")
@@ -2230,11 +3813,10 @@ def api_patient_request_status():
             ),
             2,
         )
-    eta_min = max(3, int((float(dist or 5) / 40) * 60)) if dist else None
     team_label = em.get("assigned_team_label") or TEAM_LABELS.get(em.get("assigned_to"), "Emergency Response Team")
     return jsonify({
         "success": True,
-        "active": True,
+        "active": active,
         "request": {
             "id": em["id"],
             "type": em.get("type"),
@@ -2246,7 +3828,7 @@ def api_patient_request_status():
             "latitude": em.get("latitude"),
             "longitude": em.get("longitude"),
             "accuracy_m": em.get("accuracy_m"),
-            "tracking_active": em.get("tracking_active", False),
+            "tracking_active": bool(em.get("tracking_active")) and active,
             "last_location_update": em.get("last_location_update"),
             "location_trail": em.get("location_history", [])[-15:],
         },
@@ -2302,6 +3884,7 @@ def hospital_reject_request(eid):
         _notify("patient", em.get("user_id"), f"Request forwarded to {hospital['name']}", eid)
     else:
         _append_status(em, "no_hospital_available", "No more hospitals")
+        _stop_sos_tracking(em)
     save_emergencies(edata)
     return jsonify({"success": True, "status": em["status"], "hospital": em.get("assigned_hospital_name")})
 
@@ -2317,8 +3900,15 @@ def api_notifications():
         user = current_user()
         hid, _ = _get_user_hospital(user)
         notes = hl.get_notifications_for(read_json, "hospital", hid, unread_only=unread_only) if hid else []
-    elif role == "admin":
-        notes = hl.get_notifications_for(read_json, "admin", session.get("user_id"), unread_only=unread_only)
+    elif role in STAFF_ADMIN_ROLES:
+        # Prefer role-scoped inbox; also include legacy "admin" target for super_admin
+        notes = hl.get_notifications_for(read_json, role, session.get("user_id"), unread_only=unread_only)
+        if role == "super_admin":
+            legacy = hl.get_notifications_for(
+                read_json, "admin", session.get("user_id"), unread_only=unread_only
+            )
+            seen = {n.get("id") for n in notes}
+            notes = notes + [n for n in legacy if n.get("id") not in seen]
     elif role in ("police", "fire", "call_center"):
         notes = hl.get_notifications_for(read_json, role, session.get("user_id"), unread_only=unread_only)
     else:
@@ -2417,12 +4007,32 @@ def api_user_profile():
     data = request.get_json(silent=True) or {}
     allowed = (
         "name", "phone", "emergency_contact_name", "emergency_contact_phone",
-        "emergency_contact_relation", "address", "city", "date_of_birth", "blood_type", "medical_notes",
-        "saved_locations",
+        "emergency_contact_relation", "emergency_contact_email", "address", "city",
+        "date_of_birth", "blood_type", "medical_notes",
+        "saved_locations", "first_name", "middle_name", "last_name", "gender",
     )
     for key in allowed:
         if key in data:
             user[key] = data[key]
+    if any(k in data for k in ("first_name", "middle_name", "last_name")):
+        user["name"] = _compose_full_name(
+            user.get("first_name", ""),
+            user.get("middle_name", ""),
+            user.get("last_name", ""),
+        ) or user.get("name")
+    if "national_id" in data:
+        try:
+            last4, nid_hash, nid_enc = _national_id_fields(data.get("national_id"))
+        except ValueError as exc:
+            return jsonify({"success": False, "message": str(exc)}), 400
+        if nid_hash and any(
+            u.get("national_id_hash") == nid_hash and u.get("id") != user.get("id")
+            for u in udata["users"]
+        ):
+            return jsonify({"success": False, "message": "This National ID is already registered."}), 400
+        user["national_id_last4"] = last4
+        user["national_id_hash"] = nid_hash
+        user["national_id_encrypted"] = nid_enc
     if "profile_photo" in data:
         photo = data.get("profile_photo") or ""
         if photo and not str(photo).startswith("data:image/"):
@@ -2500,7 +4110,7 @@ DISPLAY_STAGE_LABELS = {
 
 def _distance_remaining_km(em, responder=None):
     victim_lat, victim_lng = hl.best_emergency_coords(em)
-    if not hl.is_in_somalia(victim_lat, victim_lng):
+    if victim_lat is None or victim_lng is None or not hl.is_in_somalia(victim_lat, victim_lng):
         return None
     dist = None
     if responder and responder.get("latitude") is not None:
@@ -2516,28 +4126,27 @@ def _distance_remaining_km(em, responder=None):
 
 
 def _dispatch_unit_info(em):
-    """Assigned response unit details shown to the citizen."""
-    eid = em["id"]
-    team_label = em.get("assigned_team_label") or TEAM_LABELS.get(em.get("assigned_to"), "Emergency Response Team")
+    """Assigned response unit details shown to the citizen (DB fields only)."""
+    team_label = em.get("assigned_team_label") or TEAM_LABELS.get(
+        em.get("assigned_to"), "Emergency Response Team"
+    )
     base = _responder_base_location(em)
-    contact = "+252 61 500 0000"
+    contact = (em.get("contact_number") or "").strip() or None
     unit_name = team_label
     if base:
-        unit_name = base.get("name", team_label)
+        unit_name = base.get("name") or team_label
+    if em.get("assigned_hospital_id"):
         hdata = hl.load_hospitals(read_json, save_json)
-        hospital = hl.get_hospital_by_id(hdata, em.get("assigned_hospital_id")) if em.get("assigned_hospital_id") else None
-        if hospital and hospital.get("phone"):
-            contact = hospital["phone"]
-    drivers = ("Ahmed Noor", "Fatima Ali", "Hassan Mohamed", "Amina Yusuf", "Omar Diini")
-    vehicles = ("AMB", "RSC", "EMR")
-    prefix = vehicles[eid % len(vehicles)]
-    assigned = em.get("assigned_to", "hospital")
-    team_code = {"hospital": "MED", "fire": "FIR", "police": "POL"}.get(assigned, "ERS")
+        hospital = hl.get_hospital_by_id(hdata, em.get("assigned_hospital_id"))
+        if hospital:
+            unit_name = hospital.get("name") or unit_name
+            if hospital.get("phone"):
+                contact = hospital["phone"]
     return {
         "team_name": unit_name,
-        "team_id": f"ERS-{team_code}-{eid:04d}",
-        "vehicle_number": f"{prefix}-{1000 + (eid % 900)}",
-        "driver_name": drivers[eid % len(drivers)],
+        "team_id": em.get("assigned_team_id") or None,
+        "vehicle_number": em.get("vehicle_number") or None,
+        "driver_name": em.get("driver_name") or None,
         "contact_number": contact,
     }
 
@@ -2657,7 +4266,7 @@ def _compute_responder_location(em):
     if em.get("status") in COMPLETED_STATUSES:
         return None
     victim_lat, victim_lng = hl.best_emergency_coords(em)
-    if not hl.is_in_somalia(victim_lat, victim_lng):
+    if victim_lat is None or victim_lng is None or not hl.is_in_somalia(victim_lat, victim_lng):
         return None
     base = _responder_base_location(em)
     if not base and not em.get("assigned_hospital_id") and em.get("assigned_to") not in RESPONSE_STATIONS:
@@ -2748,16 +4357,17 @@ def _emergency_tracking_payload(em):
         }
 
     district = em.get("district") or ""
-    if not coords_valid:
-        district = district or "Mogadishu, Somalia"
-    location_label = district + " (" + str(victim_lat) + ", " + str(victim_lng) + ")"
+    if coords_valid and victim_lat is not None and victim_lng is not None:
+        location_label = (district + " (" + str(victim_lat) + ", " + str(victim_lng) + ")").strip()
+    else:
+        location_label = district or "Location unavailable"
 
     return {
         "emergency_id": em["id"],
         "latitude": victim_lat,
         "longitude": victim_lng,
         "coords_valid": coords_valid,
-        "coords_corrected": not coords_valid,
+        "coords_corrected": False,
         "accuracy_m": em.get("accuracy_m"),
         "district": district,
         "location": location_label,
@@ -2830,18 +4440,17 @@ def send_alert():
     fix = build_location_fix(data)
     fix["latitude"] = fix["latitude"] if fix["latitude"] is not None else lat
     fix["longitude"] = fix["longitude"] if fix["longitude"] is not None else lng
-    if fix["latitude"] is not None:
-        try:
-            fix["latitude"], fix["longitude"] = hl.validate_coordinates(
-                fix["latitude"], fix["longitude"]
-            )
-        except ValueError as exc:
-            return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
-    elif lat is not None and lng is not None:
+    if fix["latitude"] is None or fix["longitude"] is None:
         return jsonify({
             "success": False,
-            "message": "Coordinates must be within Somalia.",
+            "message": "GPS location is required to send SOS. Enable location and try again.",
         }), 400
+    try:
+        fix["latitude"], fix["longitude"] = hl.validate_coordinates(
+            fix["latitude"], fix["longitude"]
+        )
+    except ValueError as exc:
+        return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
 
     emergency = {
         "id": eid,
@@ -2868,8 +4477,12 @@ def send_alert():
     }
     _apply_tracking_fields(emergency, fix)
     _auto_dispatch_emergency(emergency)
+    if (emergency.get("status") or "").lower() in COMPLETED_STATUSES:
+        _stop_sos_tracking(emergency)
     edata["emergencies"].append(emergency)
     save_emergencies(edata)
+    citizen, _ = get_user_by_id(session.get("user_id"))
+    _notify_emergency_contact(citizen, emergency)
     _run_escalations()
     # AI analyzes in parallel — never delays or replaces SOS auto-dispatch
     _schedule_ai_analysis(emergency, source="sos")
@@ -2886,9 +4499,10 @@ def send_alert():
 
 
 @app.route("/api/route/osrm")
+@app.route("/api/route")
 @login_required
 def api_osrm_route():
-    """Proxy OSRM driving directions (Somalia coordinates only)."""
+    """Driving route — Google Directions primary, OSRM only if Google unavailable."""
     from_param = request.args.get("from", "")
     to_param = request.args.get("to", "")
     try:
@@ -2899,6 +4513,15 @@ def api_osrm_route():
     for lat, lng in ((lat1, lng1), (lat2, lng2)):
         if not hl.is_in_somalia(lat, lng):
             return jsonify({"success": False, "message": "Route points must be within Somalia."}), 400
+
+    api_key = _google_maps_api_key()
+    if api_key and _use_google_maps():
+        try:
+            g_route = _google_directions_route(lat1, lng1, lat2, lng2, api_key)
+            return jsonify({"success": True, **g_route, "provider": "google"})
+        except Exception:
+            logging.getLogger(__name__).exception("Google Directions failed; trying OSRM fallback")
+
     path = f"{lng1},{lat1};{lng2},{lat2}"
     url = (
         "https://router.project-osrm.org/route/v1/driving/"
@@ -2909,7 +4532,10 @@ def api_osrm_route():
         with urllib.request.urlopen(url, timeout=12) as resp:
             payload = json.loads(resp.read().decode("utf-8"))
     except Exception:
-        return jsonify({"success": False, "message": "Routing service unavailable."}), 502
+        return jsonify({
+            "success": False,
+            "message": "Routing unavailable. Configure a Google Maps API key with Directions enabled.",
+        }), 502
     routes = payload.get("routes") or []
     if not routes:
         return jsonify({"success": False, "message": "No route found."}), 404
@@ -2921,6 +4547,8 @@ def api_osrm_route():
         "coordinates": coords,
         "distance_km": round((route.get("distance") or 0) / 1000, 2),
         "duration_minutes": max(1, int((route.get("duration") or 0) / 60)),
+        "provider": "osrm",
+        "source": "osrm",
     })
 
 
@@ -2948,6 +4576,14 @@ def append_emergency_location(eid):
     role = session.get("role")
     if not _can_access_emergency(em, role):
         return jsonify({"success": False, "message": "Forbidden"}), 403
+    if not _is_active_sos(em):
+        _stop_sos_tracking(em)
+        save_emergencies(edata)
+        return jsonify({
+            "success": False,
+            "message": "SOS is no longer active — location tracking stopped.",
+            "tracking_active": False,
+        }), 409
 
     fix = build_location_fix(data)
     if fix["latitude"] is None:
@@ -3043,6 +4679,7 @@ def responder_status_update(eid):
         _notify("patient", uid, "The response team has arrived at your location.", eid, "team_arrived")
     elif action == "reached_victim":
         em["status"] = "completed"
+        _stop_sos_tracking(em)
         _notify("patient", uid, "Your emergency has been resolved.", eid, "emergency_completed")
     save_emergencies(edata)
     append_audit(action, "emergency", eid)
@@ -3056,6 +4693,11 @@ def emergency_route(eid):
     if not em:
         return jsonify({"success": False}), 404
     coords = EmergencyLocation_parse(em)
+    if coords.get("lat") is None or coords.get("lng") is None:
+        return jsonify({
+            "success": False,
+            "message": "Victim GPS location is not available yet.",
+        }), 404
     return jsonify(
         {
             "success": True,
@@ -3074,16 +4716,21 @@ def emergency_route(eid):
 
 
 def EmergencyLocation_parse(em):
-    lat = em.get("latitude")
-    lng = em.get("longitude")
+    """Parse emergency coords — never invent Mogadishu when GPS is missing."""
+    lat, lng = hl.best_emergency_coords(em)
     if lat is not None and lng is not None:
         return {"lat": float(lat), "lng": float(lng)}
     import re
 
-    m = re.search(r"\((-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)\)", em.get("location", ""))
+    m = re.search(r"\((-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)\)", em.get("location", "") or "")
     if m:
-        return {"lat": float(m.group(1)), "lng": float(m.group(2))}
-    return {"lat": 2.0469, "lng": 45.3182}
+        try:
+            plat, plng = float(m.group(1)), float(m.group(2))
+            if hl.is_in_somalia(plat, plng):
+                return {"lat": plat, "lng": plng}
+        except (TypeError, ValueError):
+            pass
+    return {"lat": None, "lng": None}
 
 
 def _location_label(em):
@@ -3115,7 +4762,7 @@ def get_emergencies():
         if filter_type and filter_type != allowed:
             return jsonify({"success": False, "message": "Forbidden"}), 403
         filter_type = allowed
-    elif role != "admin":
+    elif role not in STAFF_ADMIN_ROLES:
         return jsonify({"success": False, "message": "Forbidden"}), 403
 
     edata = load_emergencies()
@@ -3127,10 +4774,11 @@ def get_emergencies():
             "emergencies": [],
             "count": 0,
             "refresh_interval": load_settings().get("refresh_interval", 5),
+            "avg_response_time": None,
             "message": "Complete hospital registration to receive dispatch requests.",
         })
     for em in edata["emergencies"]:
-        if role != "admin" and not matches_filter(em["type"], filter_type):
+        if role not in STAFF_ADMIN_ROLES and not matches_filter(em["type"], filter_type):
             continue
         if role == "hospital":
             if em.get("assigned_hospital_id") != hospital_id:
@@ -3155,6 +4803,7 @@ def get_emergencies():
             "emergencies": result,
             "count": len(result),
             "refresh_interval": settings.get("refresh_interval", 5),
+            "avg_response_time": _avg_response_minutes(result),
         }
     )
 
@@ -3163,7 +4812,7 @@ def get_emergencies():
 @login_required
 def update_status():
     role = session.get("role")
-    if role not in ROLE_API_TYPE and role != "admin":
+    if role not in ROLE_API_TYPE and role not in STAFF_ADMIN_ROLES:
         return jsonify({"success": False, "message": "Forbidden"}), 403
 
     data = request.get_json(silent=True) or {}
@@ -3182,8 +4831,11 @@ def update_status():
             if new_status == "dispatched":
                 _notify("patient", uid, "Your emergency response team has been dispatched.", eid, "team_dispatched")
             elif new_status in ("completed", "resolved"):
+                _stop_sos_tracking(em)
                 _notify("patient", uid, "Your emergency has been completed.", eid, "emergency_completed")
                 _ai_record_outcome(em)
+            elif new_status in COMPLETED_STATUSES:
+                _stop_sos_tracking(em)
             save_emergencies(edata)
             append_audit("status_update", "emergency", eid, {"status": new_status})
             return jsonify({"success": True, "emergency": em})
@@ -3196,6 +4848,9 @@ def update_status():
 @app.route("/api/admin/backup", methods=["POST"])
 @admin_required
 def admin_backup():
+    denied = _require_admin_perm("backup")
+    if denied:
+        return denied
     backup_dir = os.path.join(DATABASE_DIR, "backups", datetime.now().strftime("%Y%m%d_%H%M%S"))
     os.makedirs(backup_dir, exist_ok=True)
     ms = _mysql_backend()
@@ -3212,9 +4867,8 @@ def admin_backup():
     append_audit("database_backup", "system", 0, {"path": backup_dir})
     return jsonify({"success": True, "backup_path": backup_dir})
 
-@app.route("/api/admin/stats")
-@admin_required
-def admin_stats():
+def _admin_command_payload():
+    """Shared stats payload for overview + Super Admin command center."""
     udata = load_users()
     edata = load_emergencies()
     users = udata["users"]
@@ -3222,63 +4876,966 @@ def admin_stats():
     now = datetime.now()
     today = now.date()
     week_start = today - timedelta(days=7)
+    month_start = today - timedelta(days=30)
 
     by_role = {r: 0 for r in VALID_ROLES}
     for u in users:
         by_role[u["role"]] = by_role.get(u["role"], 0) + 1
 
-    today_count = sum(1 for e in emergencies if parse_dt(e["timestamp"]).date() == today)
-    week_count = sum(1 for e in emergencies if parse_dt(e["timestamp"]).date() >= week_start)
+    def _eday(e):
+        try:
+            return parse_dt(e.get("timestamp")).date()
+        except Exception:
+            return None
+
+    today_count = sum(1 for e in emergencies if _eday(e) == today)
+    week_count = sum(1 for e in emergencies if _eday(e) and _eday(e) >= week_start)
+    month_count = sum(1 for e in emergencies if _eday(e) and _eday(e) >= month_start)
 
     by_type = {}
     by_location = {}
+    by_day = {}
+    by_day_dates = []
+    prev_week_start = today - timedelta(days=14)
+    prev_day_values = []
+    for i in range(6, -1, -1):
+        d = today - timedelta(days=i)
+        key = d.strftime("%a")
+        by_day[key] = 0
+        by_day_dates.append({"key": key, "date": d.strftime("%b %d"), "iso": d.isoformat()})
+        prev_d = today - timedelta(days=i + 7)
+        prev_day_values.append({
+            "key": prev_d.strftime("%a"),
+            "date": prev_d.strftime("%b %d"),
+            "count": 0,
+            "iso": prev_d.isoformat(),
+        })
+
     for e in emergencies:
-        by_type[e["type"]] = by_type.get(e["type"], 0) + 1
-        loc = (e.get("location") or "Unknown").split(",")[0].strip()
+        by_type[e.get("type") or "other"] = by_type.get(e.get("type") or "other", 0) + 1
+        loc = (e.get("location") or e.get("district") or "Unknown").split(",")[0].strip() or "Unknown"
         by_location[loc] = by_location.get(loc, 0) + 1
+        ed = _eday(e)
+        if not ed:
+            continue
+        if ed >= week_start:
+            key = ed.strftime("%a")
+            if key in by_day:
+                by_day[key] += 1
+        if prev_week_start <= ed < week_start:
+            for slot in prev_day_values:
+                if slot["iso"] == ed.isoformat():
+                    slot["count"] += 1
+                    break
+
+    active_statuses = set(ACTIVE_SOS_STATUSES)
+    active_emergencies = [e for e in emergencies if (e.get("status") or "").lower() in active_statuses]
+    # "Resolved" in Reports = completed/resolved only (not cancelled)
+    done_statuses = ("completed", "resolved")
+    resolved_week = sum(
+        1
+        for e in emergencies
+        if _eday(e)
+        and _eday(e) >= week_start
+        and (e.get("status") or "").lower() in done_statuses
+    )
+    resolved_total = sum(
+        1 for e in emergencies if (e.get("status") or "").lower() in done_statuses
+    )
+    # Keep week_summary.resolved compatible with prior cancelled-inclusive count
+    resolved_week_summary = sum(
+        1
+        for e in emergencies
+        if _eday(e)
+        and _eday(e) >= week_start
+        and (e.get("status") or "").lower() in ("completed", "resolved", "cancelled")
+    )
+    prev_week_count = sum(
+        1
+        for e in emergencies
+        if _eday(e) and prev_week_start <= _eday(e) < week_start
+    )
+    pending_week = sum(
+        1
+        for e in emergencies
+        if _eday(e) and _eday(e) >= week_start and (e.get("status") or "").lower() in active_statuses
+    )
+    cancelled_week = sum(
+        1
+        for e in emergencies
+        if _eday(e) and _eday(e) >= week_start and (e.get("status") or "").lower() == "cancelled"
+    )
+    busiest_day = None
+    if by_day:
+        bk = max(by_day.items(), key=lambda x: x[1])
+        if bk[1] > 0:
+            match = next((x for x in by_day_dates if x["key"] == bk[0]), None)
+            busiest_day = {
+                "label": match["date"] if match else bk[0],
+                "weekday": bk[0],
+                "count": bk[1],
+            }
+
+    # Average response from status history when available
+    daily_response = {d.strftime("%a"): [] for d in (today - timedelta(days=i) for i in range(6, -1, -1))}
+    for e in emergencies:
+        hist = e.get("status_history") or []
+        start = parse_dt(e.get("timestamp")) if e.get("timestamp") else None
+        if not start or start == datetime.min:
+            continue
+        dispatched_at = None
+        for h in hist:
+            st = (h.get("status") or "").lower()
+            if st in ("dispatched", "accepted", "in_progress") and h.get("timestamp"):
+                dispatched_at = parse_dt(h.get("timestamp"))
+                break
+        if dispatched_at and dispatched_at != datetime.min and dispatched_at >= start:
+            mins = (dispatched_at - start).total_seconds() / 60.0
+            if 0 <= mins <= 180:
+                ed = _eday(e)
+                if ed and ed >= week_start:
+                    daily_response[ed.strftime("%a")].append(mins)
 
     settings = load_settings()
-    avg = (
-        settings.get("ambulance_response_time", 8)
-        + settings.get("police_response_time", 6)
-        + settings.get("fire_response_time", 9)
-    ) / 3
+    avg = _avg_response_minutes(emergencies)
 
-    active_sessions = 1 if session.get("user_id") else 0
+    avg_by_day = {}
+    for day, samples in daily_response.items():
+        avg_by_day[day] = (
+            round(sum(samples) / len(samples), 1) if samples else None
+        )
 
-    return jsonify(
-        {
-            "total_users": len(users),
-            "users_by_role": by_role,
-            "emergencies_today": today_count,
-            "emergencies_week": week_count,
-            "emergencies_total": len(emergencies),
-            "avg_response_time": round(avg, 1),
-            "active_sessions": active_sessions,
+    hdata = hl.load_hospitals(read_json, save_json)
+    hospitals = hdata.get("hospitals") or []
+    hospitals_online = sum(
+        1
+        for h in hospitals
+        if str(h.get("status") or "active").lower()
+        not in ("offline", "inactive", "blocked", "closed")
+    )
+    ambulances_free = 0
+    ambulances_total = 0
+    for h in hospitals:
+        try:
+            count = int(h.get("ambulance_count") or 0)
+        except (TypeError, ValueError):
+            count = 0
+        if count <= 0 and h.get("ambulance_available"):
+            count = 1
+        ambulances_total += count
+        if h.get("ambulance_available"):
+            ambulances_free += count or 1
+
+    police_online = by_role.get("police", 0)
+    fire_online = by_role.get("fire", 0)
+    citizens = by_role.get("citizen", 0)
+
+    # Map markers — live GPS preferred (latest location_history fix)
+    map_markers = []
+    for h in hospitals:
+        lat, lng = h.get("latitude"), h.get("longitude")
+        if lat is None or lng is None:
+            continue
+        try:
+            map_markers.append({
+                "kind": "hospital",
+                "id": h.get("id"),
+                "name": h.get("name") or "Hospital",
+                "lat": float(lat),
+                "lng": float(lng),
+                "meta": {"ambulances": h.get("ambulance_count"), "phone": h.get("phone")},
+            })
+        except (TypeError, ValueError):
+            pass
+    # Police / fire unit accounts with stored coords (live ops positions when available)
+    for u in users:
+        role = (u.get("role") or "").lower()
+        if role not in ("police", "fire"):
+            continue
+        lat, lng = u.get("latitude"), u.get("longitude")
+        if lat is None or lng is None:
+            continue
+        try:
+            map_markers.append({
+                "kind": role,
+                "id": u.get("id"),
+                "name": u.get("name") or role.title(),
+                "lat": float(lat),
+                "lng": float(lng),
+                "meta": {"phone": u.get("phone"), "status": u.get("status")},
+            })
+        except (TypeError, ValueError):
+            pass
+    for e in sorted(emergencies, key=lambda x: x.get("timestamp") or "", reverse=True)[:80]:
+        status = (e.get("status") or "pending").lower()
+        # Map shows active SOS only — hide completed / cancelled / no_hospital
+        if status not in ACTIVE_SOS_STATUSES:
+            continue
+        lat, lng = e.get("latitude"), e.get("longitude")
+        accuracy_m = e.get("accuracy_m")
+        updated_at = (
+            e.get("last_location_update")
+            or e.get("location_updated_at")
+            or e.get("timestamp")
+        )
+        hist = e.get("location_history") or []
+        if hist:
+            last = hist[-1] if isinstance(hist[-1], dict) else None
+            if last and last.get("latitude") is not None and last.get("longitude") is not None:
+                lat, lng = last.get("latitude"), last.get("longitude")
+                accuracy_m = last.get("accuracy_m") if last.get("accuracy_m") is not None else accuracy_m
+                updated_at = last.get("timestamp") or updated_at
+        if lat is None or lng is None:
+            continue
+        try:
+            lat_f, lng_f = float(lat), float(lng)
+            if not hl.is_in_somalia(lat_f, lng_f):
+                continue
+            live = bool(e.get("tracking_active")) and status in ACTIVE_SOS_STATUSES
+            map_markers.append({
+                "kind": "emergency",
+                "id": e.get("id"),
+                "name": TYPE_LABELS.get(e.get("type"), e.get("type") or "Emergency"),
+                "lat": lat_f,
+                "lng": lng_f,
+                "accuracy_m": float(accuracy_m) if accuracy_m is not None else None,
+                "live": live,
+                "meta": {
+                    "status": e.get("status"),
+                    "priority": e.get("priority") or e.get("type"),
+                    "caller": e.get("caller_name") or e.get("name"),
+                    "phone": e.get("phone"),
+                    "location": e.get("location") or e.get("district"),
+                    "type": e.get("type"),
+                    "updated_at": updated_at,
+                    "method": (hist[-1].get("method") if hist and isinstance(hist[-1], dict) else None)
+                    or e.get("method")
+                    or "gps",
+                },
+            })
+        except (TypeError, ValueError):
+            pass
+
+    feed = []
+    for e in sorted(emergencies, key=lambda x: x.get("timestamp") or "", reverse=True)[:25]:
+        feed.append({
+            "id": e.get("id"),
+            "type": e.get("type"),
+            "type_label": TYPE_LABELS.get(e.get("type"), (e.get("type") or "Emergency").title()),
+            "caller_name": e.get("caller_name") or e.get("name") or "Citizen",
+            "location": e.get("location") or e.get("district") or "Unknown",
+            "timestamp": e.get("timestamp"),
+            "priority": e.get("priority") or ("high" if e.get("type") in ("fire", "medical") else "normal"),
+            "status": e.get("status") or "pending",
+            "assigned_to": e.get("assigned_to") or e.get("assigned_hospital_id") or "",
+            "dispatch_progress": e.get("status") or "pending",
+        })
+
+    audit = read_json(AUDIT_FILE, {"entries": [], "next_id": 1})
+    user_index = {u.get("id"): u for u in users}
+    activities = []
+    for entry in (audit.get("entries") or [])[:20]:
+        actor = user_index.get(entry.get("user_id")) or {}
+        activities.append({
+            "id": entry.get("id"),
+            "administrator": actor.get("name") or ("User #" + str(entry.get("user_id")) if entry.get("user_id") else "System"),
+            "action": entry.get("action"),
+            "entity_type": entry.get("entity_type"),
+            "entity_id": entry.get("entity_id"),
+            "timestamp": entry.get("timestamp"),
+            "ip": (entry.get("details") or {}).get("ip") or "—",
+            "details": entry.get("details") or {},
+        })
+
+    # AI summary — only real engine stats / active incidents from DB
+    ai_alerts = 0
+    ai_stats = {}
+    try:
+        ai_stats = _ai_engine().stats() or {}
+        ai_alerts = int(ai_stats.get("decisions_today") or 0)
+    except Exception:
+        ai_stats = {}
+
+    conf = ai_stats.get("average_confidence")
+    approved = int(ai_stats.get("approved_recommendations") or 0)
+    rejected = int(ai_stats.get("rejected_recommendations") or 0)
+    decided = approved + rejected
+    ai_center = {
+        "has_data": bool(
+            ai_alerts
+            or decided
+            or conf is not None
+            or active_emergencies
+        ),
+        "alert": None,
+        "priority": None,
+        "recommendation": None,
+        "prediction_accuracy": round(float(conf) * 100, 1) if conf is not None else None,
+        "incidents_predicted": ai_alerts if ai_alerts else None,
+        "approved": approved,
+        "rejected": rejected,
+        "decisions_today": ai_alerts,
+    }
+    if active_emergencies:
+        top = active_emergencies[0]
+        loc = top.get("location") or top.get("district") or "Unknown location"
+        etype = TYPE_LABELS.get(top.get("type"), top.get("type") or "emergency")
+        ai_center["alert"] = (
+            f"{len(active_emergencies)} active emergency(ies). "
+            f"Latest: {etype} at {loc}."
+        )
+        ai_center["priority"] = "High" if len(active_emergencies) >= 3 else "Active"
+        ai_center["recommendation"] = (
+            f"Review emergency #{top.get('id')} ({etype}) — status: {top.get('status') or 'pending'}."
+        )
+    elif ai_alerts or decided:
+        ai_center["alert"] = f"{ai_alerts} AI decision(s) recorded today."
+        ai_center["priority"] = "Info"
+        ai_center["recommendation"] = (
+            f"Approved: {approved} · Rejected: {rejected}."
+        )
+
+    # System health — real probes only (no fabricated CPU/memory/storage)
+    email_ok = False
+    email_provider = os.environ.get("EMAIL_PROVIDER") or "smtp"
+    try:
+        from email_service.factory import get_email_provider
+
+        prov = get_email_provider()
+        email_provider = getattr(prov, "name", email_provider)
+        email_ok = bool(getattr(prov, "configured", lambda: True)())
+    except Exception:
+        email_ok = False
+
+    db_ok = True
+    try:
+        load_users()
+    except Exception:
+        db_ok = False
+
+    health = {
+        "database": {
+            "status": "healthy" if db_ok else "degraded",
+            "detail": "MySQL" if USE_MYSQL else "JSON store",
+        },
+        "api": {"status": "healthy", "detail": "Online"},
+        "sms_gateway": {
+            "status": "healthy" if settings.get("sms_notifications") else "idle",
+            "detail": "Enabled" if settings.get("sms_notifications") else "Disabled in settings",
+        },
+        "email_service": {
+            "status": "healthy" if email_ok else "degraded",
+            "detail": str(email_provider),
+        },
+        "ai_engine": {
+            "status": "healthy" if settings.get("ai_enabled", True) else "idle",
+            "detail": settings.get("ai_provider") or "rule_based",
+        },
+        "google_maps": {
+            "status": "healthy"
+            if (os.environ.get("GOOGLE_MAPS_API_KEY") or settings.get("google_maps_api_key"))
+            else "idle",
+            "detail": "API key configured"
+            if (os.environ.get("GOOGLE_MAPS_API_KEY") or settings.get("google_maps_api_key"))
+            else "Using Leaflet tiles",
+        },
+    }
+    try:
+        import psutil  # type: ignore[reportMissingModuleSource]
+
+        health["cpu"] = {
+            "status": "healthy",
+            "detail": "Live",
+            "usage": round(psutil.cpu_percent(interval=0.05)),
+        }
+        mem = psutil.virtual_memory()
+        health["memory"] = {
+            "status": "healthy" if mem.percent < 90 else "degraded",
+            "detail": "Live",
+            "usage": round(mem.percent),
+        }
+        disk = psutil.disk_usage(os.path.abspath(DATABASE_DIR) if DATABASE_DIR else os.getcwd())
+        health["storage"] = {
+            "status": "healthy" if disk.percent < 90 else "degraded",
+            "detail": "Live",
+            "usage": round(disk.percent),
+        }
+    except Exception:
+        pass
+
+    hotline = (
+        settings.get("emergency_hotline")
+        or settings.get("call_center_phone")
+        or settings.get("contact_phone")
+        or ""
+    ).strip()
+
+    return {
+        "total_users": len(users),
+        "users_by_role": by_role,
+        "citizens": citizens,
+        "hospitals_online": hospitals_online,
+        "hospitals_total": len(hospitals),
+        "police_online": police_online,
+        "fire_online": fire_online,
+        "ambulances_available": ambulances_free,
+        "ambulances_total": ambulances_total,
+        "active_emergencies": len(active_emergencies),
+        "ai_alerts": ai_alerts,
+        "emergencies_today": today_count,
+        "emergencies_week": week_count,
+        "emergencies_month": month_count,
+        "emergencies_total": len(emergencies),
+        "avg_response_time": avg,
+        "avg_response_by_day": avg_by_day,
+        "emergencies_by_day": by_day,
+        "week_summary": {
+            "total": week_count,
+            "resolved": resolved_week_summary,
+            "pending": pending_week,
+            "cancelled": cancelled_week,
+        },
+        "reports": {
+            "range_start": (today - timedelta(days=6)).strftime("%b %d, %Y"),
+            "range_end": today.strftime("%b %d, %Y"),
+            "updated_at": now.strftime("%b %d, %Y %I:%M %p"),
+            "total_emergencies": len(emergencies),
+            "active_emergencies": len(active_emergencies),
+            "resolved_emergencies": resolved_total,
+            "resolved_week": resolved_week,
+            "week_total": week_count,
+            "prev_week_total": prev_week_count,
+            "week_change_pct": (
+                round(((week_count - prev_week_count) / prev_week_count) * 100, 1)
+                if prev_week_count
+                else (100.0 if week_count else 0.0)
+            ),
+            "resolution_rate": (
+                round((resolved_week / week_count) * 100, 1) if week_count else 0.0
+            ),
+            "avg_response_time": avg,
+            "avg_response_display": (
+                f"{int(avg)}m {int(round((avg % 1) * 60)):02d}s" if avg is not None else None
+            ),
+            "hospitals_online": hospitals_online,
+            "hospitals_total": len(hospitals),
+            "ambulances_available": ambulances_free,
+            "ambulances_total": ambulances_total,
             "by_type": by_type,
             "by_location": dict(sorted(by_location.items(), key=lambda x: -x[1])[:8]),
-            "blocked_users": sum(1 for u in users if u.get("status") == "blocked"),
-        }
+            "trend_labels": [x["date"] for x in by_day_dates],
+            "trend_this_week": [by_day.get(x["key"], 0) for x in by_day_dates],
+            "trend_last_week": [x["count"] for x in prev_day_values],
+            "busiest_day": busiest_day,
+        },
+        "active_sessions": 1
+        if has_request_context() and session.get("user_id")
+        else 0,
+        "by_type": by_type,
+        "by_location": dict(sorted(by_location.items(), key=lambda x: -x[1])[:8]),
+        "blocked_users": sum(1 for u in users if u.get("status") == "blocked"),
+        "map_markers": map_markers,
+        "emergency_feed": feed,
+        "ai_center": ai_center,
+        "recent_activities": activities,
+        "system_health": health,
+        "system_status": "operational" if db_ok else "degraded",
+        "hotline": hotline or None,
+        "has_emergencies": bool(emergencies),
+        "has_users": bool(users),
+    }
+
+
+@app.route("/api/admin/stats")
+@admin_required
+def admin_stats():
+    return jsonify(_admin_command_payload())
+
+
+def _analytics_region(em):
+    loc = (em.get("district") or em.get("location") or "Unknown").strip()
+    if not loc:
+        return "Unknown"
+    return loc.split(",")[0].strip() or "Unknown"
+
+
+def _build_admin_analytics(days=7, region="", etype="", status=""):
+    """Filterable BI analytics for the Executive Reports dashboard."""
+    edata = load_emergencies()
+    emergencies = list(edata.get("emergencies") or [])
+    hdata = hl.load_hospitals(read_json, save_json)
+    hospitals = hdata.get("hospitals") or []
+    now = datetime.now()
+    today = now.date()
+    try:
+        days = max(1, min(90, int(days or 7)))
+    except (TypeError, ValueError):
+        days = 7
+    start = today - timedelta(days=days - 1)
+    region = (region or "").strip().lower()
+    etype = (etype or "").strip().lower()
+    status = (status or "").strip().lower()
+
+    def _eday(e):
+        try:
+            return parse_dt(e.get("timestamp")).date()
+        except Exception:
+            return None
+
+    # Filter options from full dataset (so dropdowns stay populated)
+    all_regions = sorted({_analytics_region(e) for e in emergencies if _analytics_region(e)})
+    all_types = sorted({(e.get("type") or "other").lower() for e in emergencies})
+    all_statuses = sorted({(e.get("status") or "pending").lower() for e in emergencies})
+
+    filtered = []
+    for e in emergencies:
+        ed = _eday(e)
+        if ed is None or ed < start or ed > today:
+            continue
+        if region and _analytics_region(e).lower() != region:
+            continue
+        if etype and (e.get("type") or "other").lower() != etype:
+            continue
+        st = (e.get("status") or "pending").lower()
+        if status:
+            if status == "active" and st not in ACTIVE_SOS_STATUSES:
+                continue
+            if status == "resolved" and st not in ("completed", "resolved"):
+                continue
+            if status not in ("active", "resolved") and st != status:
+                continue
+        filtered.append(e)
+
+    by_type = {}
+    by_region = {}
+    by_status = {}
+    day_keys = []
+    by_day = {}
+    stacked = {}  # day -> {active, resolved, other}
+    for i in range(days - 1, -1, -1):
+        d = today - timedelta(days=i)
+        label = d.strftime("%b %d")
+        day_keys.append(label)
+        by_day[label] = 0
+        stacked[label] = {"active": 0, "resolved": 0, "other": 0}
+
+    for e in filtered:
+        t = (e.get("type") or "other").lower()
+        by_type[t] = by_type.get(t, 0) + 1
+        r = _analytics_region(e)
+        by_region[r] = by_region.get(r, 0) + 1
+        st = (e.get("status") or "pending").lower()
+        by_status[st] = by_status.get(st, 0) + 1
+        ed = _eday(e)
+        if ed:
+            label = ed.strftime("%b %d")
+            if label in by_day:
+                by_day[label] += 1
+                if st in ACTIVE_SOS_STATUSES:
+                    stacked[label]["active"] += 1
+                elif st in ("completed", "resolved"):
+                    stacked[label]["resolved"] += 1
+                else:
+                    stacked[label]["other"] += 1
+
+    active_n = sum(1 for e in filtered if (e.get("status") or "").lower() in ACTIVE_SOS_STATUSES)
+    resolved_n = sum(
+        1 for e in filtered if (e.get("status") or "").lower() in ("completed", "resolved")
     )
+    total_n = len(filtered)
+    avg = _avg_response_minutes(filtered)
+    hospitals_online = sum(
+        1
+        for h in hospitals
+        if str(h.get("status") or "active").lower()
+        not in ("offline", "inactive", "blocked", "closed")
+    )
+    ambulances_free = 0
+    ambulances_total = 0
+    for h in hospitals:
+        try:
+            count = int(h.get("ambulance_count") or 0)
+        except (TypeError, ValueError):
+            count = 0
+        if count <= 0 and h.get("ambulance_available"):
+            count = 1
+        ambulances_total += count
+        if h.get("ambulance_available"):
+            ambulances_free += count or 1
+
+    recent = []
+    for e in sorted(filtered, key=lambda x: x.get("timestamp") or "", reverse=True)[:12]:
+        recent.append({
+            "id": e.get("id"),
+            "type": e.get("type"),
+            "status": e.get("status"),
+            "region": _analytics_region(e),
+            "caller": e.get("caller_name") or e.get("name") or "—",
+            "timestamp": e.get("timestamp"),
+        })
+
+    return {
+        "success": True,
+        "filters": {
+            "days": days,
+            "region": region,
+            "type": etype,
+            "status": status,
+            "range_start": start.strftime("%b %d, %Y"),
+            "range_end": today.strftime("%b %d, %Y"),
+        },
+        "filter_options": {
+            "regions": all_regions,
+            "types": all_types,
+            "statuses": ["active", "resolved"] + [s for s in all_statuses if s not in ("completed", "resolved")],
+        },
+        "updated_at": now.strftime("%b %d, %Y %I:%M %p"),
+        "kpis": {
+            "total": total_n,
+            "active": active_n,
+            "resolved": resolved_n,
+            "resolution_rate": round((resolved_n / total_n) * 100, 1) if total_n else 0.0,
+            "avg_response_time": avg,
+            "avg_response_display": (
+                f"{int(avg)}m {int(round((avg % 1) * 60)):02d}s" if avg is not None else "—"
+            ),
+            "hospitals_online": hospitals_online,
+            "hospitals_total": len(hospitals),
+            "ambulances_available": ambulances_free,
+            "ambulances_total": ambulances_total,
+        },
+        "by_type": by_type,
+        "by_region": dict(sorted(by_region.items(), key=lambda x: -x[1])[:10]),
+        "by_status": by_status,
+        "trend": {
+            "labels": day_keys,
+            "values": [by_day[k] for k in day_keys],
+        },
+        "stacked_status": {
+            "labels": day_keys,
+            "active": [stacked[k]["active"] for k in day_keys],
+            "resolved": [stacked[k]["resolved"] for k in day_keys],
+            "other": [stacked[k]["other"] for k in day_keys],
+        },
+        "recent": recent,
+    }
+
+
+@app.route("/api/admin/analytics")
+@admin_required
+def admin_analytics():
+    denied = _require_admin_perm("reports")
+    if denied:
+        return denied
+    return jsonify(
+        _build_admin_analytics(
+            days=request.args.get("days", 7),
+            region=request.args.get("region", ""),
+            etype=request.args.get("type", ""),
+            status=request.args.get("status", ""),
+        )
+    )
+
+
+@app.route("/api/admin/command-center")
+@admin_required
+def admin_command_center():
+    """Rich Super Admin command-center payload (map, feed, health, AI)."""
+    return jsonify({"success": True, **_admin_command_payload()})
+
+
+@app.route("/api/admin/audit")
+@admin_required
+def admin_audit_logs():
+    denied = _require_admin_perm("audit")
+    if denied:
+        return denied
+    log = read_json(AUDIT_FILE, {"entries": [], "next_id": 1})
+    udata = load_users()
+    user_index = {u.get("id"): u for u in udata["users"]}
+    rows = []
+    for entry in (log.get("entries") or [])[:200]:
+        actor = user_index.get(entry.get("user_id")) or {}
+        rows.append({
+            "id": entry.get("id"),
+            "administrator": actor.get("name") or "System",
+            "email": actor.get("email") or "",
+            "action": entry.get("action"),
+            "entity_type": entry.get("entity_type"),
+            "entity_id": entry.get("entity_id"),
+            "timestamp": entry.get("timestamp"),
+            "ip": (entry.get("details") or {}).get("ip") or "—",
+            "details": entry.get("details") or {},
+        })
+    return jsonify({"success": True, "entries": rows})
+
+
+def _is_privileged_role(role):
+    return role in PRIVILEGED_ROLES
+
+
+def _is_active_privileged(user):
+    return (
+        user
+        and _is_privileged_role(user.get("role"))
+        and (user.get("status") or "active") != "blocked"
+    )
+
+
+def _is_active_super_admin(user):
+    return (
+        user
+        and user.get("role") == "super_admin"
+        and (user.get("status") or "active") != "blocked"
+    )
+
+
+def _count_active_super_admins(udata, exclude_id=None):
+    count = 0
+    for u in udata.get("users") or []:
+        if exclude_id is not None and u.get("id") == exclude_id:
+            continue
+        if _is_active_super_admin(u):
+            count += 1
+    return count
+
+
+def _count_active_privileged(udata, exclude_id=None):
+    count = 0
+    for u in udata.get("users") or []:
+        if exclude_id is not None and u.get("id") == exclude_id:
+            continue
+        if _is_active_privileged(u):
+            count += 1
+    return count
+
+
+def _admin_account_guard(target, action, udata):
+    """Safety + RBAC rules when managing accounts. Returns error message or None."""
+    actor_id = session.get("user_id")
+    actor_role = _session_role()
+    if not target:
+        return "User not found"
+    if target.get("id") == actor_id and action in ("block", "delete", "demote"):
+        return "You cannot " + action + " your own account"
+
+    target_privileged = _is_privileged_role(target.get("role"))
+    if target_privileged and not _has_admin_perm("users_admins"):
+        # Regular Admin may edit their own profile (not role/status/security actions)
+        if not (target.get("id") == actor_id and action == "edit"):
+            return "Only Super Admin can manage Admin accounts"
+
+    if not target_privileged and not _has_admin_perm("users_ops"):
+        return "You do not have permission to manage users"
+
+    # Only Super Admin may touch other Super Admins
+    if target.get("role") == "super_admin" and actor_role != "super_admin":
+        return "Only Super Admin can manage Super Admin accounts"
+
+    if action in ("block", "delete", "demote") and _is_active_super_admin(target):
+        if _count_active_super_admins(udata, exclude_id=target.get("id")) < 1:
+            return "Cannot " + action + " the last active Super Admin account"
+    return None
+
+
+def _migrate_legacy_admins_to_super():
+    """One-time: if no super_admin exists, promote legacy admin accounts."""
+    try:
+        udata = load_users()
+        if any(u.get("role") == "super_admin" for u in udata.get("users") or []):
+            return
+        changed = False
+        for u in udata.get("users") or []:
+            if u.get("role") == "admin":
+                u["role"] = "super_admin"
+                log_activity(u, "Migrated to Super Admin role")
+                changed = True
+        if changed:
+            save_users(udata)
+            append_audit(
+                "role_migration",
+                "system",
+                0,
+                {"from": "admin", "to": "super_admin", "note": "legacy full-access admins"},
+            )
+    except Exception:
+        logging.getLogger(__name__).exception("Admin role migration failed")
+
+
+@app.route("/api/admin/me")
+@admin_required
+def admin_me():
+    role = _session_role()
+    return jsonify({
+        "success": True,
+        "role": role,
+        "is_super_admin": role == "super_admin",
+        "permissions": sorted(_admin_permissions(role)),
+        "user_id": session.get("user_id"),
+        "name": session.get("name"),
+    })
+
+
+def _admin_self_profile_payload(user):
+    """Safe admin self-profile for My Profile UI."""
+    role = (user.get("role") or "").lower()
+    profile = public_user_profile(user) or {}
+    return {
+        "id": profile.get("id"),
+        "name": profile.get("name") or "",
+        "email": profile.get("email") or "",
+        "phone": profile.get("phone") or "",
+        "role": role,
+        "role_label": "Super Administrator" if role == "super_admin" else "Administrator",
+        "status": profile.get("status") or "active",
+        "profile_photo": profile.get("profile_photo") or "",
+        "created_at": profile.get("created_at") or user.get("created_at") or "",
+        "last_login": profile.get("last_login") or user.get("last_login") or "",
+        "email_verified": bool(profile.get("email_verified") or user.get("email_verified")),
+        "is_super_admin": role == "super_admin",
+        "permissions": sorted(_admin_permissions(role)),
+        # Account preferences (self-only; never used to edit other admins)
+        "settings": {
+            "notify_email_on_sos": bool(user.get("notify_email_on_sos", True)),
+            "notify_email_on_dispatch": bool(user.get("notify_email_on_dispatch", True)),
+        },
+    }
+
+
+@app.route("/api/admin/profile", methods=["GET", "PUT"])
+@admin_required
+def api_admin_profile():
+    """Admin My Profile — always edits the logged-in admin only.
+
+    Other admin accounts stay on /api/admin/users/edit (requires users_admins).
+    """
+    uid = session.get("user_id")
+    user, udata = get_user_by_id(uid)
+    if not user or not _is_privileged_role(user.get("role")):
+        return jsonify({"success": False, "message": "Admin account not found"}), 404
+
+    if request.method == "GET":
+        return jsonify({"success": True, "profile": _admin_self_profile_payload(user)})
+
+    data = request.get_json(silent=True) or {}
+    # Never accept another user id — self-only endpoint
+    if data.get("id") not in (None, "", uid, str(uid)):
+        return jsonify({
+            "success": False,
+            "message": "You can only edit your own profile here. Use Users Management to edit other accounts.",
+        }), 403
+
+    if "name" in data:
+        name = (data.get("name") or "").strip()
+        if not name or len(name) < 2:
+            return jsonify({"success": False, "message": "Name is required"}), 400
+        user["name"] = name[:120]
+
+    if "phone" in data:
+        user["phone"] = (data.get("phone") or "").strip()[:40]
+
+    if "email" in data:
+        email = normalize_email(data.get("email") or "")
+        if not email:
+            return jsonify({"success": False, "message": "A valid email address is required"}), 400
+        if any(
+            other.get("email", "").lower() == email and other.get("id") != uid
+            for other in udata.get("users", [])
+        ):
+            return jsonify({"success": False, "message": "Email already registered"}), 400
+        reject = signup_email_rejection_reason(email)
+        if reject and not allow_test_email_domains():
+            return jsonify({"success": False, "message": reject}), 400
+        if email.lower() != (user.get("email") or "").lower():
+            user["email"] = email
+            user["email_verified"] = False
+
+    if "profile_photo" in data:
+        photo = data.get("profile_photo") or ""
+        if photo and not str(photo).startswith("data:image/"):
+            return jsonify({
+                "success": False,
+                "message": "Profile photo must be an uploaded image.",
+            }), 400
+        if photo and len(str(photo)) > 120000:
+            return jsonify({"success": False, "message": "Photo too large (max ~90KB)."}), 400
+        user["profile_photo"] = photo
+
+    settings_in = data.get("settings") if isinstance(data.get("settings"), dict) else None
+    if settings_in is not None:
+        if "notify_email_on_sos" in settings_in:
+            user["notify_email_on_sos"] = bool(settings_in.get("notify_email_on_sos"))
+        if "notify_email_on_dispatch" in settings_in:
+            user["notify_email_on_dispatch"] = bool(settings_in.get("notify_email_on_dispatch"))
+
+    new_password = (data.get("new_password") or data.get("password") or "").strip()
+    if new_password:
+        current_password = (data.get("current_password") or "").strip()
+        if not current_password:
+            return jsonify({
+                "success": False,
+                "message": "Current password is required to set a new password.",
+            }), 400
+        if not check_password_hash(user.get("password_hash") or "", current_password):
+            return jsonify({"success": False, "message": "Current password is incorrect."}), 400
+        confirm = (data.get("confirm_password") or "").strip()
+        if confirm and confirm != new_password:
+            return jsonify({"success": False, "message": "New passwords do not match."}), 400
+        pw_err = _password_policy_error(new_password)
+        if pw_err:
+            return jsonify({"success": False, "message": pw_err}), 400
+        user["password_hash"] = generate_password_hash(new_password)
+        log_activity(user, "Password changed from My Profile")
+
+    # Role / status are never self-editable here
+    log_activity(user, "Profile updated from My Profile")
+    save_users(udata)
+    session["name"] = user.get("name")
+    session["email"] = user.get("email")
+    append_audit(
+        "admin_profile_updated",
+        "user",
+        uid,
+        {"fields": [k for k in ("name", "email", "phone", "profile_photo", "settings", "password")
+                    if k in data or (k == "password" and new_password) or (k == "settings" and settings_in)]},
+        uid,
+    )
+    return jsonify({"success": True, "profile": _admin_self_profile_payload(user)})
 
 
 @app.route("/api/admin/users")
 @admin_required
 def admin_users():
+    denied = _require_admin_perm("users_ops")
+    if denied:
+        return denied
     udata = load_users()
     q = request.args.get("q", "").lower()
     role = request.args.get("role", "")
-    users = udata["users"]
+    users = list(udata["users"])
+    can_manage_admins = _has_admin_perm("users_admins")
+    if not can_manage_admins:
+        users = [u for u in users if not _is_privileged_role(u.get("role"))]
     if q:
         users = [
             u
             for u in users
             if q in user_name(u).lower() or q in u.get("email", "").lower()
         ]
-    if role:
+    if role == "admins":
+        users = [u for u in users if _is_privileged_role(u.get("role"))]
+    elif role:
         users = [u for u in users if u.get("role") == role]
+    me = session.get("user_id")
+    hnames = _hospital_name_map()
+    hdata = hl.load_hospitals(read_json, save_json)
+    hospital_options = [
+        {"id": h["id"], "name": h.get("name") or f"Hospital #{h['id']}"}
+        for h in (hdata.get("hospitals") or [])
+    ]
     safe = []
     for u in users:
+        hid = u.get("hospital_id")
         safe.append(
             {
                 "id": u["id"],
@@ -3287,12 +5844,24 @@ def admin_users():
                 "phone": u.get("phone", ""),
                 "role": u["role"],
                 "status": u.get("status", "active"),
+                "hospital_id": hid,
+                "hospital_name": hnames.get(hid) if hid else None,
                 "created_at": u.get("created_at"),
                 "last_login": u.get("last_login"),
                 "activity": u.get("activity", []),
+                "is_self": u["id"] == me,
+                "email_verified": bool(u.get("email_verified", True)),
+                "is_privileged": _is_privileged_role(u.get("role")),
             }
         )
-    return jsonify({"users": safe})
+    return jsonify({
+        "users": safe,
+        "hospitals": hospital_options,
+        "current_user_id": me,
+        "active_admins": _count_active_privileged(udata),
+        "active_super_admins": _count_active_super_admins(udata),
+        "can_manage_admins": can_manage_admins,
+    })
 
 
 @app.route("/api/admin/users/block", methods=["POST"])
@@ -3303,13 +5872,23 @@ def admin_block_user():
     udata = load_users()
     for u in udata["users"]:
         if u["id"] == uid:
-            if u["role"] == "admin":
-                return jsonify({"success": False, "message": "Cannot block admin"}), 400
-            u["status"] = "blocked" if u.get("status") != "blocked" else "active"
-            log_activity(u, "Status changed to " + u["status"])
+            next_status = "blocked" if u.get("status") != "blocked" else "active"
+            action = "block" if next_status == "blocked" else "unblock"
+            err = _admin_account_guard(u, "block" if next_status == "blocked" else "unblock", udata)
+            if err:
+                return jsonify({"success": False, "message": err}), 400
+            u["status"] = next_status
+            log_activity(u, "Status changed to " + u["status"] + " by admin")
             save_users(udata)
+            append_audit(
+                "admin_user_" + action,
+                "user",
+                uid,
+                {"role": u.get("role"), "status": u.get("status")},
+                session.get("user_id"),
+            )
             return jsonify({"success": True, "status": u["status"]})
-    return jsonify({"success": False}), 404
+    return jsonify({"success": False, "message": "User not found"}), 404
 
 
 @app.route("/api/admin/users/delete", methods=["POST"])
@@ -3320,12 +5899,30 @@ def admin_delete_user():
     udata = load_users()
     for i, u in enumerate(udata["users"]):
         if u["id"] == uid:
-            if u["role"] == "admin":
-                return jsonify({"success": False, "message": "Cannot delete admin"}), 400
+            err = _admin_account_guard(u, "delete", udata)
+            if err:
+                return jsonify({"success": False, "message": err}), 400
+            role = u.get("role")
+            # Drop facility ownership before removing the account
+            hdata = hl.load_hospitals(read_json, save_json)
+            h_changed = False
+            for h in hdata.get("hospitals") or []:
+                if h.get("owner_user_id") == uid:
+                    h["owner_user_id"] = None
+                    h_changed = True
+            if h_changed:
+                hl.save_hospitals(hdata, save_json)
             udata["users"].pop(i)
             save_users(udata)
+            append_audit(
+                "admin_user_deleted",
+                "user",
+                uid,
+                {"role": role},
+                session.get("user_id"),
+            )
             return jsonify({"success": True})
-    return jsonify({"success": False}), 404
+    return jsonify({"success": False, "message": "User not found"}), 404
 
 
 @app.route("/api/admin/users/edit", methods=["PUT", "POST"])
@@ -3336,24 +5933,114 @@ def admin_edit_user():
     udata = load_users()
     for u in udata["users"]:
         if u["id"] == uid:
+            err = _admin_account_guard(u, "edit", udata)
+            if err:
+                return jsonify({"success": False, "message": err}), 400
+            new_role = data.get("role")
+            if new_role and new_role in VALID_ROLES and new_role != u.get("role"):
+                # Role changes involving privileged roles require Super Admin
+                if _is_privileged_role(new_role) or _is_privileged_role(u.get("role")):
+                    if not _has_admin_perm("users_admins"):
+                        return jsonify({
+                            "success": False,
+                            "message": "Only Super Admin can change Admin roles",
+                        }), 403
+                if _is_privileged_role(u.get("role")) and not _is_privileged_role(new_role):
+                    err = _admin_account_guard(u, "demote", udata)
+                    if err:
+                        return jsonify({"success": False, "message": err}), 400
+                # Regular Admin cannot assign privileged roles
+                if _is_privileged_role(new_role) and not _has_admin_perm("users_admins"):
+                    return jsonify({
+                        "success": False,
+                        "message": "Only Super Admin can assign Admin roles",
+                    }), 403
+                u["role"] = new_role
             if data.get("name"):
-                u["name"] = data["name"]
+                u["name"] = data["name"].strip()
             elif data.get("full_name"):
-                u["name"] = data["full_name"]
+                u["name"] = data["full_name"].strip()
             if data.get("email"):
-                u["email"] = data["email"]
-            if data.get("phone"):
-                u["phone"] = data["phone"]
-            if data.get("role") and data["role"] in VALID_ROLES:
-                if u["role"] == "admin" and data["role"] != "admin":
-                    return jsonify({"success": False, "message": "Cannot change admin role"}), 400
-                u["role"] = data["role"]
+                email = normalize_email(data.get("email") or "")
+                if not email:
+                    return jsonify({"success": False, "message": "A real email address is required"}), 400
+                if any(
+                    other["email"].lower() == email and other["id"] != uid
+                    for other in udata["users"]
+                ):
+                    return jsonify({"success": False, "message": "Email already registered"}), 400
+                reject = signup_email_rejection_reason(email)
+                if reject and not allow_test_email_domains():
+                    return jsonify({"success": False, "message": reject}), 400
+                u["email"] = email
+            if "phone" in data:
+                u["phone"] = (data.get("phone") or "").strip()
             if data.get("password"):
-                u["password_hash"] = generate_password_hash(data["password"])
+                password = str(data.get("password") or "").strip()
+                pw_err = _password_policy_error(password)
+                if pw_err:
+                    return jsonify({"success": False, "message": pw_err}), 400
+                u["password_hash"] = generate_password_hash(password)
+                log_activity(u, "Password reset by admin")
+            if data.get("status") in ("active", "blocked"):
+                next_status = data["status"]
+                if next_status == "blocked" and u.get("status") != "blocked":
+                    err = _admin_account_guard(u, "block", udata)
+                    if err:
+                        return jsonify({"success": False, "message": err}), 400
+                u["status"] = next_status
+
+            # Keep hospital account ↔ facility row in sync
+            if u.get("role") == "hospital":
+                raw_hid = data.get("hospital_id", u.get("hospital_id"))
+                try:
+                    hid = int(raw_hid or 0)
+                except (TypeError, ValueError):
+                    hid = 0
+                if not hid:
+                    return jsonify({
+                        "success": False,
+                        "message": "Select a hospital facility for this hospital account",
+                    }), 400
+                if not hl.get_hospital_by_id(hl.load_hospitals(read_json, save_json), hid):
+                    return jsonify({"success": False, "message": "Hospital not found"}), 400
+                u["hospital_id"] = hid
+                save_users(udata)
+                _link_user_to_hospital(uid, hid, set_owner=True)
+                udata = load_users()
+                u = next((x for x in udata["users"] if x["id"] == uid), u)
+            elif u.get("hospital_id"):
+                # Role changed away from hospital — clear link
+                u["hospital_id"] = None
+                save_users(udata)
+                hdata = hl.load_hospitals(read_json, save_json)
+                for h in hdata.get("hospitals") or []:
+                    if h.get("owner_user_id") == uid:
+                        h["owner_user_id"] = None
+                hl.save_hospitals(hdata, save_json)
+                udata = load_users()
+                u = next((x for x in udata["users"] if x["id"] == uid), u)
+
             log_activity(u, "Profile updated by admin")
             save_users(udata)
+            append_audit(
+                "admin_user_updated",
+                "user",
+                uid,
+                {
+                    "role": u.get("role"),
+                    "status": u.get("status"),
+                    "hospital_id": u.get("hospital_id"),
+                },
+                session.get("user_id"),
+            )
+            # Keep session role in sync if editing self
+            if u["id"] == session.get("user_id"):
+                session["role"] = u["role"]
+                session["name"] = u.get("name")
+                session["email"] = u.get("email")
             return jsonify({"success": True, "user": {k: u[k] for k in u if k != "password_hash"}})
-    return jsonify({"success": False}), 404
+    return jsonify({"success": False, "message": "User not found"}), 404
 
 
 @app.route("/api/admin/users/create", methods=["POST"])
@@ -3365,6 +6052,29 @@ def admin_create_user():
     role = data.get("role", "citizen")
     if role not in VALID_ROLES:
         return jsonify({"success": False, "message": "Invalid role"}), 400
+
+    # + Add user → citizens only (Admin or Super Admin with users_ops)
+    # + Create staff → Super Admin only: admin, hospital, police, fire
+    if role == "citizen":
+        denied = _require_admin_perm("users_ops")
+        if denied:
+            return denied
+    elif role in SUPER_CREATE_ROLES:
+        if not _has_admin_perm("users_admins"):
+            return jsonify({
+                "success": False,
+                "message": "Only Super Admin can create Admin, Hospital, Police, or Fire accounts",
+            }), 403
+    else:
+        return jsonify({
+            "success": False,
+            "message": "This role cannot be created here. Use Add user for citizens, "
+            "or Create staff for Admin / Hospital / Police / Fire.",
+        }), 400
+
+    name = (data.get("name") or data.get("full_name") or "").strip()
+    if not name:
+        return jsonify({"success": False, "message": "Full name is required"}), 400
     email = normalize_email(data.get("email") or "")
     if not email:
         return jsonify({"success": False, "message": "A real email address is required"}), 400
@@ -3375,14 +6085,36 @@ def admin_create_user():
     if any(u["email"].lower() == email for u in udata["users"]):
         return jsonify({"success": False, "message": "Email already registered"}), 400
     password = (data.get("password") or "").strip()
-    if len(password) < 6:
-        return jsonify({"success": False, "message": "Password must be at least 6 characters"}), 400
+    pw_err = _password_policy_error(password)
+    if pw_err:
+        return jsonify({"success": False, "message": pw_err}), 400
     udata["next_id"] += 1
+    actor = current_user() or {}
+    if role == "admin":
+        created_label = "Admin account created by " + (actor.get("name") or "Super Admin")
+    elif role in SUPER_CREATE_ROLES:
+        created_label = role.title() + " account created by " + (actor.get("name") or "Super Admin")
+    else:
+        created_label = "Citizen created by admin"
+    hospital_id = None
+    if role == "hospital":
+        try:
+            hospital_id = int(data.get("hospital_id") or 0)
+        except (TypeError, ValueError):
+            hospital_id = 0
+        if not hospital_id:
+            return jsonify({
+                "success": False,
+                "message": "Select a hospital facility to link this account",
+            }), 400
+        if not hl.get_hospital_by_id(hl.load_hospitals(read_json, save_json), hospital_id):
+            return jsonify({"success": False, "message": "Hospital not found"}), 400
+
     user = {
         "id": uid,
-        "name": data.get("name") or data.get("full_name", "New User"),
+        "name": name,
         "email": email,
-        "phone": data.get("phone", ""),
+        "phone": (data.get("phone") or "").strip(),
         "password_hash": generate_password_hash(password),
         "role": role,
         "status": "active",
@@ -3390,24 +6122,41 @@ def admin_create_user():
         "email_verified": True,
         "email_verify_token": None,
         "email_verify_expires": None,
+        "hospital_id": hospital_id,
         "created_at": now_str(),
         "last_login": None,
-        "activity": [{"action": "Created by admin", "timestamp": now_str()}],
+        "created_by": session.get("user_id"),
+        "activity": [{"action": created_label, "timestamp": now_str()}],
     }
     udata["users"].append(user)
     save_users(udata)
-    return jsonify({"success": True, "id": uid})
+    if role == "hospital" and hospital_id:
+        _link_user_to_hospital(uid, hospital_id, set_owner=True)
+    append_audit(
+        "admin_user_created",
+        "user",
+        uid,
+        {"role": role, "email": email, "name": name, "hospital_id": hospital_id},
+        session.get("user_id"),
+    )
+    return jsonify({"success": True, "id": uid, "role": role, "hospital_id": hospital_id})
 
 
 @app.route("/api/admin/content")
 @admin_required
 def admin_content():
+    denied = _require_admin_perm("content_edit")
+    if denied:
+        return denied
     return jsonify(load_content())
 
 
 @app.route("/api/admin/content/update", methods=["POST"])
 @admin_required
 def admin_content_update():
+    denied = _require_admin_perm("content_edit")
+    if denied:
+        return denied
     data = request.get_json(silent=True) or {}
     key = data.get("key")
     value = data.get("value")
@@ -3424,6 +6173,9 @@ def admin_content_update():
 @app.route("/api/admin/content/reset", methods=["POST"])
 @admin_required
 def admin_content_reset():
+    denied = _require_admin_perm("content_reset")
+    if denied:
+        return denied
     data = request.get_json(silent=True) or {}
     key = data.get("key")
     content = load_content()
@@ -3439,7 +6191,7 @@ def admin_content_reset():
 @app.route("/api/admin/settings")
 @admin_required
 def admin_settings():
-    return jsonify(load_settings())
+    return jsonify(_public_settings_view(load_settings()))
 
 
 @app.route("/api/admin/settings/update", methods=["POST"])
@@ -3447,16 +6199,167 @@ def admin_settings():
 def admin_settings_update():
     data = request.get_json(silent=True) or {}
     settings = load_settings()
+    can_system = _has_admin_perm("settings_system")
+    can_ops = _has_admin_perm("settings_ops")
+    can_appearance = _has_admin_perm("appearance")
+    can_cc = _has_admin_perm("call_center")
+    if not (can_system or can_ops or can_appearance or can_cc):
+        return _forbid_admin("You do not have permission to update settings.")
+    appearance_keys = {
+        "color_hospital",
+        "color_police",
+        "color_fire",
+        "dark_mode",
+        "theme_mode",
+        "brand_primary_color",
+        "brand_accent_color",
+    }
+    cc_keys = {k for k in DEFAULT_SETTINGS if k.startswith("call_center_")}
+    rejected = []
     for key in DEFAULT_SETTINGS:
-        if key in data:
-            settings[key] = data[key]
+        if key not in data:
+            continue
+        if key in SUPER_ONLY_SETTINGS:
+            if not can_system:
+                rejected.append(key)
+                continue
+        elif key in appearance_keys:
+            if not can_appearance and not can_system:
+                rejected.append(key)
+                continue
+        elif key in cc_keys:
+            if not can_cc and not can_system:
+                rejected.append(key)
+                continue
+        elif not can_ops and not can_system:
+            rejected.append(key)
+            continue
+        if key in SECRET_SETTING_KEYS:
+            raw = data.get(key)
+            if raw is None or str(raw).strip() == "" or str(raw).strip() in ("••••••••", "********"):
+                continue
+        settings[key] = _coerce_setting_value(key, data[key])
+    if rejected and not any(k in data and k not in rejected for k in DEFAULT_SETTINGS):
+        return jsonify({
+            "success": False,
+            "message": "Super Admin access is required to change: " + ", ".join(rejected),
+        }), 403
     save_settings(settings)
-    return jsonify({"success": True, "settings": settings})
+    if can_system:
+        _sync_branding_to_content(settings)
+    return jsonify({
+        "success": True,
+        "settings": _public_settings_view(settings),
+        "rejected_keys": rejected,
+    })
+
+
+@app.route("/api/admin/system-settings", methods=["GET"])
+@admin_required
+def admin_system_settings_get():
+    """Full Super Admin system configuration payload (schema + values)."""
+    denied = _require_admin_perm("settings_system")
+    if denied:
+        return denied
+    settings = load_settings()
+    db_info = {
+        "backend": "MySQL" if USE_MYSQL else "JSON file store",
+        "database_dir": DATABASE_DIR,
+    }
+    return jsonify({
+        "success": True,
+        "settings": _public_settings_view(settings),
+        "groups": SYSTEM_SETTINGS_GROUPS,
+        "secret_keys": sorted(SECRET_SETTING_KEYS),
+        "database": db_info,
+    })
+
+
+@app.route("/api/admin/system-settings", methods=["POST"])
+@admin_required
+def admin_system_settings_save():
+    """Save Super Admin system configuration from the unified page."""
+    denied = _require_admin_perm("settings_system")
+    if denied:
+        return denied
+    data = request.get_json(silent=True) or {}
+    incoming = data.get("settings") if isinstance(data.get("settings"), dict) else data
+    settings = load_settings()
+    updated = []
+    for key in DEFAULT_SETTINGS:
+        if key not in incoming:
+            continue
+        if key in SECRET_SETTING_KEYS:
+            raw = incoming.get(key)
+            if raw is None or str(raw).strip() == "" or str(raw).strip() in ("••••••••", "********"):
+                continue
+        settings[key] = _coerce_setting_value(key, incoming[key])
+        updated.append(key)
+    save_settings(settings)
+    _sync_branding_to_content(settings)
+    append_audit(
+        "system_settings_updated",
+        "settings",
+        0,
+        {"keys": updated[:80], "count": len(updated)},
+        session.get("user_id"),
+    )
+    return jsonify({
+        "success": True,
+        "updated": updated,
+        "settings": _public_settings_view(settings),
+    })
+
+
+@app.route("/api/admin/system-settings/upload", methods=["POST"])
+@admin_required
+def admin_system_settings_upload():
+    """Upload logo or favicon into static/uploads/branding."""
+    denied = _require_admin_perm("settings_system")
+    if denied:
+        return denied
+    kind = (request.form.get("kind") or "logo").strip().lower()
+    if kind not in ("logo", "favicon"):
+        return jsonify({"success": False, "message": "kind must be logo or favicon"}), 400
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return jsonify({"success": False, "message": "No file uploaded"}), 400
+    settings = load_settings()
+    allowed = {
+        e.strip().lower()
+        for e in str(settings.get("upload_allowed_extensions") or "jpg,jpeg,png,gif,webp").split(",")
+        if e.strip()
+    }
+    ext = (f.filename.rsplit(".", 1)[-1] if "." in f.filename else "").lower()
+    if ext not in allowed:
+        return jsonify({
+            "success": False,
+            "message": "File type not allowed. Allowed: " + ", ".join(sorted(allowed)),
+        }), 400
+    max_mb = int(settings.get("upload_max_mb") or 5)
+    data = f.read()
+    if len(data) > max_mb * 1024 * 1024:
+        return jsonify({"success": False, "message": f"File exceeds {max_mb} MB limit"}), 400
+    upload_dir = os.path.join(BASE_DIR, "static", "uploads", "branding")
+    os.makedirs(upload_dir, exist_ok=True)
+    filename = f"{kind}.{ext}"
+    path = os.path.join(upload_dir, filename)
+    with open(path, "wb") as out:
+        out.write(data)
+    url = url_for("static", filename=f"uploads/branding/{filename}")
+    key = "app_logo_url" if kind == "logo" else "app_favicon_url"
+    settings[key] = url
+    save_settings(settings)
+    append_audit("branding_upload", "settings", 0, {"kind": kind, "url": url}, session.get("user_id"))
+    return jsonify({"success": True, "url": url, "key": key, "settings": _public_settings_view(settings)})
 
 
 @app.route("/api/admin/emergencies")
 @admin_required
 def admin_emergencies():
+    denied = _require_admin_perm("emergencies_view")
+    if denied:
+        return denied
     edata = load_emergencies()
     return jsonify({"emergencies": edata["emergencies"]})
 
@@ -3464,6 +6367,9 @@ def admin_emergencies():
 @app.route("/api/admin/emergencies/update", methods=["POST"])
 @admin_required
 def admin_emergencies_update():
+    denied = _require_admin_perm("emergencies_update")
+    if denied:
+        return denied
     data = request.get_json(silent=True) or {}
     eid = int(data.get("id", 0))
     edata = load_emergencies()
@@ -3481,6 +6387,9 @@ def admin_emergencies_update():
 @app.route("/api/admin/emergencies/delete", methods=["POST"])
 @admin_required
 def admin_emergencies_delete():
+    denied = _require_admin_perm("emergencies_delete")
+    if denied:
+        return denied
     data = request.get_json(silent=True) or {}
     eid = int(data.get("id", 0))
     edata = load_emergencies()
@@ -3492,6 +6401,9 @@ def admin_emergencies_delete():
 @app.route("/api/admin/emergencies/export")
 @admin_required
 def admin_emergencies_export():
+    denied = _require_admin_perm("emergencies_export")
+    if denied:
+        return denied
     edata = load_emergencies()
     output = io.StringIO()
     writer = csv.writer(output)
@@ -4243,7 +7155,7 @@ def api_call_center_complete(call_id):
 @app.route("/api/call-center/settings", methods=["GET"])
 @login_required
 def api_call_center_settings():
-    if session.get("role") not in ("admin", "call_center"):
+    if session.get("role") not in STAFF_ADMIN_ROLES and session.get("role") != "call_center":
         return jsonify({"success": False, "message": "Forbidden"}), 403
     settings = load_settings()
     return jsonify({
@@ -4264,6 +7176,9 @@ def api_call_center_settings():
 @app.route("/api/admin/call-center/stats")
 @admin_required
 def api_admin_call_center_stats():
+    denied = _require_admin_perm("call_center")
+    if denied:
+        return denied
     settings = load_settings()
     online = cc.online_operators(load_users, int(settings.get("call_center_heartbeat_sec", 45)))
     stats = cc.call_stats(read_json, save_json, [o["id"] for o in online])
@@ -4297,6 +7212,9 @@ def api_admin_call_center_stats():
 @app.route("/api/admin/call-center/settings", methods=["POST"])
 @admin_required
 def api_admin_call_center_settings():
+    denied = _require_admin_perm("call_center")
+    if denied:
+        return denied
     data = request.get_json(silent=True) or {}
     settings = load_settings()
     mapping = {
@@ -4323,16 +7241,18 @@ def api_admin_call_center_settings():
 @admin_required
 def api_admin_ai_stats():
     """AI Intelligence dashboard counters (recommendations only — AI never dispatches)."""
+    denied = _require_admin_perm("ai")
+    if denied:
+        return denied
     settings = load_settings()
     try:
         stats = _ai_engine().stats()
     except Exception as exc:
         return jsonify({"success": False, "message": _safe_client_message(exc, "Internal server error.")}), 500
-    # Placeholder improvement metric until Phase 2 timing analytics
     approved = stats.get("approved_recommendations") or 0
     rejected = stats.get("rejected_recommendations") or 0
     decided = approved + rejected
-    approval_rate = round((approved / decided) * 100, 1) if decided else 0.0
+    approval_rate = round((approved / decided) * 100, 1) if decided else None
     return jsonify({
         "success": True,
         "ai_enabled": settings.get("ai_enabled", True),
@@ -4340,12 +7260,28 @@ def api_admin_ai_stats():
         "stats": {
             **stats,
             "approval_rate_pct": approval_rate,
-            "average_response_improvement": approval_rate,
+            # No fabricated improvement metric — omit until real timing analytics exist
+            "average_response_improvement": None,
         },
     })
 
 
 if __name__ == "__main__":
+    # Ensure SMTP from .env wins over leftover shell EMAIL_PROVIDER=memory
+    _apply_email_env_from_dotenv(force=True)
+    try:
+        from email_service.factory import clear_email_provider_cache, get_email_provider
+
+        clear_email_provider_cache()
+        provider = get_email_provider(force_new=True)
+        logging.getLogger(__name__).info(
+            "Email provider active: %s (configured=%s)",
+            getattr(provider, "name", type(provider).__name__),
+            getattr(provider, "configured", lambda: True)(),
+        )
+    except Exception:
+        logging.getLogger(__name__).exception("Email provider init failed")
+
     ensure_database_dir()
     seed_defaults()
     debug = os.environ.get("FLASK_DEBUG", "").lower() in ("1", "true", "yes", "on")

@@ -3,16 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Police Emergency Dashboard - Hamar Police</title>
+  <title>Police Operations Dashboard</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% include "_google_maps.html" %}
 </head>
 <body class="dashboard-police">
   <div class="dashboard-container">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-brand">
-        <h2>Hamar Police</h2>
-        <span>Security Operations</span>
+        <h2>Police Operations</h2>
+        <span>Security desk</span>
       </div>
       <nav>
         <a href="#" class="active" data-panel="live">Live Alerts</a>
@@ -47,11 +48,11 @@
               <div class="stat-label">Active incidents</div>
             </div>
             <div class="stat-card">
-              <div class="stat-value">8</div>
+              <div class="stat-value" id="stat-officers">No data available</div>
               <div class="stat-label">Available officers</div>
             </div>
             <div class="stat-card">
-              <div class="stat-value">{{ settings.police_response_time }} min</div>
+              <div class="stat-value" id="stat-avg">No data available</div>
               <div class="stat-label">Average response time</div>
             </div>
           </div>
@@ -64,13 +65,6 @@
 
           <h2 class="section-title">Incidents map</h2>
           <div id="police-overview-map" class="leaflet-map-container dashboard-map"></div>
-
-          <div class="panel-section">
-            <h2 class="section-title">Patrol coverage</h2>
-            <p class="officers-note">
-              Units active in: Wadajir · KM4 · Bakaro Market · Howlwadaag · Boondheere
-            </p>
-          </div>
         </div>
 
         <div id="panel-history" class="hidden-panel panel-section">
@@ -80,8 +74,8 @@
 
         <div id="panel-settings" class="hidden-panel panel-section">
           <h2 class="section-title">Settings</h2>
-          <p><strong>Station:</strong> Hamar Police HQ</p>
-          <p><strong>District:</strong> Banadir</p>
+          <p><strong>Operator:</strong> {{ user.name }}</p>
+          <p><strong>Role:</strong> Police</p>
         </div>
       </div>
     </div>
@@ -122,6 +116,12 @@
           .replace(/&/g, "&amp;")
           .replace(/"/g, "&quot;")
           .replace(/</g, "&lt;");
+      }
+
+      function setAvg(value) {
+        var el = document.getElementById("stat-avg");
+        if (!el) return;
+        el.textContent = value != null ? value + " min" : "No data available";
       }
 
       function renderCard(em) {
@@ -177,7 +177,7 @@
 
             if (list.length === 0) {
               container.innerHTML =
-                '<div class="empty-alerts">No active security incidents. Monitoring Wadajir, KM4, Bakaro...</div>';
+                '<div class="empty-alerts">No data available</div>';
             } else {
               list.forEach(function (em) {
                 container.appendChild(renderCard(em));
@@ -188,6 +188,7 @@
               return e.status === "pending" || e.status === "dispatched";
             });
             document.getElementById("stat-active").textContent = active.length;
+            setAvg(data.avg_response_time);
 
             document.getElementById("refresh-time").textContent =
               "Last updated " + new Date().toLocaleTimeString();
@@ -214,7 +215,7 @@
             const list = data.emergencies || [];
             if (list.length === 0) {
               container.innerHTML =
-                '<div class="empty-alerts">No completed incidents in history yet.</div>';
+                '<div class="empty-alerts">No data available</div>';
             } else {
               list.forEach(function (em) {
                 container.appendChild(renderCard(em));
@@ -237,7 +238,6 @@
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ id: id, status: "dispatched" })
             }).then(function () {
-              alert("Officer assigned to incident #" + id);
               loadEmergencies();
             });
           };
@@ -274,7 +274,7 @@
       if (broadcastBtn) {
         broadcastBtn.addEventListener("click", function () {
           alert(
-            "Unit broadcast is not available in this version yet. " +
+            "Unit broadcast is not available yet. " +
               "Assign officers from each incident card for now."
           );
         });

@@ -3,16 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fire Emergency Dashboard - KM4 Fire Station</title>
+  <title>Fire &amp; Rescue Dashboard</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% include "_google_maps.html" %}
 </head>
 <body class="dashboard-fire">
   <div class="dashboard-container">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-brand">
-        <h2>KM4 Fire Station</h2>
-        <span>Fire &amp; Rescue</span>
+        <h2>Fire &amp; Rescue</h2>
+        <span>Operations desk</span>
       </div>
       <nav>
         <a href="#" class="active" data-panel="live">Live Alerts</a>
@@ -43,11 +44,11 @@
               <div class="stat-label">Fire calls today</div>
             </div>
             <div class="stat-card">
-              <div class="stat-value">{{ settings.fire_response_time }} min</div>
+              <div class="stat-value" id="stat-avg">No data available</div>
               <div class="stat-label">Average arrival time</div>
             </div>
             <div class="stat-card">
-              <div class="stat-value" id="stat-trucks">2</div>
+              <div class="stat-value" id="stat-trucks">No data available</div>
               <div class="stat-label">Available trucks</div>
             </div>
           </div>
@@ -59,23 +60,8 @@
           <div class="alerts-grid" id="alerts-container"></div>
 
           <h2 class="section-title">Fire trucks status</h2>
-          <div class="trucks-grid">
-            <div class="truck-item available">
-              <strong>Truck 1</strong>
-              <p>Available — KM4 Station</p>
-            </div>
-            <div class="truck-item available">
-              <strong>Truck 2</strong>
-              <p>Available — Hodan</p>
-            </div>
-            <div class="truck-item busy">
-              <strong>Truck 3</strong>
-              <p>En route — Bakaro Market</p>
-            </div>
-            <div class="truck-item available">
-              <strong>Truck 4</strong>
-              <p>Available — Wadajir</p>
-            </div>
+          <div class="trucks-grid" id="trucks-container">
+            <div class="empty-alerts">No data available</div>
           </div>
 
           <h2 class="section-title" style="margin-top: 24px;">Fire incidents map</h2>
@@ -89,8 +75,8 @@
 
         <div id="panel-settings" class="hidden-panel panel-section">
           <h2 class="section-title">Settings</h2>
-          <p><strong>Station:</strong> KM4 Fire Station, Mogadishu</p>
-          <p><strong>Response zones:</strong> Banadir region</p>
+          <p><strong>Operator:</strong> {{ user.name }}</p>
+          <p><strong>Role:</strong> Fire &amp; Rescue</p>
         </div>
       </div>
     </div>
@@ -136,6 +122,12 @@
           .replace(/</g, "&lt;");
       }
 
+      function setAvg(value) {
+        var el = document.getElementById("stat-avg");
+        if (!el) return;
+        el.textContent = value != null ? value + " min" : "No data available";
+      }
+
       function renderCard(em) {
         const card = document.createElement("div");
         card.className = "alert-card";
@@ -154,7 +146,6 @@
           '<div class="alert-meta">Time: ' +
           formatTime(em.timestamp) +
           "</div>" +
-          '<p class="severity-high">Severity: High</p>' +
           '<span class="alert-status ' +
           em.status +
           '">' +
@@ -189,7 +180,7 @@
 
             if (list.length === 0) {
               container.innerHTML =
-                '<div class="empty-alerts">No active fire alerts. Trucks ready at KM4 station.</div>';
+                '<div class="empty-alerts">No data available</div>';
             } else {
               list.forEach(function (em) {
                 container.appendChild(renderCard(em));
@@ -201,15 +192,8 @@
               const now = new Date();
               return d.toDateString() === now.toDateString();
             });
-            document.getElementById("stat-calls").textContent = today.length || list.length;
-
-            const available = list.filter(function (e) {
-              return e.status === "pending";
-            }).length;
-            document.getElementById("stat-trucks").textContent = Math.max(
-              2,
-              4 - Math.min(2, available)
-            );
+            document.getElementById("stat-calls").textContent = today.length;
+            setAvg(data.avg_response_time);
 
             document.getElementById("refresh-time").textContent =
               "Last updated " + new Date().toLocaleTimeString();
@@ -236,7 +220,7 @@
             const list = data.emergencies || [];
             if (list.length === 0) {
               container.innerHTML =
-                '<div class="empty-alerts">No completed fire calls in history yet.</div>';
+                '<div class="empty-alerts">No data available</div>';
             } else {
               list.forEach(function (em) {
                 container.appendChild(renderCard(em));
@@ -259,7 +243,6 @@
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ id: id, status: "dispatched" })
             }).then(function () {
-              alert("Fire truck dispatched to incident #" + id);
               loadEmergencies();
             });
           };

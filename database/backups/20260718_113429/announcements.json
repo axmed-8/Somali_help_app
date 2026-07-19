@@ -1,0 +1,19 @@
+{
+  "announcements": [
+    {
+      "id": 1,
+      "title": "Welcome to Somalia Emergency Response",
+      "body": "Tap SOS for immediate help. Your location is shared automatically with dispatch.",
+      "priority": "info",
+      "timestamp": "2026-06-09 13:50:03"
+    },
+    {
+      "id": 2,
+      "title": "24/7 Emergency Hotline",
+      "body": "For life-threatening emergencies, call 999 while your app request is processed.",
+      "priority": "alert",
+      "timestamp": "2026-06-09 13:50:03"
+    }
+  ],
+  "next_id": 3
+}

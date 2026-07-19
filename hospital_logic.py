@@ -75,9 +75,11 @@ def is_in_somalia(lat, lng):
 
 
 def best_emergency_coords(em, fallback=None):
-    """Return the best valid Somalia coordinates for an emergency record."""
-    if fallback is None:
-        fallback = MOGADISHU_CENTER
+    """Return the best valid Somalia coordinates for an emergency record.
+
+    Never invents a city-center pin. Returns (None, None) when unknown unless
+    an explicit fallback tuple is provided by the caller.
+    """
     lat, lng = em.get("latitude"), em.get("longitude")
     if lat is not None and lng is not None and is_in_somalia(lat, lng):
         return round(float(lat), 6), round(float(lng), 6)
@@ -85,7 +87,9 @@ def best_emergency_coords(em, fallback=None):
         flat, flng = fix.get("latitude"), fix.get("longitude")
         if flat is not None and flng is not None and is_in_somalia(flat, flng):
             return round(float(flat), 6), round(float(flng), 6)
-    return fallback
+    if fallback is not None:
+        return fallback
+    return None, None
 
 
 def resolve_hospital_coords(hospital):
@@ -346,8 +350,15 @@ def save_hospitals(data, save_fn):
 
 
 def seed_hospitals_if_empty(read_fn, save_fn):
+    """Load hospitals. Demo seed only when GURMADNET_SEED_DEMO=1 (or under pytest)."""
     data = load_hospitals(read_fn, save_fn)
     if data["hospitals"]:
+        return data
+    seed_flag = (os.environ.get("GURMADNET_SEED_DEMO") or "").strip().lower()
+    under_pytest = bool(os.environ.get("PYTEST_CURRENT_TEST")) or (
+        (os.environ.get("TESTING") or "").strip() in ("1", "true", "yes")
+    )
+    if seed_flag not in ("1", "true", "yes") and not under_pytest:
         return data
     samples = [
         ("Aamin Ambulance Hospital", "Mogadishu", "Banadir", "Hodan", "Hodan District, Afgooye Road, Mogadishu",
@@ -459,6 +470,7 @@ def assign_next_hospital(emergency, hospitals_data, timeout_seconds):
     idx = emergency.get("escalation_index", 0)
     if idx >= len(queue):
         emergency["status"] = "no_hospital_available"
+        emergency["tracking_active"] = False
         return None
     hid = queue[idx]
     hospital = get_hospital_by_id(hospitals_data, hid)

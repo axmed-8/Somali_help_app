@@ -52,6 +52,12 @@ def main():
     _execute_schema(conn, schema_path)
     conn.close()
     print(f"Schema applied. Database: {db_name}")
+
+    # Idempotent indexes/FKs/orphan cleanup for both fresh and upgraded DBs
+    integrity = mysql_store.ensure_production_integrity()
+    print("Production integrity:", integrity)
+    verify = mysql_store.verify_schema()
+    print("Schema verify:", verify)
     print("Run scripts/migrate_json_to_mysql.py to import JSON data.")
 
 

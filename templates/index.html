@@ -7,9 +7,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/gurmadnet.css') }}">
-  {% if google_maps_key %}
-  <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_key }}"></script>
-  {% endif %}
+  {% include "_google_maps.html" %}
 </head>
 <body class="gn-user user-app" data-user-name="{{ user.name }}" data-user-phone="{{ user.phone or '' }}">
   <header class="app-header-red">

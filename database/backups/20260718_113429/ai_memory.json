@@ -1,0 +1,123 @@
+{
+  "items": [
+    {
+      "id": 1,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-14 14:28:25",
+      "event_type": "analysis",
+      "analysis_id": 1,
+      "emergency_id": 20
+    },
+    {
+      "id": 2,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "banadir: closest suitable hospital, ETA 3 min. Ambulance available.",
+        "hospital": "banadir",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-14 14:28:25",
+      "event_type": "recommendation",
+      "analysis_id": 1,
+      "emergency_id": 20,
+      "recommendation_id": 1
+    },
+    {
+      "id": 3,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          20
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "banadir"
+      },
+      "timestamp": "2026-07-14 14:28:25",
+      "event_type": "dispatch_result",
+      "emergency_id": 20,
+      "dispatch_log_id": 1,
+      "recommendation_id": 1
+    },
+    {
+      "id": 4,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-15 10:28:18",
+      "event_type": "analysis",
+      "analysis_id": 2,
+      "emergency_id": 21
+    },
+    {
+      "id": 5,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "kalkaal: closest suitable hospital, ETA 3 min. Ambulance available.",
+        "hospital": "kalkaal",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-15 10:28:18",
+      "event_type": "recommendation",
+      "analysis_id": 2,
+      "emergency_id": 21,
+      "recommendation_id": 2
+    },
+    {
+      "id": 6,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          21
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "kalkaal"
+      },
+      "timestamp": "2026-07-15 10:28:18",
+      "event_type": "dispatch_result",
+      "emergency_id": 21,
+      "dispatch_log_id": 2,
+      "recommendation_id": 2
+    }
+  ],
+  "next_id": 7
+}

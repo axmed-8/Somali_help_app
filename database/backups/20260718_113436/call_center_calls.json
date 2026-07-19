@@ -1,0 +1,133 @@
+{
+  "calls": [
+    {
+      "id": 1,
+      "user_id": null,
+      "caller_name": "Ahmed Ali",
+      "phone": "0611111111",
+      "latitude": 2.036465,
+      "longitude": 45.2994,
+      "address": "Bakaro Market, Mogadishu",
+      "district": "Bakaro Market, Mogadishu",
+      "status": "cancelled",
+      "operator_id": null,
+      "operator_name": "Call Center Operator",
+      "emergency_type": "",
+      "notes": "",
+      "accuracy_m": 178.0,
+      "start_time": "2026-07-14 12:39:46",
+      "answered_at": "2026-07-14 12:40:45",
+      "dispatched_at": null,
+      "end_time": "2026-07-14 14:43:09",
+      "duration_sec": 7403,
+      "final_status": "cancelled",
+      "source": "call_center",
+      "emergency_types": [],
+      "dispatched_to": [],
+      "emergency_ids": [],
+      "nearest": {
+        "fire": {
+          "id": "fire",
+          "name": "Fire & Rescue Station",
+          "phone": "+252612000911",
+          "latitude": 2.052,
+          "longitude": 45.328,
+          "distance_km": 3.62,
+          "eta_minutes": 5
+        },
+        "police": {
+          "id": "police",
+          "name": "Police Response Unit",
+          "phone": "+252612000912",
+          "latitude": 2.038,
+          "longitude": 45.315,
+          "distance_km": 1.74,
+          "eta_minutes": 3
+        },
+        "hospital": {
+          "id": 1,
+          "city": "Muqdisho مقديشو",
+          "name": "banadir",
+          "phone": "613919191",
+          "address": "Digfer Road طريق دكفر, Wadajir وداجير مدينة, Muqdisho مقديشو",
+          "district": "Wadajir وداجير مدينة",
+          "latitude": 2.034484,
+          "longitude": 45.298842,
+          "distance_km": 0.23,
+          "eta_minutes": 3,
+          "ambulance_available": true
+        }
+      },
+      "device_info": {
+        "language": "en-GB",
+        "platform": "Win32",
+        "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"
+      }
+    },
+    {
+      "id": 2,
+      "user_id": null,
+      "caller_name": "Ahmed Ali",
+      "phone": "0611111111",
+      "latitude": 2.036647,
+      "longitude": 45.29921,
+      "address": "Bakaro Market, Mogadishu",
+      "district": "Bakaro Market, Mogadishu",
+      "status": "answered",
+      "operator_id": null,
+      "operator_name": "Call Center Operator",
+      "emergency_type": "",
+      "notes": "",
+      "accuracy_m": 95.0,
+      "start_time": "2026-07-14 14:45:30",
+      "answered_at": "2026-07-14 14:46:01",
+      "dispatched_at": null,
+      "end_time": null,
+      "duration_sec": 0,
+      "final_status": "",
+      "source": "call_center",
+      "emergency_types": [],
+      "dispatched_to": [],
+      "emergency_ids": [],
+      "nearest": {
+        "fire": {
+          "id": "fire",
+          "name": "Fire & Rescue Station",
+          "phone": "+252612000911",
+          "latitude": 2.052,
+          "longitude": 45.328,
+          "distance_km": 3.63,
+          "eta_minutes": 5
+        },
+        "police": {
+          "id": "police",
+          "name": "Police Response Unit",
+          "phone": "+252612000912",
+          "latitude": 2.038,
+          "longitude": 45.315,
+          "distance_km": 1.76,
+          "eta_minutes": 3
+        },
+        "hospital": {
+          "id": 1,
+          "city": "Muqdisho مقديشو",
+          "name": "banadir",
+          "phone": "613919191",
+          "address": "Digfer Road طريق دكفر, Wadajir وداجير مدينة, Muqdisho مقديشو",
+          "district": "Wadajir وداجير مدينة",
+          "latitude": 2.034484,
+          "longitude": 45.298842,
+          "distance_km": 0.24,
+          "eta_minutes": 3,
+          "ambulance_available": true
+        }
+      },
+      "device_info": {
+        "language": "en-US",
+        "platform": "Win32",
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36 Edg/150.0.0.0"
+      }
+    }
+  ],
+  "next_id": 3
+}

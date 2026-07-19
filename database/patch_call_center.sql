@@ -1,14 +1,12 @@
 -- Patch existing GurmadNet MySQL for Call Center role + calls table
--- Run: mysql -u root -p gurmad < database/patch_call_center.sql
+-- Preferred: python ensure_call_center_schema + ensure_production_integrity
+-- Manual: mysql -u root -p gurmad < database/patch_call_center.sql
 
 USE gurmad;
 
 ALTER TABLE users
-  MODIFY COLUMN role ENUM('citizen','hospital','police','fire','admin','call_center')
+  MODIFY COLUMN role ENUM('citizen','hospital','police','fire','admin','super_admin','call_center')
   NOT NULL DEFAULT 'citizen';
-
--- Operator online heartbeat (safe if column already exists — run via Python patch script preferred)
--- ALTER TABLE users ADD COLUMN last_seen_call_center DATETIME NULL AFTER last_login;
 
 CREATE TABLE IF NOT EXISTS call_center_calls (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -40,5 +38,8 @@ CREATE TABLE IF NOT EXISTS call_center_calls (
   INDEX idx_cc_status (status),
   INDEX idx_cc_operator (operator_id),
   INDEX idx_cc_user (user_id),
-  INDEX idx_cc_start (start_time)
+  INDEX idx_cc_start (start_time),
+  INDEX idx_cc_status_start (status, start_time)
 );
+
+-- FKs / orphan cleanup: run ensure_production_integrity() after this patch
