@@ -38,11 +38,25 @@
             {% if is_super_admin %}
             <a href="#" data-section="users" data-role-filter="admins" data-perm="users_admins">Admins</a>
             {% endif %}
-            <a href="#" data-section="users" data-role-filter="hospital" data-perm="users_ops">Hospitals</a>
+            <a href="#" data-section="users" data-role-filter="hospital" data-perm="users_ops">Hospital login accounts</a>
             <a href="#" data-section="users" data-role-filter="police" data-perm="users_ops">Police</a>
             <a href="#" data-section="users" data-role-filter="fire" data-perm="users_ops">Fire Department</a>
             <a href="#" data-section="users" data-role-filter="call_center" data-perm="users_ops">Call Center</a>
             <a href="#" data-section="users" data-role-filter="" data-perm="users_ops">All Users</a>
+          </div>
+        </div>
+
+        <div class="sac-nav-group open" data-perm="users_ops">
+          <button type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/><path d="M10 10h4"/><path d="M12 8v4"/></svg>
+            Facility Registries
+          </button>
+          <div class="sac-sub">
+            <a href="#" data-section="hospitals" data-perm="users_ops">Hospitals</a>
+            <a href="#" data-section="ambulances" data-perm="users_ops">Ambulances</a>
+            <a href="#" data-section="police" data-perm="users_ops">Police Stations</a>
+            <a href="#" data-section="fire" data-perm="users_ops">Fire Stations</a>
+            <a href="#" data-section="callcenters" data-perm="users_ops">Call Centers</a>
           </div>
         </div>
 
@@ -52,24 +66,13 @@
             Emergency Management
           </button>
           <div class="sac-sub">
-            <a href="#" data-section="emergencies" data-perm="emergencies_view">Active Emergencies</a>
-            <a href="#" data-section="emergencies" data-perm="emergencies_view">Emergency History</a>
+            <a href="#" data-section="emergencies" data-em-filter="active" data-perm="emergencies_view">Active Emergencies</a>
+            <a href="#" data-section="emergencies" data-em-filter="history" data-perm="emergencies_view">Emergency History</a>
             <a href="#" data-section="dispatch" data-perm="emergencies_view">Dispatch Center</a>
             <a href="#" data-section="sos" data-perm="emergencies_view">SOS Requests</a>
           </div>
         </div>
-
-        <a href="#" data-section="users" data-role-filter="hospital" data-perm="users_ops">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/><path d="M10 10h4"/><path d="M12 8v4"/></svg>
-          Hospitals Management
-        </a>
-        <a href="#" data-section="users" data-role-filter="hospital" data-perm="users_ops">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="8" rx="2"/><path d="M5 11V8a2 2 0 0 1 2-2h3l2 3h7a2 2 0 0 1 2 2v2"/></svg>
-          Ambulances Management
-        </a>
-        <a href="#" data-section="users" data-role-filter="police" data-perm="users_ops">Police Management</a>
-        <a href="#" data-section="users" data-role-filter="fire" data-perm="users_ops">Fire Department</a>
-        <a href="#" data-section="callcenter" data-perm="call_center">Call Center</a>
+        <a href="#" data-section="callcenter" data-perm="call_center">Call Center Ops</a>
         <a href="#" data-section="ai" data-perm="ai">
           AI Intelligence <span class="badge-new">New</span>
         </a>
@@ -403,15 +406,9 @@
                 {% endif %}
               </select>
               <button type="button" class="btn-action btn-admin-primary" id="btn-add-user">+ Add user</button>
-              {% if is_super_admin %}
-              <button type="button" class="btn-action btn-admin-primary" id="btn-create-admin">+ Create staff</button>
-              {% endif %}
+              <button type="button" class="btn-action btn-admin-primary" id="btn-create-admin" data-perm="users_ops">+ Create staff</button>
             </div>
-            {% if is_super_admin %}
-            <p class="hint" id="admin-users-hint"><strong>+ Add user</strong> = citizens only. <strong>+ Create staff</strong> = Admin, Hospital, Police, or Fire only.</p>
-            {% else %}
-            <p class="hint" id="admin-users-hint"><strong>+ Add user</strong> adds citizens only. Hospital, Police, Fire, and Admin accounts are created by Super Admin.</p>
-            {% endif %}
+            <p class="hint" id="admin-users-hint"><strong>+ Add user</strong> = citizens only. <strong>+ Create staff</strong> = Hospital, Police, Fire, or Call Center{% if is_super_admin %} (and Admin){% endif %}. Facilities are under <strong>Facility Registries</strong>.</p>
             <div class="table-wrap">
               <table class="admin-table" id="users-table">
                 <thead>
@@ -421,6 +418,175 @@
                 </thead>
                 <tbody></tbody>
               </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Hospitals registry -->
+        <section id="sec-hospitals" class="sac-section" data-perm="users_ops">
+          <div class="sac-section-head">
+            <div>
+              <h2>Hospital Registry</h2>
+            </div>
+            <button type="button" class="btn-action btn-admin-primary" id="btn-add-hospital">+ Add hospital</button>
+          </div>
+          <div class="sac-card sac-glass">
+            <div class="sac-toolbar admin-toolbar">
+              <input type="search" id="hospital-search" placeholder="Search name, city, district...">
+              <select id="hospital-status-filter">
+                <option value="">All statuses</option>
+                <option value="open">Open</option>
+                <option value="limited">Limited</option>
+                <option value="closed">Closed</option>
+              </select>
+              <button type="button" class="btn-action btn-admin-primary" id="btn-refresh-hospitals">Refresh</button>
+            </div>
+            <div class="sac-split">
+              <div class="table-wrap">
+                <table class="admin-table" id="hospitals-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th><th>Name</th><th>City</th><th>District</th><th>Phone</th>
+                      <th>Status</th><th>Ambulance</th><th>Owner</th><th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for h in hospitals_registry %}
+                    <tr data-id="{{ h.id }}">
+                      <td>{{ h.id }}</td>
+                      <td><strong>{{ h.name }}</strong></td>
+                      <td>{{ h.city or '—' }}</td>
+                      <td>{{ h.district or '—' }}</td>
+                      <td>{{ h.phone or '—' }}</td>
+                      <td>{{ h.operating_status or 'open' }}</td>
+                      <td>{% if h.ambulance_available %}Yes ({{ h.ambulance_count or 0 }}){% else %}No{% endif %}</td>
+                      <td>{% if h.owner_user_id %}#{{ h.owner_user_id }}{% else %}—{% endif %}</td>
+                      <td class="sac-muted">Load actions…</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="9" class="sac-empty-cell">No hospitals in MySQL</td></tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+              <aside class="sac-profile-panel" id="hospital-profile" hidden>
+                <h3>Facility profile</h3>
+                <div id="hospital-profile-body"></div>
+              </aside>
+            </div>
+          </div>
+        </section>
+
+        <section id="sec-ambulances" class="sac-section" data-perm="users_ops">
+          <div class="sac-section-head">
+            <div>
+              <h2>Ambulance Dispatch Status</h2>
+              <p class="sac-section-sub">Hospital-owned units — GurmadNet shows availability, GPS, and driver contact for coordination only.</p>
+            </div>
+          </div>
+          <div class="sac-card sac-glass">
+            <div class="sac-toolbar admin-toolbar">
+              <input type="search" id="ambulance-search" placeholder="Search unit, driver, hospital...">
+              <select id="ambulance-status-filter">
+                <option value="">All statuses</option>
+                <option value="available">Available</option>
+                <option value="busy">Busy</option>
+                <option value="offline">Offline</option>
+              </select>
+              <button type="button" class="btn-action btn-admin-primary" id="btn-refresh-ambulances">Refresh</button>
+            </div>
+            <div class="sac-split">
+              <div class="table-wrap">
+                <table class="admin-table" id="ambulances-table">
+                  <thead><tr><th>ID</th><th>Unit</th><th>Hospital</th><th>Status</th><th>Driver</th><th>GPS</th><th></th></tr></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+              <aside class="sac-profile-panel" id="ambulance-profile" hidden><h3>Dispatch info</h3><div id="ambulance-profile-body"></div></aside>
+            </div>
+          </div>
+        </section>
+
+        <section id="sec-police" class="sac-section" data-perm="users_ops">
+          <div class="sac-section-head">
+            <div><h2>Police Station Registry</h2></div>
+            <button type="button" class="btn-action btn-admin-primary" id="btn-add-police">+ Add station</button>
+          </div>
+          <div class="sac-card sac-glass">
+            <div class="sac-toolbar admin-toolbar">
+              <input type="search" id="police-search" placeholder="Search stations...">
+              <select id="police-status-filter">
+                <option value="">All statuses</option>
+                <option value="open">Open</option>
+                <option value="limited">Limited</option>
+                <option value="closed">Closed</option>
+              </select>
+              <button type="button" class="btn-action btn-admin-primary" id="btn-refresh-police">Refresh</button>
+            </div>
+            <div class="sac-split">
+              <div class="table-wrap">
+                <table class="admin-table" id="police-table">
+                  <thead><tr><th>ID</th><th>Name</th><th>City</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+              <aside class="sac-profile-panel" id="police-profile" hidden><h3>Station profile</h3><div id="police-profile-body"></div></aside>
+            </div>
+          </div>
+        </section>
+
+        <section id="sec-fire" class="sac-section" data-perm="users_ops">
+          <div class="sac-section-head">
+            <div><h2>Fire Station Registry</h2></div>
+            <button type="button" class="btn-action btn-admin-primary" id="btn-add-fire">+ Add station</button>
+          </div>
+          <div class="sac-card sac-glass">
+            <div class="sac-toolbar admin-toolbar">
+              <input type="search" id="fire-search" placeholder="Search stations...">
+              <select id="fire-status-filter">
+                <option value="">All statuses</option>
+                <option value="open">Open</option>
+                <option value="limited">Limited</option>
+                <option value="closed">Closed</option>
+              </select>
+              <button type="button" class="btn-action btn-admin-primary" id="btn-refresh-fire">Refresh</button>
+            </div>
+            <div class="sac-split">
+              <div class="table-wrap">
+                <table class="admin-table" id="fire-table">
+                  <thead><tr><th>ID</th><th>Name</th><th>City</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+              <aside class="sac-profile-panel" id="fire-profile" hidden><h3>Station profile</h3><div id="fire-profile-body"></div></aside>
+            </div>
+          </div>
+        </section>
+
+        <section id="sec-callcenters" class="sac-section" data-perm="users_ops">
+          <div class="sac-section-head">
+            <div><h2>Call Center Registry</h2></div>
+            <button type="button" class="btn-action btn-admin-primary" id="btn-add-callcenter-fac">+ Add call center</button>
+          </div>
+          <div class="sac-card sac-glass">
+            <div class="sac-toolbar admin-toolbar">
+              <input type="search" id="ccfac-search" placeholder="Search call centers...">
+              <select id="ccfac-status-filter">
+                <option value="">All statuses</option>
+                <option value="open">Open</option>
+                <option value="limited">Limited</option>
+                <option value="closed">Closed</option>
+              </select>
+              <button type="button" class="btn-action btn-admin-primary" id="btn-refresh-ccfac">Refresh</button>
+            </div>
+            <div class="sac-split">
+              <div class="table-wrap">
+                <table class="admin-table" id="ccfac-table">
+                  <thead><tr><th>ID</th><th>Name</th><th>City</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+              <aside class="sac-profile-panel" id="ccfac-profile" hidden><h3>Facility profile</h3><div id="ccfac-profile-body"></div></aside>
             </div>
           </div>
         </section>
@@ -493,10 +659,19 @@
         <!-- Emergencies / Dispatch / SOS -->
         <section id="sec-emergencies" class="sac-section" data-perm="emergencies_view">
           <div class="sac-section-head">
-            <div><h2>Emergency Management</h2><p>Assign, update status, export, and locate incidents</p></div>
+            <div><h2 id="em-section-title">Emergency Management</h2><p id="em-section-sub">Assign, update status, export, and locate incidents</p></div>
             <a href="/api/admin/emergencies/export" class="btn-action btn-admin-primary" data-perm="emergencies_export" download>Export CSV</a>
           </div>
           <div class="sac-card sac-glass">
+            <div class="sac-toolbar admin-toolbar">
+              <input type="search" id="em-search" placeholder="Search caller, phone, location...">
+              <select id="em-view-filter">
+                <option value="active">Active only</option>
+                <option value="history">History (closed)</option>
+                <option value="all">All</option>
+              </select>
+              <button type="button" class="btn-action btn-admin-primary" id="btn-refresh-emergencies">Refresh</button>
+            </div>
             <div class="table-wrap">
               <table class="admin-table" id="emergencies-table">
                 <thead>
@@ -510,12 +685,40 @@
           </div>
         </section>
         <section id="sec-dispatch" class="sac-section" data-perm="emergencies_view">
-          <div class="sac-section-head"><div><h2>Dispatch Center</h2><p>Use the emergencies table to assign hospital, police, or fire</p></div></div>
-          <div class="sac-card sac-glass"><p class="hint">Open <strong>Emergency Management</strong> to update assignment and status in real time.</p><button type="button" class="btn-admin-primary" data-section="emergencies">Open Emergencies</button></div>
+          <div class="sac-section-head"><div><h2>Dispatch Center</h2><p>Assign hospital / station / ambulance · escalate · track status</p></div></div>
+          <div class="sac-card sac-glass">
+            <div class="sac-toolbar admin-toolbar">
+              <button type="button" class="btn-action btn-admin-primary" id="btn-refresh-dispatch">Refresh queue</button>
+            </div>
+            <div class="table-wrap">
+              <table class="admin-table" id="dispatch-table">
+                <thead>
+                  <tr>
+                    <th>ID</th><th>Type</th><th>Caller</th><th>Status</th><th>Facility</th><th>SLA</th><th>Dispatch</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
         </section>
         <section id="sec-sos" class="sac-section" data-perm="emergencies_view">
-          <div class="sac-section-head"><div><h2>SOS Requests</h2><p>Citizen-originated emergency requests</p></div></div>
-          <div class="sac-card sac-glass"><button type="button" class="btn-admin-primary" data-section="emergencies">View SOS / Emergencies</button></div>
+          <div class="sac-section-head"><div><h2>SOS Requests</h2><p>Citizen SOS — approve, escalate, verify</p></div></div>
+          <div class="sac-card sac-glass">
+            <div class="sac-toolbar admin-toolbar">
+              <button type="button" class="btn-action btn-admin-primary" id="btn-refresh-sos">Refresh SOS</button>
+            </div>
+            <div class="table-wrap">
+              <table class="admin-table" id="sos-table">
+                <thead>
+                  <tr>
+                    <th>ID</th><th>Type</th><th>Caller</th><th>Status</th><th>Deadline</th><th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
         </section>
 
         <!-- Call Center -->
@@ -532,7 +735,7 @@
           <div class="sac-card sac-glass">
             <form id="cc-settings-form" class="settings-form">
               <label class="toggle-row"><input type="checkbox" id="cc_enabled"> Enable Call Center</label>
-              <div class="form-row"><label>Primary phone</label><input type="tel" id="cc_phone_primary" placeholder="+252612000999"></div>
+              <div class="form-row"><label>Primary phone</label><input type="tel" id="cc_phone_primary" placeholder="Call center phone"></div>
               <div class="form-row"><label>Secondary phone</label><input type="tel" id="cc_phone_secondary"></div>
               <div class="form-row"><label>Priority Medical (1=highest)</label><input type="number" id="cc_pri_medical" min="1" max="5" value="1"></div>
               <div class="form-row"><label>Priority Fire</label><input type="number" id="cc_pri_fire" min="1" max="5" value="1"></div>
@@ -855,7 +1058,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="{{ url_for('static', filename='js/location.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/admin_command.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/admin_command.js') }}?v=ccstaff3"></script>
   <script>
     // Mirror health grid into monitoring section when overview loads
     (function () {

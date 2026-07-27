@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0b141a">
+  <title>{% if valid %}{{ unit.call_sign }} GPS{% else %}GPS link{% endif %} — GurmadNet</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/driver_gps.css') }}">
+</head>
+<body class="dgps-body">
+  <main class="dgps-shell">
+    {% if not valid %}
+      <section class="dgps-card">
+        <h1>Link expired</h1>
+        <p>This driver GPS link is invalid or was revoked. Ask the hospital desk for a new link.</p>
+      </section>
+    {% else %}
+      <header class="dgps-hero">
+        <p class="dgps-kicker">{{ unit.hospital_name or 'GurmadNet' }}</p>
+        <h1>{{ unit.call_sign }}</h1>
+        <p>{% if unit.driver_name %}{{ unit.driver_name }} · {% endif %}Live GPS share</p>
+      </header>
+
+      <section class="dgps-card">
+        <div class="dgps-status" id="dgps-status">Ready — tap Start to share location</div>
+        <div class="dgps-coords" id="dgps-coords">
+          {% if unit.latitude is not none and unit.longitude is not none %}
+            Last: {{ '%.5f'|format(unit.latitude) }}, {{ '%.5f'|format(unit.longitude) }}
+          {% else %}
+            No GPS yet
+          {% endif %}
+        </div>
+        <div class="dgps-actions">
+          <button type="button" class="dgps-btn dgps-btn-primary" id="dgps-start">Start sharing</button>
+          <button type="button" class="dgps-btn dgps-btn-stop" id="dgps-stop" hidden>Stop</button>
+        </div>
+        <p class="dgps-hint">Keep this page open while driving. The hospital map updates live.</p>
+      </section>
+    {% endif %}
+  </main>
+
+  {% if valid %}
+  <script>
+    window.DGPS = {
+      token: {{ token|tojson }},
+      endpoint: {{ url_for('api_driver_gps_location', token=token)|tojson }}
+    };
+  </script>
+  <script src="{{ url_for('static', filename='js/csrf.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/driver_gps.js') }}"></script>
+  {% endif %}
+</body>
+</html>

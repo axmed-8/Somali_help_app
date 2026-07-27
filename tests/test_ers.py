@@ -38,6 +38,37 @@ def app_client():
   ers_app.ANNOUNCEMENTS_FILE = os.path.join(db, "announcements.json")
 
   ers_app.seed_defaults()
+  # Test-only hospital (production never auto-seeds facilities)
+  import hospital_logic as hl
+  hdata = hl.load_hospitals(ers_app.read_json, ers_app.save_json)
+  if not hdata.get("hospitals"):
+    hdata["hospitals"] = [{
+      "id": 1,
+      "name": "Test Hospital",
+      "city": "Mogadishu",
+      "region": "Banadir",
+      "district": "Hodan",
+      "address": "Test Address",
+      "latitude": 2.0469,
+      "longitude": 45.3182,
+      "phone": "0622222222",
+      "emergency_contacts": ["0622222222"],
+      "services": ["Emergency"],
+      "specialties": ["Emergency"],
+      "ambulance_available": True,
+      "ambulance_count": 2,
+      "emergency_capacity": 20,
+      "rating": 4.5,
+      "operating_status": "open",
+      "contact_email": "amina@hospital.com",
+      "owner_user_id": None,
+      "location_verified": True,
+      "created_at": ers_app.now_str(),
+      "updated_at": ers_app.now_str(),
+    }]
+    hdata["next_id"] = 2
+    hl.save_hospitals(hdata, ers_app.save_json)
+
   udata = ers_app.load_users()
   test_users = [
     ("Ahmed Ali", "ahmed@example.com", "123456", "citizen", "0611111111"),
@@ -69,6 +100,14 @@ def app_client():
       u["hospital_id"] = 1
     u["email_verified"] = True
   ers_app.save_users(udata)
+  hdata = hl.load_hospitals(ers_app.read_json, ers_app.save_json)
+  for h in hdata.get("hospitals") or []:
+    if h.get("id") == 1:
+      h["owner_user_id"] = next(
+        (u["id"] for u in udata["users"] if u.get("email") == "amina@hospital.com"),
+        None,
+      )
+  hl.save_hospitals(hdata, ers_app.save_json)
   ers_app.app.config["TESTING"] = True
   ers_app.app.config["WTF_CSRF_ENABLED"] = False
   client = ers_app.app.test_client()
@@ -413,7 +452,9 @@ def test_call_center_initiate_and_dispatch(app_client):
   data = r.get_json()
   assert data["success"] is True
   assert data["call_id"]
-  assert data["tel_href"].startswith("tel:")
+  assert data.get("voice_mode") is True
+  assert "tel_href" not in data
+  assert data.get("ice_servers")
   call_id = data["call_id"]
 
   client.get("/logout", follow_redirects=True)

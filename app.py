@@ -12,6 +12,7 @@ import secrets
 import sys
 import tempfile
 import threading
+import time
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta
@@ -19,6 +20,7 @@ from functools import wraps
 
 # Load .env (SMTP_*) before email_service / other config readers
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Email/SMTP only — never force-overwrite GURMADNET_DB here (breaks JSON smoke/e2e scripts).
 _EMAIL_ENV_KEYS = (
     "EMAIL_PROVIDER",
     "SMTP_HOST",
@@ -29,7 +31,6 @@ _EMAIL_ENV_KEYS = (
     "SMTP_USE_TLS",
     "EMAIL_VERIFICATION_HOURS",
     "EMAIL_VERIFICATION_MINUTES",
-    "GURMADNET_DB",
 )
 
 
@@ -63,8 +64,9 @@ except ImportError:
     pass
 
 # Local `python app.py` must use .env SMTP even if the shell still has
-# EMAIL_PROVIDER=memory from a previous pytest run. Pytest keeps memory via fixture.
-if "pytest" not in sys.modules:
+# EMAIL_PROVIDER=memory from a previous pytest run. Pytest / TESTING=1 keep test providers.
+_testing_flag = (os.environ.get("TESTING") or "").strip().lower() in ("1", "true", "yes")
+if "pytest" not in sys.modules and not _testing_flag:
     _apply_email_env_from_dotenv(force=True)
 from flask import (
     Flask,
@@ -123,20 +125,23 @@ TEAM_LABELS = {
 
 COMPLETED_STATUSES = ("resolved", "completed", "cancelled", "no_hospital_available")
 
-RESPONSE_STATIONS = {
+# Seeded into MySQL settings.response_stations once; runtime reads via get_response_stations().
+DEFAULT_RESPONSE_STATIONS = {
     "fire": {
         "latitude": 2.052,
         "longitude": 45.328,
         "name": "Fire & Rescue Station",
-        "phone": "+252612000911",
+        "phone": "",
     },
     "police": {
         "latitude": 2.038,
         "longitude": 45.315,
         "name": "Police Response Unit",
-        "phone": "+252612000912",
+        "phone": "",
     },
 }
+# Backward-compatible name; prefer get_response_stations() for live MySQL values.
+RESPONSE_STATIONS = DEFAULT_RESPONSE_STATIONS
 
 
 def configure_hospital_db(db_dir):
@@ -192,6 +197,14 @@ app.config.update(
     WTF_CSRF_HEADERS=["X-CSRFToken", "X-CSRF-Token"],
     WTF_CSRF_SSL_STRICT=False,
 )
+# HTTPS tunnels (cloudflared / ngrok) send X-Forwarded-* headers.
+if os.environ.get("TRUST_PROXY", "1").strip().lower() not in ("0", "false", "no", "off"):
+    try:
+        from werkzeug.middleware.proxy_fix import ProxyFix
+
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+    except Exception:
+        _logger.exception("ProxyFix not applied")
 csrf = CSRFProtect(app)
 
 
@@ -240,8 +253,10 @@ VALID_ROLES = [
 STAFF_ADMIN_ROLES = frozenset({"super_admin", "admin"})
 PRIVILEGED_ROLES = frozenset({"super_admin", "admin"})
 OPS_USER_ROLES = frozenset({"citizen", "hospital", "police", "fire", "call_center"})
+# Ops staff any Admin can create; privileged Admin accounts need Super Admin.
+OPS_CREATE_ROLES = frozenset({"hospital", "police", "fire", "call_center"})
 # Super Admin "Create staff" button may only create these roles
-SUPER_CREATE_ROLES = frozenset({"admin", "hospital", "police", "fire"})
+SUPER_CREATE_ROLES = frozenset({"admin", "hospital", "police", "fire", "call_center"})
 
 # Role → capability set for the admin dashboard / APIs
 ADMIN_PERMISSIONS = {
@@ -350,7 +365,7 @@ SUPER_ONLY_SETTINGS = frozenset({
 })
 
 ROLE_HOME = {
-    "citizen": "/dashboard",
+    "citizen": "/",
     "hospital": "/hospital",
     "police": "/police",
     "fire": "/fire",
@@ -398,30 +413,79 @@ def _require_admin_perm(perm):
         return _forbid_admin("Super Admin access is required for this action.")
     return None
 
-def _resolve_use_mysql():
-    if os.environ.get("GURMADNET_DB", "").lower() == "json":
+def _json_store_allowed():
+    """
+    JSON file store is allowed ONLY under automated tests.
+    GURMADNET_DB=json alone is not enough for gunicorn/production.
+    """
+    mode = (os.environ.get("GURMADNET_DB") or "").strip().lower()
+    if mode != "json":
         return False
-    if os.environ.get("GURMADNET_DB", "").lower() == "mysql":
+    if os.environ.get("PYTEST_CURRENT_TEST"):
         return True
+    if "pytest" in sys.modules:
+        return True
+    if (os.environ.get("TESTING") or "").strip().lower() in ("1", "true", "yes"):
+        return True
+    return False
+
+
+def _resolve_use_mysql():
+    """
+    MySQL is the only production store.
+    JSON is permitted solely when GURMADNET_DB=json AND tests (pytest/TESTING=1).
+    """
+    mode = (os.environ.get("GURMADNET_DB") or "").strip().lower()
+    if mode == "json":
+        if _json_store_allowed():
+            return False
+        raise RuntimeError(
+            "GURMADNET_DB=json is blocked outside tests. "
+            "Remove it and configure database/db_config.env for MySQL."
+        )
+
     cfg_path = os.path.join(DATABASE_DIR, "db_config.env")
-    if not os.path.exists(cfg_path):
-        return False
+    if not os.path.exists(cfg_path) and mode != "mysql":
+        if _json_store_allowed():
+            return False
+        raise RuntimeError(
+            "MySQL is required. Create database/db_config.env "
+            "(copy from db_config.env.example) with live credentials."
+        )
     try:
         from database.connection import load_config
         from database import mysql_store
 
         if not mysql_store.available():
-            return False
-        if load_config().get("password") in ("", "YOUR_PASSWORD"):
-            return False
+            raise RuntimeError("PyMySQL is not installed. Run: pip install PyMySQL")
+        cfg = load_config()
+        if cfg.get("password") in ("", "YOUR_PASSWORD", "CHANGE_ME_STRONG_PASSWORD"):
+            raise RuntimeError(
+                "Set a real DB_PASSWORD in database/db_config.env before starting the app."
+            )
         conn = mysql_store.connect()
         conn.close()
         return True
-    except Exception:
-        return False
+    except RuntimeError:
+        raise
+    except Exception as exc:
+        if _json_store_allowed():
+            logging.getLogger(__name__).warning(
+                "MySQL unavailable (%s); using JSON because TESTING/pytest is active.",
+                exc,
+            )
+            return False
+        raise RuntimeError(
+            f"Cannot connect to MySQL ({exc}). Fix database/db_config.env — "
+            "the app will not fall back to JSON files."
+        ) from exc
 
 
 USE_MYSQL = _resolve_use_mysql()
+logging.getLogger(__name__).info(
+    "Storage backend: %s",
+    "MySQL (live)" if USE_MYSQL else "JSON (test only)",
+)
 
 # Ensure Call Center + AI + email verification MySQL schema before seeding
 if USE_MYSQL:
@@ -433,6 +497,8 @@ if USE_MYSQL:
         _ms_boot.ensure_email_verification_schema()
         _ms_boot.ensure_citizen_profile_schema()
         _ms_boot.ensure_admin_profile_schema()
+        _ms_boot.ensure_hospital_logo_schema()
+        _ms_boot.ensure_ambulance_gps_share_schema()
     except Exception as _cc_schema_exc:
         import logging as _logging
 
@@ -478,8 +544,8 @@ DEFAULT_SETTINGS = {
     "hospital_response_timeout_sec": 120,
     "google_maps_api_key": os.environ.get("GOOGLE_MAPS_API_KEY", ""),
     "call_center_enabled": True,
-    "call_center_phone": "+252612000999",
-    "call_center_phone_secondary": "+252612000998",
+    "call_center_phone": "",
+    "call_center_phone_secondary": "",
     "call_center_priority_medical": 1,
     "call_center_priority_fire": 1,
     "call_center_priority_police": 1,
@@ -495,11 +561,11 @@ DEFAULT_SETTINGS = {
     "default_language": "en",
     "timezone": "Africa/Mogadishu",
     # --- contact ---
-    "contact_phone": "+252613910872",
+    "contact_phone": "",
     "contact_email": "",
-    "contact_address": "Mogadishu, Somalia",
+    "contact_address": "",
     "contact_website": "",
-    "emergency_hotline": "+252613910872",
+    "emergency_hotline": "",
     # --- SMTP / email (runtime override; .env remains fallback) ---
     "smtp_enabled": True,
     "smtp_host": "",
@@ -790,9 +856,15 @@ def _json_file_path(entity):
 
 
 def read_store(entity, default):
+    """Read entity document from MySQL (production) or JSON (tests only)."""
     ms = _mysql_backend()
     if ms:
         return ms.read_store(entity, default)
+    if not _json_store_allowed():
+        raise RuntimeError(
+            f"Refusing JSON read for '{entity}' — MySQL is required. "
+            "Check database/db_config.env and restart the server."
+        )
     path = _json_file_path(entity)
     ensure_database_dir()
     if not os.path.exists(path):
@@ -807,11 +879,16 @@ def read_store(entity, default):
 
 
 def save_store(entity, data):
-    """Persist data to MySQL (production) or temp JSON file (tests)."""
+    """Persist to MySQL (production) or temp JSON (tests only). Never dual-write."""
     ms = _mysql_backend()
     if ms:
         ms.save_store(entity, data)
         return
+    if not _json_store_allowed():
+        raise RuntimeError(
+            f"Refusing JSON write for '{entity}' — MySQL is required. "
+            "Check database/db_config.env and restart the server."
+        )
     path = _json_file_path(entity)
     ensure_database_dir()
     with _path_lock(path):
@@ -835,19 +912,37 @@ def save_json(entity, data):
 
 
 def append_audit(action, entity_type, entity_id, details=None, user_id=None):
-    log = read_json(AUDIT_FILE, {"entries": [], "next_id": 1})
-    entry = {
-        "id": log["next_id"],
-        "timestamp": now_str(),
-        "action": action,
-        "entity_type": entity_type,
-        "entity_id": entity_id,
-        "user_id": user_id or session.get("user_id"),
-        "details": details or {},
-    }
-    log["next_id"] += 1
-    log["entries"] = ([entry] + log["entries"])[:5000]
-    save_json(AUDIT_FILE, log)
+    try:
+        log = read_json(AUDIT_FILE, {"entries": [], "next_id": 1})
+        entries = log.get("entries") or []
+        max_existing = 0
+        for e in entries:
+            try:
+                max_existing = max(max_existing, int(e.get("id") or 0))
+            except (TypeError, ValueError):
+                pass
+        next_id = int(log.get("next_id") or 1)
+        if next_id <= max_existing:
+            next_id = max_existing + 1
+        entry = {
+            "id": next_id,
+            "timestamp": now_str(),
+            "action": action,
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+            "user_id": user_id or session.get("user_id"),
+            "details": details or {},
+        }
+        log["next_id"] = next_id + 1
+        log["entries"] = ([entry] + entries)[:5000]
+        save_json(AUDIT_FILE, log)
+    except Exception:
+        logging.getLogger(__name__).exception(
+            "append_audit failed action=%s entity=%s/%s",
+            action,
+            entity_type,
+            entity_id,
+        )
 
 
 def normalize_emergency_record(em):
@@ -932,8 +1027,8 @@ def _ai_context_from_emergency(emergency, source="sos", extra=None):
         "emergency_history": history,
         "active_emergencies": active,
         "hospitals": hdata.get("hospitals", []),
-        "police_station": RESPONSE_STATIONS.get("police"),
-        "fire_station": RESPONSE_STATIONS.get("fire"),
+        "police_station": get_response_stations().get("police"),
+        "fire_station": get_response_stations().get("fire"),
     }
     if emergency.get("latitude") is not None and emergency.get("longitude") is not None:
         try:
@@ -942,7 +1037,7 @@ def _ai_context_from_emergency(emergency, source="sos", extra=None):
                 emergency["longitude"],
                 read_json,
                 save_json,
-                RESPONSE_STATIONS,
+                get_response_station_list(),
             )
         except Exception:
             ctx["nearest"] = {}
@@ -1084,7 +1179,7 @@ def _ai_context_from_call(call, notes=None):
                 call["longitude"],
                 read_json,
                 save_json,
-                RESPONSE_STATIONS,
+                get_response_station_list(),
             )
         except Exception:
             call.setdefault("nearest", {})
@@ -1096,8 +1191,8 @@ def _ai_context_from_call(call, notes=None):
     ]
     ctx = call_center_ai.build_call_context(call, notes=notes, extra={
         "hospitals": hdata.get("hospitals", []),
-        "police_station": RESPONSE_STATIONS.get("police"),
-        "fire_station": RESPONSE_STATIONS.get("fire"),
+        "police_station": get_response_stations().get("police"),
+        "fire_station": get_response_stations().get("fire"),
         "active_emergencies": active,
         "emergency_history": history,
     })
@@ -1197,8 +1292,52 @@ def _auto_dispatch_emergency(emergency):
             _append_status(emergency, "pending", "Awaiting dispatch assignment")
     else:
         emergency["status"] = "pending"
-        _append_status(emergency, "pending", f"Routed to {emergency['assigned_team_label']}")
-        _notify("patient", uid, f"{emergency['assigned_team_label']} notified.", eid, "team_assigned")
+        # Soft-assign nearest open police/fire station when coordinates exist
+        if team in ("police", "fire") and emergency.get("latitude") and emergency.get("longitude"):
+            import police_logic as pl
+
+            nearest = pl.nearest_open_station(
+                team, emergency.get("latitude"), emergency.get("longitude"), read_json
+            )
+            if nearest:
+                emergency["assigned_station_id"] = nearest.get("id")
+                emergency["assigned_team_label"] = nearest.get("name") or emergency["assigned_team_label"]
+                if nearest.get("phone"):
+                    emergency["contact_number"] = nearest.get("phone")
+                dist = nearest.get("_distance_km")
+                dist_txt = f" ({dist} km)" if dist is not None else ""
+                _append_status(
+                    emergency,
+                    "pending",
+                    f"Nearest {team} station: {nearest.get('name')}{dist_txt}",
+                )
+                _notify_role_operators(
+                    team,
+                    f"URGENT: Emergency #{eid} — respond now",
+                    eid,
+                    "team_assigned",
+                    station_id=nearest.get("id"),
+                )
+                _notify(
+                    "patient",
+                    uid,
+                    f"{nearest.get('name') or emergency['assigned_team_label']} has been assigned to your request.",
+                    eid,
+                    "team_assigned",
+                )
+            else:
+                _append_status(emergency, "pending", f"Routed to {emergency['assigned_team_label']}")
+                _notify_role_operators(
+                    team, f"URGENT: Emergency #{eid} — open queue", eid, "team_assigned"
+                )
+                _notify("patient", uid, f"{emergency['assigned_team_label']} notified.", eid, "team_assigned")
+        else:
+            _append_status(emergency, "pending", f"Routed to {emergency['assigned_team_label']}")
+            if team in ("police", "fire"):
+                _notify_role_operators(
+                    team, f"URGENT: Emergency #{eid} — open queue", eid, "team_assigned"
+                )
+            _notify("patient", uid, f"{emergency['assigned_team_label']} notified.", eid, "team_assigned")
 
 
 def _user_hospital_id(user):
@@ -1213,6 +1352,43 @@ def _get_user_hospital(user):
         return None, None
     hdata = hl.load_hospitals(read_json, save_json)
     return hid, hl.get_hospital_by_id(hdata, hid)
+
+
+def _user_station_id(user):
+    if not user:
+        return None
+    sid = user.get("station_id")
+    if sid in (None, ""):
+        return None
+    try:
+        return int(sid)
+    except (TypeError, ValueError):
+        return None
+
+
+def _get_user_station(user, kind=None):
+    """Return (station_id, station_row) for police/fire operator."""
+    import police_logic as pl
+
+    role_kind = kind or ((user or {}).get("role") if user else None)
+    if role_kind not in ("police", "fire"):
+        role_kind = None
+    return pl.get_user_station(user, role_kind, read_json)
+
+
+def _notify_role_operators(role, message, request_id=None, ntype="system_alert", station_id=None):
+    """Notify active operators of a role; optionally only those linked to a station."""
+    udata = load_users()
+    for u in udata.get("users") or []:
+        if (u.get("role") or "") != role or (u.get("status") or "active") != "active":
+            continue
+        if station_id is not None:
+            try:
+                if int(u.get("station_id") or 0) != int(station_id):
+                    continue
+            except (TypeError, ValueError):
+                continue
+        _notify(role, u.get("id"), message, request_id, ntype)
 
 
 def _hospital_name_map():
@@ -1377,6 +1553,128 @@ def _sync_hospital_account_links():
     return {"users_changed": users_changed, "hospitals_changed": hospitals_changed}
 
 
+def _sync_station_account_links():
+    """
+    Repair broken police/fire station↔operator links so desks receive SOS cases:
+    - station.owner_user_id → user.station_id
+    - user.station_id → owner_user_id if empty
+    - phone match when both sides unlinked
+    - if exactly one station of that kind exists, bind the unlinked operator(s) of that role
+    """
+    import facility_registry as fr
+
+    udata = load_users()
+    sdata = fr.load_stations(read_json)
+    users_by_id = {u["id"]: u for u in udata.get("users") or []}
+    stations = sdata.get("stations") or []
+    users_changed = False
+    stations_changed = False
+
+    def _digits(val):
+        return "".join(ch for ch in str(val or "") if ch.isdigit())
+
+    # 1) Owner → user.station_id
+    for st in stations:
+        oid = st.get("owner_user_id")
+        if not oid:
+            continue
+        u = users_by_id.get(oid)
+        if u is None:
+            try:
+                u = users_by_id.get(int(oid))
+            except (TypeError, ValueError):
+                u = None
+        if not u:
+            st["owner_user_id"] = None
+            stations_changed = True
+            continue
+        kind = (st.get("kind") or "").lower()
+        if u.get("station_id") != st["id"]:
+            u["station_id"] = st["id"]
+            if kind in ("police", "fire") and u.get("role") != kind:
+                u["role"] = kind
+            users_changed = True
+
+    # 2) Operators with station_id → claim owner if empty
+    for u in udata.get("users") or []:
+        role = str(u.get("role") or "").lower()
+        if role not in ("police", "fire"):
+            continue
+        sid = u.get("station_id")
+        if not sid:
+            continue
+        st = fr.get_station(sdata, sid)
+        if not st:
+            u["station_id"] = None
+            users_changed = True
+            continue
+        if (st.get("kind") or "").lower() != role:
+            u["station_id"] = None
+            users_changed = True
+            continue
+        if not st.get("owner_user_id"):
+            st["owner_user_id"] = u["id"]
+            stations_changed = True
+
+    # 3) Phone match for fully unlinked pairs
+    for kind in ("police", "fire"):
+        unlinked = [
+            u
+            for u in (udata.get("users") or [])
+            if str(u.get("role") or "").lower() == kind and not u.get("station_id")
+        ]
+        for st in stations:
+            if (st.get("kind") or "").lower() != kind or st.get("owner_user_id"):
+                continue
+            st_phone = _digits(st.get("phone"))
+            if len(st_phone) < 7:
+                continue
+            for u in unlinked:
+                if u.get("station_id"):
+                    continue
+                up = _digits(u.get("phone"))
+                if len(up) < 7:
+                    continue
+                if up == st_phone or up in st_phone or st_phone in up:
+                    u["station_id"] = st["id"]
+                    st["owner_user_id"] = u["id"]
+                    users_changed = True
+                    stations_changed = True
+                    break
+
+    # 4) Single-station fallback: one open station of kind + unlinked operator(s)
+    for kind in ("police", "fire"):
+        kind_stations = [
+            st
+            for st in stations
+            if (st.get("kind") or "").lower() == kind
+            and (st.get("operating_status") or "open").lower() != "closed"
+        ]
+        if len(kind_stations) != 1:
+            continue
+        st = kind_stations[0]
+        unlinked = [
+            u
+            for u in (udata.get("users") or [])
+            if str(u.get("role") or "").lower() == kind and not u.get("station_id")
+        ]
+        if not unlinked:
+            continue
+        # Prefer empty-owner station; otherwise still bind operators so desks work
+        for u in unlinked:
+            u["station_id"] = st["id"]
+            users_changed = True
+        if not st.get("owner_user_id"):
+            st["owner_user_id"] = unlinked[0]["id"]
+            stations_changed = True
+
+    if users_changed:
+        save_users(udata)
+    if stations_changed:
+        fr.save_stations(sdata, save_json)
+    return {"users_changed": users_changed, "stations_changed": stations_changed}
+
+
 def _role_home(user):
     if user and user.get("role") == "hospital" and not user.get("hospital_id"):
         return url_for("hospital_register")
@@ -1475,11 +1773,18 @@ def _create_healthcare_emergency(data, request_mode="emergency"):
             hospital = hl.assign_next_hospital(emergency, hdata, timeout)
             if hospital:
                 _append_status(emergency, "pending_hospital", f"Nearest: {hospital['name']}")
-                _notify("hospital", hospital["id"], f"URGENT: Emergency request #{eid} — respond now", eid)
 
-    _notify("patient", session.get("user_id"), "Your emergency request has been submitted.", eid)
     edata["emergencies"].append(emergency)
     save_emergencies(edata)
+    # Notify only after emergency row exists (MySQL FK on notifications.request_id)
+    if emergency.get("assigned_hospital_id"):
+        _notify(
+            "hospital",
+            emergency["assigned_hospital_id"],
+            f"URGENT: Emergency request #{eid} — respond now",
+            eid,
+        )
+    _notify("patient", session.get("user_id"), "Your emergency request has been submitted.", eid)
     append_audit("healthcare_request", "emergency", eid, {"mode": request_mode})
     _run_escalations()
     _schedule_ai_analysis(emergency, source="healthcare")
@@ -1859,6 +2164,45 @@ def _mysql_backend():
     return None
 
 
+def _storage_status():
+    """Live storage diagnostics for admin health / system settings."""
+    info = {
+        "backend": "mysql" if USE_MYSQL else "json",
+        "mysql_required": not _json_store_allowed(),
+        "live": False,
+        "database": None,
+        "user": None,
+        "host": None,
+        "port": None,
+        "table_counts": {},
+        "error": None,
+    }
+    if not USE_MYSQL:
+        info["error"] = "Running on JSON test store — not production MySQL"
+        return info
+    try:
+        from database.connection import load_config
+        from database import mysql_store as _ms
+
+        cfg = load_config()
+        info["database"] = cfg.get("database")
+        info["user"] = cfg.get("user")
+        info["host"] = cfg.get("host")
+        info["port"] = cfg.get("port")
+        with _ms._db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT DATABASE() AS db, USER() AS u")
+                row = cur.fetchone() or {}
+                info["database"] = row.get("db") or info["database"]
+                info["user"] = row.get("u") or info["user"]
+        info["table_counts"] = _ms.table_counts()
+        info["live"] = True
+    except Exception as exc:
+        info["error"] = str(exc)
+        info["live"] = False
+    return info
+
+
 def load_users():
     data = read_json(USERS_FILE, {"users": [], "next_id": 1})
     data["users"] = [normalize_user_record(u) for u in data.get("users", [])]
@@ -1900,7 +2244,7 @@ def _apply_tracking_fields(emergency, fix=None):
 
 
 def _can_access_emergency(em, role, user=None):
-    """Citizen owner, assigned hospital, responder role, or admin."""
+    """Citizen owner, assigned hospital/station, responder role, or admin."""
     if not em:
         return False
     if role in STAFF_ADMIN_ROLES:
@@ -1911,6 +2255,15 @@ def _can_access_emergency(em, role, user=None):
         user = user or current_user()
         hid = _user_hospital_id(user)
         return hid and em.get("assigned_hospital_id") == hid
+    if role in ("police", "fire"):
+        user = user or current_user()
+        sid = _user_station_id(user)
+        if not sid:
+            return False
+        import police_logic as pl
+        if not matches_filter(em.get("type"), ROLE_API_TYPE[role]):
+            return False
+        return pl.emergency_visible_to_station(em, sid, role)
     if role in ROLE_API_TYPE:
         return matches_filter(em.get("type"), ROLE_API_TYPE[role])
     return False
@@ -2012,6 +2365,51 @@ def load_settings():
 def save_settings(settings):
     save_json(SETTINGS_FILE, settings)
     _apply_runtime_settings(settings)
+
+
+def get_response_stations():
+    """Police/fire stations from MySQL response_stations table, then settings fallback."""
+    try:
+        import facility_registry as fr
+        from_table = fr.stations_as_settings_map(read_json)
+        if from_table:
+            return from_table
+    except Exception:
+        logging.getLogger(__name__).exception("Failed loading response_stations table")
+    try:
+        stored = load_settings().get("response_stations")
+        if isinstance(stored, dict) and stored:
+            out = {}
+            for key in ("police", "fire"):
+                row = stored.get(key)
+                if isinstance(row, dict) and row.get("latitude") is not None and row.get("longitude") is not None:
+                    out[key] = row
+            if out:
+                return out
+    except Exception:
+        logging.getLogger(__name__).exception("Failed loading response_stations from MySQL settings")
+    return {k: dict(v) for k, v in DEFAULT_RESPONSE_STATIONS.items()}
+
+
+def get_response_station_list():
+    """All open police/fire stations with coords (for true nearest ranking)."""
+    try:
+        import facility_registry as fr
+        rows = fr.open_stations_with_coords(read_json)
+        if rows:
+            return rows
+    except Exception:
+        logging.getLogger(__name__).exception("Failed loading open stations list")
+    # Fallback: legacy single-station map → list
+    out = []
+    for kind, row in (get_response_stations() or {}).items():
+        if not isinstance(row, dict):
+            continue
+        item = dict(row)
+        item.setdefault("kind", kind)
+        if item.get("latitude") is not None and item.get("longitude") is not None:
+            out.append(item)
+    return out
 
 
 def _apply_runtime_settings(settings=None):
@@ -2211,6 +2609,8 @@ def seed_defaults():
             _ms.ensure_email_verification_schema()
             _ms.ensure_citizen_profile_schema()
             _ms.ensure_admin_profile_schema()
+            _ms.ensure_hospital_logo_schema()
+            _ms.ensure_ambulance_gps_share_schema()
             _ms.ensure_ai_schema()
             integrity = _ms.ensure_production_integrity()
             if integrity.get("changes"):
@@ -2226,6 +2626,13 @@ def seed_defaults():
             logging.getLogger(__name__).info("Hospital↔user link sync: %s", sync)
     except Exception:
         logging.getLogger(__name__).exception("Hospital account link sync failed")
+
+    try:
+        sync_st = _sync_station_account_links()
+        if sync_st.get("users_changed") or sync_st.get("stations_changed"):
+            logging.getLogger(__name__).info("Station↔user link sync: %s", sync_st)
+    except Exception:
+        logging.getLogger(__name__).exception("Station account link sync failed")
 
     # Seed CMS / settings only when empty — never overwrite live MySQL data
     if USE_MYSQL:
@@ -2266,6 +2673,17 @@ def seed_defaults():
     hl.seed_hospitals_if_empty(read_json, save_json)
     hl.migrate_all_hospitals(read_json, save_json)
     seed_announcements_if_empty()
+    # Persist police/fire stations into MySQL settings (single source of truth)
+    try:
+        settings = load_settings()
+        stations = settings.get("response_stations")
+        if not isinstance(stations, dict) or not stations:
+            settings["response_stations"] = {
+                k: dict(v) for k, v in DEFAULT_RESPONSE_STATIONS.items()
+            }
+            save_settings(settings)
+    except Exception:
+        logging.getLogger(__name__).exception("response_stations MySQL seed failed")
     if USE_MYSQL:
         try:
             from database import mysql_store as _ms
@@ -2278,6 +2696,57 @@ def seed_defaults():
         _apply_runtime_settings()
     except Exception:
         logging.getLogger(__name__).exception("Runtime settings apply failed")
+
+
+# Gunicorn / import path: ensure MySQL schema + settings seed (not only __main__)
+_BOOT_SEEDED = False
+
+
+def ensure_mysql_boot():
+    """Idempotent boot for gunicorn workers — MySQL single source of truth."""
+    global _BOOT_SEEDED
+    if _BOOT_SEEDED:
+        return
+    if not USE_MYSQL:
+        _BOOT_SEEDED = True
+        return
+    try:
+        seed_defaults()
+    except Exception:
+        logging.getLogger(__name__).exception("MySQL boot seed_defaults failed")
+    _BOOT_SEEDED = True
+
+
+@app.before_request
+def _mysql_boot_before_request():
+    ensure_mysql_boot()
+
+
+@app.before_request
+def _ensure_valid_session():
+    """Drop stale sessions after user purge/delete so links don't dump into wrong roles."""
+    uid = session.get("user_id")
+    if not uid:
+        return None
+    # Skip static assets
+    if (request.path or "").startswith("/static/"):
+        return None
+    user, _ = get_user_by_id(uid)
+    if not user:
+        session.clear()
+        return None
+    status = (user.get("status") or "active").lower()
+    if status in ("blocked", "disabled", "inactive", "deleted"):
+        session.clear()
+        return None
+    # Keep session role/name in sync with DB
+    if user.get("role") and user.get("role") != session.get("role"):
+        session["role"] = user["role"]
+    if user.get("name"):
+        session["name"] = user["name"]
+    if user.get("email"):
+        session["email"] = user["email"]
+    return None
 
 
 def get_user_by_login(login):
@@ -2293,8 +2762,12 @@ def get_user_by_login(login):
 
 def get_user_by_id(uid):
     udata = load_users()
+    try:
+        uid_int = int(uid)
+    except (TypeError, ValueError):
+        uid_int = None
     for user in udata["users"]:
-        if user["id"] == uid:
+        if user.get("id") == uid or (uid_int is not None and user.get("id") == uid_int):
             return user, udata
     return None, udata
 
@@ -2345,17 +2818,28 @@ def role_required(*roles):
         def wrapped(*args, **kwargs):
             if not session.get("user_id"):
                 return _auth_challenge("Please log in to continue.")
+            user = current_user()
+            if not user:
+                session.clear()
+                return _auth_challenge("Please log in again.")
+            # Prefer DB role over stale session role
+            role = user.get("role") or session.get("role")
+            if role and role != session.get("role"):
+                session["role"] = role
             settings = load_settings()
-            if settings.get("maintenance_mode") and not _is_staff_admin():
+            if settings.get("maintenance_mode") and not _is_staff_admin(role):
                 if _wants_json_response():
                     return jsonify({"success": False, "message": "System is under maintenance."}), 503
                 flash("System is under maintenance.", "error")
                 return redirect(url_for("login"))
-            if session.get("role") not in roles:
+            if role not in roles:
                 if _wants_json_response():
                     return jsonify({"success": False, "message": "Forbidden"}), 403
+                # Staff hitting the wrong desk → quiet redirect home (no scary flash)
+                if role in ROLE_HOME:
+                    return redirect(_role_home(user))
                 flash("You do not have permission to access that page.", "error")
-                return redirect(ROLE_HOME.get(session.get("role"), "/login"))
+                return redirect(url_for("login"))
             return f(*args, **kwargs)
 
         return wrapped
@@ -2493,7 +2977,7 @@ def inject_globals():
 @app.after_request
 def _inject_csrf_assets(response):
     """Ensure every HTML page has CSRF meta + fetch helper (does not alter APIs)."""
-    if app.config.get("TESTING") or not app.config.get("WTF_CSRF_ENABLED", True):
+    if not app.config.get("WTF_CSRF_ENABLED", True):
         return response
     ctype = (response.headers.get("Content-Type") or "").lower()
     if "text/html" not in ctype:
@@ -2975,9 +3459,32 @@ def logout():
 
 
 @app.route("/")
-@role_required("citizen")
 def index():
-    return render_template("index.html", user=current_user())
+    """
+    Citizen emergency home (SOS / Call Center).
+    Guests must never see this app — send them to login/register.
+    Staff opening / are routed to their role desk.
+    """
+    uid = session.get("user_id")
+    if not uid:
+        return redirect(url_for("login", next="/"))
+
+    user = current_user()
+    if not user:
+        session.clear()
+        return redirect(url_for("login", next="/"))
+
+    # Blocked / inactive accounts cannot use the app
+    status = (user.get("status") or "active").lower()
+    if status in ("blocked", "disabled", "inactive", "deleted"):
+        session.clear()
+        flash("Your account is not allowed to access GurmadNet.", "error")
+        return redirect(url_for("login"))
+
+    role = user.get("role") or ""
+    if role != "citizen":
+        return redirect(_role_home(user))
+    return render_template("index.html", user=user)
 
 
 @app.route("/dashboard")
@@ -2991,27 +3498,8 @@ def load_announcements():
 
 
 def seed_announcements_if_empty():
-    data = load_announcements()
-    if data["announcements"]:
-        return
-    data["announcements"] = [
-        {
-            "id": 1,
-            "title": "Welcome to Somalia Emergency Response",
-            "body": "Tap SOS for immediate help. Your location is shared automatically with dispatch.",
-            "timestamp": now_str(),
-            "priority": "info",
-        },
-        {
-            "id": 2,
-            "title": "24/7 Emergency Hotline",
-            "body": "For life-threatening emergencies, call 999 while your app request is processed.",
-            "timestamp": now_str(),
-            "priority": "alert",
-        },
-    ]
-    data["next_id"] = 3
-    save_json(ANNOUNCEMENTS_FILE, data)
+    """No-op: never invent demo announcements — admins create them in CMS."""
+    return
 
 
 def _somalia_bounds_ok(lat, lng):
@@ -3019,21 +3507,38 @@ def _somalia_bounds_ok(lat, lng):
 
 
 def _known_hospital_results(query):
-    """Build geocode results from verified Somalia hospital directory."""
+    """Build geocode results from live MySQL hospitals (no hardcoded directory)."""
     out = []
-    for h in hl.search_known_hospitals(query):
-        out.append({
-            "lat": h["latitude"],
-            "lng": h["longitude"],
-            "display_name": f"{h['name']}, {h['address']}",
-            "name": h["name"],
-            "address": h["address"],
-            "city": h["city"],
-            "district": h["district"],
-            "region": h["region"],
-            "source": "known_hospital",
-            "match_score": 100,
-        })
+    q = (query or "").strip().lower()
+    if not q:
+        return out
+    try:
+        hdata = hl.load_hospitals(read_json, save_json)
+        for h in hdata.get("hospitals") or []:
+            name = (h.get("name") or "").lower()
+            addr = (h.get("address") or "").lower()
+            city = (h.get("city") or "").lower()
+            district = (h.get("district") or "").lower()
+            if not (q in name or q in addr or q in city or q in district or name in q):
+                continue
+            lat, lng = h.get("latitude"), h.get("longitude")
+            if lat is None or lng is None:
+                continue
+            out.append({
+                "lat": float(lat),
+                "lng": float(lng),
+                "display_name": f"{h.get('name')}, {h.get('address') or h.get('city') or ''}".strip(", "),
+                "name": h.get("name") or "",
+                "address": h.get("address") or "",
+                "city": h.get("city") or "",
+                "district": h.get("district") or "",
+                "region": h.get("region") or "",
+                "source": "mysql_hospital",
+                "hospital_id": h.get("id"),
+                "match_score": 100,
+            })
+    except Exception:
+        logging.getLogger(__name__).exception("MySQL hospital geocode search failed")
     return out
 
 
@@ -3568,6 +4073,9 @@ def api_hospital_profile():
         return jsonify({"success": True, "hospital": hospital})
 
     data = request.get_json(silent=True) or {}
+    # Ambulance readiness comes from hospital-managed units — ignore manual fleet flags
+    data.pop("ambulance_available", None)
+    data.pop("ambulance_count", None)
     try:
         hospital = hl.update_hospital(hid, data, read_json, save_json)
         append_audit("hospital_profile_updated", "hospital", hid)
@@ -3576,16 +4084,761 @@ def api_hospital_profile():
         return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
 
 
+@app.route("/api/hospital/logo", methods=["POST", "DELETE"])
+@role_required("hospital")
+def api_hospital_logo():
+    """Upload or clear hospital logo under static/uploads/hospitals/."""
+    user = current_user()
+    hid, hospital = _get_user_hospital(user)
+    if not hid or not hospital:
+        return jsonify({"success": False, "message": "Complete hospital registration first."}), 403
+
+    upload_dir = os.path.join(BASE_DIR, "static", "uploads", "hospitals")
+    os.makedirs(upload_dir, exist_ok=True)
+
+    if request.method == "DELETE":
+        old = (hospital.get("logo_url") or "").strip()
+        if old.startswith("/static/uploads/hospitals/"):
+            old_path = os.path.join(BASE_DIR, old.lstrip("/").replace("/", os.sep))
+            if os.path.isfile(old_path):
+                try:
+                    os.remove(old_path)
+                except OSError:
+                    pass
+        hospital = hl.update_hospital(hid, {"logo_url": ""}, read_json, save_json)
+        append_audit("hospital_logo_cleared", "hospital", hid)
+        return jsonify({"success": True, "hospital": hospital, "logo_url": ""})
+
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return jsonify({"success": False, "message": "No file uploaded"}), 400
+    settings = load_settings()
+    allowed = {
+        e.strip().lower()
+        for e in str(settings.get("upload_allowed_extensions") or "jpg,jpeg,png,gif,webp").split(",")
+        if e.strip()
+    }
+    ext = (f.filename.rsplit(".", 1)[-1] if "." in f.filename else "").lower()
+    if ext not in allowed:
+        return jsonify({
+            "success": False,
+            "message": "File type not allowed. Allowed: " + ", ".join(sorted(allowed)),
+        }), 400
+    max_mb = min(int(settings.get("upload_max_mb") or 5), 5)
+    data = f.read()
+    if len(data) > max_mb * 1024 * 1024:
+        return jsonify({"success": False, "message": f"File exceeds {max_mb} MB limit"}), 400
+
+    # Replace previous file if it was under our uploads folder
+    old = (hospital.get("logo_url") or "").strip()
+    if old.startswith("/static/uploads/hospitals/"):
+        old_path = os.path.join(BASE_DIR, old.lstrip("/").replace("/", os.sep))
+        if os.path.isfile(old_path):
+            try:
+                os.remove(old_path)
+            except OSError:
+                pass
+
+    filename = f"hospital_{hid}.{ext}"
+    path = os.path.join(upload_dir, filename)
+    with open(path, "wb") as out:
+        out.write(data)
+    url = url_for("static", filename=f"uploads/hospitals/{filename}")
+    hospital = hl.update_hospital(hid, {"logo_url": url}, read_json, save_json)
+    append_audit("hospital_logo_uploaded", "hospital", hid, {"url": url})
+    return jsonify({"success": True, "hospital": hospital, "logo_url": url})
+
+
+def _hospital_sync_ambulance_counts(hid):
+    import facility_registry as fr
+    hdata = hl.load_hospitals(read_json, save_json)
+    adata = fr.load_ambulances(read_json)
+    if fr.sync_hospital_ambulance_counts(hdata, adata):
+        hl.save_hospitals(hdata, save_json)
+    return hl.get_hospital_by_id(hdata, hid)
+
+
+def _assign_ambulance_to_emergency(em, aid, hospital_id):
+    """Bind a hospital-owned unit to an emergency and mark it busy."""
+    import facility_registry as fr
+    try:
+        aid = int(aid)
+    except (TypeError, ValueError):
+        raise ValueError("Invalid ambulance unit")
+    adata = fr.load_ambulances(read_json)
+    unit = fr.get_ambulance(adata, aid)
+    if not unit or unit.get("hospital_id") != hospital_id:
+        raise ValueError("Ambulance not found for your hospital")
+    st = (unit.get("status") or "").lower()
+    if st == "maintenance":
+        st = "offline"
+    if st == "offline":
+        raise ValueError("Ambulance is offline")
+    if st not in ("available", "busy"):
+        raise ValueError("Ambulance is not available for dispatch")
+    em["assigned_ambulance_id"] = aid
+    em["assigned_ambulance_call_sign"] = unit.get("call_sign") or ""
+    em["assigned_ambulance_driver_name"] = unit.get("driver_name") or ""
+    em["assigned_ambulance_driver_phone"] = unit.get("driver_phone") or ""
+    em["assigned_ambulance_latitude"] = unit.get("latitude")
+    em["assigned_ambulance_longitude"] = unit.get("longitude")
+    if unit.get("latitude") is not None and unit.get("longitude") is not None:
+        em["responder_latitude"] = unit.get("latitude")
+        em["responder_longitude"] = unit.get("longitude")
+    if st == "available":
+        fr.mark_ambulance_busy(aid, read_json, save_json)
+        _hospital_sync_ambulance_counts(hospital_id)
+    return unit
+
+
+def _release_emergency_ambulance(em):
+    """Return assigned unit to available when the case ends."""
+    aid = em.get("assigned_ambulance_id")
+    if not aid:
+        return
+    import facility_registry as fr
+    try:
+        aid = int(aid)
+    except (TypeError, ValueError):
+        return
+    adata = fr.load_ambulances(read_json)
+    unit = fr.get_ambulance(adata, aid)
+    if not unit:
+        return
+    if (unit.get("status") or "").lower() == "busy":
+        # Only release if driver phone still present (available requires it)
+        try:
+            fr.mark_ambulance_available(aid, read_json, save_json)
+        except ValueError:
+            # If driver phone missing, set offline rather than leave busy forever
+            try:
+                fr.update_ambulance(aid, {"status": "offline"}, read_json, save_json)
+            except ValueError:
+                return
+        hid = unit.get("hospital_id") or em.get("assigned_hospital_id")
+        if hid:
+            _hospital_sync_ambulance_counts(hid)
+
+
+@app.route("/api/hospital/ambulances", methods=["GET", "POST"])
+@role_required("hospital")
+def api_hospital_ambulances():
+    """Hospital owns units; GurmadNet stores only dispatch essentials."""
+    import facility_registry as fr
+    user = current_user()
+    hid, hospital = _get_user_hospital(user)
+    if not hid or not hospital:
+        return jsonify({"success": False, "message": "Complete hospital registration first."}), 403
+
+    if request.method == "GET":
+        data = fr.load_ambulances(read_json)
+        rows = [
+            fr.ambulance_dispatch_view(a, hospital.get("name") or "")
+            for a in fr.list_hospital_ambulances(data, hid)
+        ]
+        rows.sort(key=lambda r: int(r.get("id") or 0))
+        return jsonify({
+            "success": True,
+            "ambulances": rows,
+            "count": len(rows),
+            "available_count": sum(1 for r in rows if r.get("status") == "available"),
+        })
+
+    payload = request.get_json(silent=True) or {}
+    payload["hospital_id"] = hid
+    try:
+        row = fr.create_ambulance(payload, read_json, save_json)
+    except ValueError as exc:
+        return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
+    _hospital_sync_ambulance_counts(hid)
+    append_audit(
+        "hospital_ambulance_created",
+        "ambulance",
+        row["id"],
+        {"call_sign": row.get("call_sign"), "hospital_id": hid},
+        user.get("id"),
+    )
+    return jsonify({
+        "success": True,
+        "ambulance": fr.ambulance_dispatch_view(row, hospital.get("name") or ""),
+    }), 201
+
+
+@app.route("/api/hospital/ambulances/<int:aid>", methods=["GET", "PUT", "DELETE"])
+@role_required("hospital")
+def api_hospital_ambulance_item(aid):
+    import facility_registry as fr
+    user = current_user()
+    hid, hospital = _get_user_hospital(user)
+    if not hid or not hospital:
+        return jsonify({"success": False, "message": "Complete hospital registration first."}), 403
+
+    data = fr.load_ambulances(read_json)
+    row = fr.get_ambulance(data, aid)
+    if not row or row.get("hospital_id") != hid:
+        return jsonify({"success": False, "message": "Ambulance not found"}), 404
+
+    if request.method == "GET":
+        return jsonify({
+            "success": True,
+            "ambulance": fr.ambulance_dispatch_view(row, hospital.get("name") or ""),
+        })
+
+    if request.method == "PUT":
+        payload = request.get_json(silent=True) or {}
+        payload.pop("hospital_id", None)
+        try:
+            row = fr.update_ambulance(aid, payload, read_json, save_json)
+        except ValueError as exc:
+            return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
+        _hospital_sync_ambulance_counts(hid)
+        append_audit(
+            "hospital_ambulance_updated",
+            "ambulance",
+            aid,
+            {"fields": list(payload.keys()), "hospital_id": hid},
+            user.get("id"),
+        )
+        return jsonify({
+            "success": True,
+            "ambulance": fr.ambulance_dispatch_view(row, hospital.get("name") or ""),
+        })
+
+    try:
+        fr.delete_ambulance(aid, read_json, save_json)
+    except ValueError as exc:
+        return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
+    _hospital_sync_ambulance_counts(hid)
+    append_audit("hospital_ambulance_deleted", "ambulance", aid, {"hospital_id": hid}, user.get("id"))
+    return jsonify({"success": True})
+
+
+@app.route("/api/hospital/ambulances/<int:aid>/photo", methods=["POST", "DELETE"])
+@role_required("hospital")
+def api_hospital_ambulance_photo(aid):
+    """Upload or clear driver/vehicle photo for a hospital-owned ambulance unit.
+
+    Form/query: kind=driver (default) or kind=vehicle
+    """
+    import facility_registry as fr
+    user = current_user()
+    hid, hospital = _get_user_hospital(user)
+    if not hid or not hospital:
+        return jsonify({"success": False, "message": "Complete hospital registration first."}), 403
+
+    data = fr.load_ambulances(read_json)
+    row = fr.get_ambulance(data, aid)
+    if not row or row.get("hospital_id") != hid:
+        return jsonify({"success": False, "message": "Ambulance not found"}), 404
+
+    kind = (request.args.get("kind") or request.form.get("kind") or "driver").strip().lower()
+    if kind not in ("driver", "vehicle"):
+        return jsonify({"success": False, "message": "kind must be driver or vehicle"}), 400
+    field = "driver_photo_url" if kind == "driver" else "vehicle_photo_url"
+
+    upload_dir = os.path.join(BASE_DIR, "static", "uploads", "ambulances")
+    os.makedirs(upload_dir, exist_ok=True)
+
+    def _remove_old_file(url):
+        old = (url or "").strip()
+        if not old.startswith("/static/uploads/ambulances/"):
+            return
+        old_path = os.path.join(BASE_DIR, old.lstrip("/").replace("/", os.sep))
+        if os.path.isfile(old_path):
+            try:
+                os.remove(old_path)
+            except OSError:
+                pass
+
+    if request.method == "DELETE":
+        _remove_old_file(row.get(field))
+        row = fr.update_ambulance(aid, {field: ""}, read_json, save_json)
+        append_audit(
+            "hospital_ambulance_photo_cleared",
+            "ambulance",
+            aid,
+            {"hospital_id": hid, "kind": kind},
+            user.get("id"),
+        )
+        view = fr.ambulance_dispatch_view(row, hospital.get("name") or "")
+        return jsonify({
+            "success": True,
+            "ambulance": view,
+            "kind": kind,
+            field: "",
+            "driver_photo_url": view.get("driver_photo_url") or "",
+            "vehicle_photo_url": view.get("vehicle_photo_url") or "",
+        })
+
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return jsonify({"success": False, "message": "No file uploaded"}), 400
+    settings = load_settings()
+    allowed = {
+        e.strip().lower()
+        for e in str(settings.get("upload_allowed_extensions") or "jpg,jpeg,png,gif,webp").split(",")
+        if e.strip()
+    }
+    ext = (f.filename.rsplit(".", 1)[-1] if "." in f.filename else "").lower()
+    if ext not in allowed:
+        return jsonify({
+            "success": False,
+            "message": "File type not allowed. Allowed: " + ", ".join(sorted(allowed)),
+        }), 400
+    max_mb = min(int(settings.get("upload_max_mb") or 5), 5)
+    blob = f.read()
+    if len(blob) > max_mb * 1024 * 1024:
+        return jsonify({"success": False, "message": f"File exceeds {max_mb} MB limit"}), 400
+
+    _remove_old_file(row.get(field))
+    # Unique name so browsers never keep showing a cached previous upload
+    filename = f"amb_{hid}_{aid}_{kind}_{int(time.time())}.{ext}"
+    path = os.path.join(upload_dir, filename)
+    with open(path, "wb") as out:
+        out.write(blob)
+    url = url_for("static", filename=f"uploads/ambulances/{filename}")
+    row = fr.update_ambulance(aid, {field: url}, read_json, save_json)
+    append_audit(
+        "hospital_ambulance_photo_uploaded",
+        "ambulance",
+        aid,
+        {"hospital_id": hid, "url": url, "kind": kind},
+        user.get("id"),
+    )
+    view = fr.ambulance_dispatch_view(row, hospital.get("name") or "")
+    return jsonify({
+        "success": True,
+        "ambulance": view,
+        "kind": kind,
+        field: url,
+        "driver_photo_url": view.get("driver_photo_url") or "",
+        "vehicle_photo_url": view.get("vehicle_photo_url") or "",
+    })
+
+
+@app.route("/api/hospital/ambulances/<int:aid>/location", methods=["POST"])
+@role_required("hospital")
+def api_hospital_ambulance_location(aid):
+    """Update live GPS for dispatch coordination (and follow assigned emergencies)."""
+    import facility_registry as fr
+    user = current_user()
+    hid, hospital = _get_user_hospital(user)
+    if not hid or not hospital:
+        return jsonify({"success": False, "message": "Complete hospital registration first."}), 403
+    data = fr.load_ambulances(read_json)
+    row = fr.get_ambulance(data, aid)
+    if not row or row.get("hospital_id") != hid:
+        return jsonify({"success": False, "message": "Ambulance not found"}), 404
+    body = request.get_json(silent=True) or {}
+    try:
+        row = fr.update_ambulance(
+            aid,
+            {"latitude": body.get("latitude"), "longitude": body.get("longitude")},
+            read_json,
+            save_json,
+        )
+    except ValueError as exc:
+        return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
+
+    lat, lng = row.get("latitude"), row.get("longitude")
+    _apply_ambulance_gps_to_emergencies(aid, lat, lng)
+
+    return jsonify({
+        "success": True,
+        "ambulance": fr.ambulance_dispatch_view(row, hospital.get("name") or ""),
+    })
+
+
+def _apply_ambulance_gps_to_emergencies(aid, lat, lng):
+    """Keep assigned active emergencies following the moving unit."""
+    if lat is None or lng is None:
+        return False
+    edata = load_emergencies()
+    changed = False
+    for em in edata.get("emergencies") or []:
+        if em.get("assigned_ambulance_id") != aid:
+            continue
+        st = (em.get("status") or "").lower()
+        if st in COMPLETED_STATUSES:
+            continue
+        em["assigned_ambulance_latitude"] = lat
+        em["assigned_ambulance_longitude"] = lng
+        em["responder_latitude"] = lat
+        em["responder_longitude"] = lng
+        em["last_location_update"] = now_str()
+        changed = True
+    if changed:
+        save_emergencies(edata)
+    return changed
+
+
+@app.route("/api/hospital/ambulances/<int:aid>/gps-link", methods=["POST", "DELETE"])
+@role_required("hospital")
+def api_hospital_ambulance_gps_link(aid):
+    """Create/rotate or revoke a mobile Driver GPS share link."""
+    import facility_registry as fr
+
+    user = current_user()
+    hid, hospital = _get_user_hospital(user)
+    if not hid or not hospital:
+        return jsonify({"success": False, "message": "Complete hospital registration first."}), 403
+    data = fr.load_ambulances(read_json)
+    row = fr.get_ambulance(data, aid)
+    if not row or row.get("hospital_id") != hid:
+        return jsonify({"success": False, "message": "Ambulance not found"}), 404
+
+    if request.method == "DELETE":
+        try:
+            row = fr.revoke_ambulance_gps_token(aid, read_json, save_json)
+        except ValueError as exc:
+            return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
+        append_audit(
+            "hospital_ambulance_gps_link_revoked",
+            "ambulance",
+            aid,
+            {"hospital_id": hid},
+            user.get("id"),
+        )
+        return jsonify({
+            "success": True,
+            "ambulance": fr.ambulance_dispatch_view(row, hospital.get("name") or ""),
+        })
+
+    body = request.get_json(silent=True) or {}
+    rotate = bool(body.get("rotate"))
+    try:
+        row = fr.issue_ambulance_gps_token(aid, read_json, save_json, rotate=rotate)
+    except ValueError as exc:
+        return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
+    view = fr.ambulance_dispatch_view(row, hospital.get("name") or "")
+    path = view.get("gps_share_path") or ""
+    url = request.url_root.rstrip("/") + path if path else ""
+    append_audit(
+        "hospital_ambulance_gps_link_issued",
+        "ambulance",
+        aid,
+        {"hospital_id": hid, "rotated": rotate},
+        user.get("id"),
+    )
+    return jsonify({
+        "success": True,
+        "url": url,
+        "path": path,
+        "token": view.get("gps_share_token") or "",
+        "ambulance": view,
+    })
+
+
+@app.route("/driver/gps/<token>")
+def driver_gps_share_page(token):
+    """Public mobile page — driver shares live GPS without hospital login."""
+    import facility_registry as fr
+
+    row = fr.get_ambulance_by_gps_token(token, read_json)
+    if not row:
+        return render_template("driver_gps.html", valid=False, unit=None, token=""), 404
+    hdata = hl.load_hospitals(read_json, save_json)
+    hospital = hl.get_hospital_by_id(hdata, row.get("hospital_id")) or {}
+    return render_template(
+        "driver_gps.html",
+        valid=True,
+        token=token,
+        unit={
+            "id": row.get("id"),
+            "call_sign": row.get("call_sign") or "Ambulance",
+            "driver_name": row.get("driver_name") or "",
+            "hospital_name": hospital.get("name") or "",
+            "latitude": row.get("latitude"),
+            "longitude": row.get("longitude"),
+            "updated_at": row.get("updated_at") or "",
+        },
+    )
+
+
+@app.route("/api/driver/gps/<token>", methods=["GET"])
+def api_driver_gps_info(token):
+    import facility_registry as fr
+
+    row = fr.get_ambulance_by_gps_token(token, read_json)
+    if not row:
+        return jsonify({"success": False, "message": "Invalid or revoked GPS link"}), 404
+    hdata = hl.load_hospitals(read_json, save_json)
+    hospital = hl.get_hospital_by_id(hdata, row.get("hospital_id")) or {}
+    return jsonify({
+        "success": True,
+        "call_sign": row.get("call_sign") or "",
+        "driver_name": row.get("driver_name") or "",
+        "hospital_name": hospital.get("name") or "",
+        "latitude": row.get("latitude"),
+        "longitude": row.get("longitude"),
+        "updated_at": row.get("updated_at") or "",
+        "status": row.get("status") or "",
+    })
+
+
+@app.route("/api/driver/gps/<token>/location", methods=["POST"])
+@csrf.exempt
+def api_driver_gps_location(token):
+    """Public GPS push from driver phone (tokenized link)."""
+    import facility_registry as fr
+
+    row = fr.get_ambulance_by_gps_token(token, read_json)
+    if not row:
+        return jsonify({"success": False, "message": "Invalid or revoked GPS link"}), 404
+    body = request.get_json(silent=True) or {}
+    try:
+        updated = fr.update_ambulance(
+            row["id"],
+            {"latitude": body.get("latitude"), "longitude": body.get("longitude")},
+            read_json,
+            save_json,
+        )
+    except ValueError as exc:
+        return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
+
+    lat, lng = updated.get("latitude"), updated.get("longitude")
+    _apply_ambulance_gps_to_emergencies(updated["id"], lat, lng)
+    hdata = hl.load_hospitals(read_json, save_json)
+    hospital = hl.get_hospital_by_id(hdata, updated.get("hospital_id")) or {}
+    return jsonify({
+        "success": True,
+        "latitude": lat,
+        "longitude": lng,
+        "updated_at": updated.get("updated_at") or "",
+        "ambulance": fr.ambulance_dispatch_view(updated, hospital.get("name") or ""),
+    })
+
+
 @app.route("/police")
 @role_required("police")
 def police_dashboard():
-    return render_template("police_dashboard.html", user=current_user())
+    user = current_user()
+    sid, station = _get_user_station(user, "police")
+    import police_logic as pl
+
+    return render_template(
+        "police_dashboard.html",
+        user=user,
+        station=pl.station_view(station) if station else {
+            "id": None,
+            "name": "Police Station",
+            "operating_status": "open",
+            "city": "",
+            "district": "",
+            "phone": "",
+            "latitude": None,
+            "longitude": None,
+        },
+        station_linked=bool(sid),
+        settings=load_settings(),
+    )
+
+
+def _station_desk_mutate(role, eid, action):
+    """Shared accept / dispatch / complete / release for police or fire desk."""
+    import police_logic as pl
+
+    if role not in ("police", "fire"):
+        return jsonify({"success": False, "message": "Invalid role"}), 400
+    label = "Police" if role == "police" else "Fire & Rescue"
+    user = current_user()
+    sid, station = _get_user_station(user, role)
+    if not sid or not station:
+        return jsonify({"success": False, "message": f"No {role} station linked"}), 403
+    em, edata = get_emergency_by_id(eid)
+    if not em:
+        return jsonify({"success": False, "message": "Not found"}), 404
+    if not matches_filter(em.get("type"), role):
+        return jsonify({"success": False, "message": f"Not a {role} case"}), 403
+
+    try:
+        if action == "accept":
+            if not pl.emergency_visible_to_station(em, sid, role):
+                return jsonify({"success": False, "message": "Case not in your queue"}), 403
+            pl.claim_station(em, station, role)
+            _append_status(em, "accepted", f"{station.get('name') or label} accepted")
+            em["accepted_at"] = now_str()
+            _notify(
+                "patient",
+                em.get("user_id"),
+                f"{station.get('name') or label} accepted your emergency.",
+                eid,
+                "request_accepted",
+            )
+            append_audit(f"{role}_accept", "emergency", eid, {"station_id": sid}, user.get("id"))
+        elif action == "dispatch":
+            if em.get("assigned_station_id") != sid:
+                return jsonify({"success": False, "message": "Accept the case first"}), 403
+            if (em.get("status") or "").lower() in COMPLETED_STATUSES:
+                return jsonify({"success": False, "message": "Case is already closed"}), 400
+            pl.claim_station(em, station, role)
+            unit_word = "Police units" if role == "police" else "Fire crews"
+            _append_status(em, "dispatched", f"{unit_word} dispatched")
+            em["status"] = "dispatched"
+            _notify(
+                "patient",
+                em.get("user_id"),
+                f"{unit_word} are on the way.",
+                eid,
+                "team_dispatched",
+            )
+            append_audit(f"{role}_dispatch", "emergency", eid, {"station_id": sid}, user.get("id"))
+        elif action == "complete":
+            if em.get("assigned_station_id") != sid:
+                return jsonify({"success": False, "message": "Not assigned to your station"}), 403
+            _append_status(em, "completed", f"{label} closed the case")
+            em["status"] = "completed"
+            _stop_sos_tracking(em)
+            _notify(
+                "patient",
+                em.get("user_id"),
+                "Your emergency has been completed.",
+                eid,
+                "emergency_completed",
+            )
+            _ai_record_outcome(em)
+            append_audit(f"{role}_complete", "emergency", eid, {"station_id": sid}, user.get("id"))
+        elif action == "release":
+            if em.get("assigned_station_id") != sid:
+                return jsonify({"success": False, "message": "Not assigned to your station"}), 403
+            if (em.get("status") or "").lower() in COMPLETED_STATUSES:
+                return jsonify({"success": False, "message": "Case is already closed"}), 400
+            pl.release_station(em, sid)
+            em["assigned_to"] = role
+            _append_status(em, "pending", f"Released back to {role} queue")
+            em["status"] = "pending"
+            _notify_role_operators(
+                role, f"Emergency #{eid} released to open {role} queue", eid, "system_alert"
+            )
+            append_audit(f"{role}_release", "emergency", eid, {"station_id": sid}, user.get("id"))
+        else:
+            return jsonify({"success": False, "message": "Unknown action"}), 400
+    except ValueError as exc:
+        return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
+
+    save_emergencies(edata)
+    return jsonify({"success": True, "emergency": em, "status": em.get("status")})
+
+
+def _police_mutate_case(eid, action):
+    return _station_desk_mutate("police", eid, action)
+
+
+def _api_station_profile(kind):
+    """GET/PUT station profile for police or fire operator."""
+    import police_logic as pl
+    import facility_registry as fr
+
+    user = current_user()
+    sid, station = _get_user_station(user, kind)
+    if not sid or not station:
+        return jsonify({
+            "success": False,
+            "message": f"No {kind} station linked to this account. Ask Admin to set station_id.",
+            "station": None,
+        }), 403
+    if request.method == "GET":
+        return jsonify({"success": True, "station": pl.station_view(station)})
+
+    data = request.get_json(silent=True) or {}
+    allowed = {}
+    for key in ("name", "city", "region", "district", "address", "phone", "operating_status"):
+        if key in data:
+            allowed[key] = data.get(key)
+    if "latitude" in data or "longitude" in data:
+        allowed["latitude"] = data.get("latitude", station.get("latitude"))
+        allowed["longitude"] = data.get("longitude", station.get("longitude"))
+    try:
+        row = fr.update_station(sid, allowed, read_json, save_json)
+    except ValueError as exc:
+        return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
+    append_audit(f"{kind}_station_updated", "station", sid, {"fields": list(allowed.keys())}, user.get("id"))
+    return jsonify({"success": True, "station": pl.station_view(row)})
+
+
+@app.route("/api/police/station", methods=["GET", "PUT"])
+@role_required("police")
+def api_police_station():
+    return _api_station_profile("police")
+
+
+@app.route("/api/police/request/<int:eid>/accept", methods=["POST"])
+@role_required("police")
+def api_police_accept(eid):
+    return _station_desk_mutate("police", eid, "accept")
+
+
+@app.route("/api/police/request/<int:eid>/dispatch", methods=["POST"])
+@role_required("police")
+def api_police_dispatch(eid):
+    return _station_desk_mutate("police", eid, "dispatch")
+
+
+@app.route("/api/police/request/<int:eid>/complete", methods=["POST"])
+@role_required("police")
+def api_police_complete(eid):
+    return _station_desk_mutate("police", eid, "complete")
+
+
+@app.route("/api/police/request/<int:eid>/release", methods=["POST"])
+@role_required("police")
+def api_police_release(eid):
+    return _station_desk_mutate("police", eid, "release")
 
 
 @app.route("/fire")
 @role_required("fire")
 def fire_dashboard():
-    return render_template("fire_dashboard.html", user=current_user())
+    user = current_user()
+    sid, station = _get_user_station(user, "fire")
+    import police_logic as pl
+
+    return render_template(
+        "fire_dashboard.html",
+        user=user,
+        station=pl.station_view(station) if station else {
+            "id": None,
+            "name": "Fire Station",
+            "operating_status": "open",
+            "city": "",
+            "district": "",
+            "phone": "",
+            "latitude": None,
+            "longitude": None,
+        },
+        station_linked=bool(sid),
+        settings=load_settings(),
+    )
+
+
+@app.route("/api/fire/station", methods=["GET", "PUT"])
+@role_required("fire")
+def api_fire_station():
+    return _api_station_profile("fire")
+
+
+@app.route("/api/fire/request/<int:eid>/accept", methods=["POST"])
+@role_required("fire")
+def api_fire_accept(eid):
+    return _station_desk_mutate("fire", eid, "accept")
+
+
+@app.route("/api/fire/request/<int:eid>/dispatch", methods=["POST"])
+@role_required("fire")
+def api_fire_dispatch(eid):
+    return _station_desk_mutate("fire", eid, "dispatch")
+
+
+@app.route("/api/fire/request/<int:eid>/complete", methods=["POST"])
+@role_required("fire")
+def api_fire_complete(eid):
+    return _station_desk_mutate("fire", eid, "complete")
+
+
+@app.route("/api/fire/request/<int:eid>/release", methods=["POST"])
+@role_required("fire")
+def api_fire_release(eid):
+    return _station_desk_mutate("fire", eid, "release")
 
 
 @app.route("/admin")
@@ -3593,12 +4846,18 @@ def fire_dashboard():
 def admin_dashboard():
     user = current_user()
     role = (user or {}).get("role") or _session_role()
+    hdata = hl.load_hospitals(read_json, save_json)
+    hospitals_registry = sorted(
+        hdata.get("hospitals") or [],
+        key=lambda h: int(h.get("id") or 0),
+    )
     return render_template(
         "admin_dashboard.html",
         user=user,
         admin_role=role,
         is_super_admin=role == "super_admin",
         admin_permissions=sorted(_admin_permissions(role)),
+        hospitals_registry=hospitals_registry,
     )
 
 
@@ -3666,6 +4925,47 @@ def api_hospitals():
         except (TypeError, ValueError):
             pass
     return jsonify({"hospitals": hospitals, "count": len(hospitals)})
+
+
+@app.route("/api/stations", methods=["GET"])
+@login_required
+def api_stations():
+    """Citizen/nearby list of police or fire stations (read-only)."""
+    import facility_registry as fr
+    kind = (request.args.get("kind") or "").strip().lower()
+    if kind and kind not in ("police", "fire"):
+        return jsonify({"success": False, "message": "kind must be police or fire"}), 400
+    stations = fr.open_stations_with_coords(read_json, kind=kind or None)
+    lat = request.args.get("lat")
+    lng = request.args.get("lng")
+    if lat and lng:
+        try:
+            lat_f, lng_f = float(lat), float(lng)
+            ranked = []
+            for s in stations:
+                dist = hl.haversine_km(lat_f, lng_f, s["latitude"], s["longitude"])
+                ranked.append((dist, s))
+            ranked.sort(key=lambda x: x[0])
+            stations = [{**s, "distance_km": round(d, 2)} for d, s in ranked]
+        except (TypeError, ValueError):
+            pass
+    public = [
+        {
+            "id": s.get("id"),
+            "name": s.get("name"),
+            "kind": s.get("kind"),
+            "phone": s.get("phone") or "",
+            "city": s.get("city") or "",
+            "district": s.get("district") or "",
+            "region": s.get("region") or "",
+            "latitude": s.get("latitude"),
+            "longitude": s.get("longitude"),
+            "distance_km": s.get("distance_km"),
+            "operating_status": s.get("operating_status") or "open",
+        }
+        for s in stations
+    ]
+    return jsonify({"stations": public, "count": len(public), "kind": kind or "all"})
 
 
 @app.route("/api/nearest_hospital", methods=["GET"])
@@ -3835,6 +5135,45 @@ def api_patient_request_status():
     })
 
 
+@app.route("/api/patient/request/<int:eid>/cancel", methods=["POST"])
+@role_required("citizen")
+def api_patient_cancel_request(eid):
+    """Citizen cancels their own active emergency."""
+    uid = session.get("user_id")
+    em, edata = get_emergency_by_id(eid)
+    if not em or em.get("user_id") != uid:
+        return jsonify({"success": False, "message": "Emergency not found"}), 404
+    if not _is_active_sos(em):
+        return jsonify({"success": False, "message": "This emergency is already closed"}), 400
+
+    data = request.get_json(silent=True) or {}
+    reason = (data.get("reason") or "").strip()[:240]
+    note = "Cancelled by citizen"
+    if reason:
+        note = f"{note}: {reason}"
+
+    _append_status(em, "cancelled", note)
+    em["cancelled_at"] = now_str()
+    em["cancelled_by"] = "citizen"
+    _stop_sos_tracking(em)
+    _release_emergency_ambulance(em)
+    save_emergencies(edata)
+
+    msg = f"Citizen cancelled emergency #{eid}."
+    hid = em.get("assigned_hospital_id")
+    if hid:
+        _notify("hospital", hid, msg, eid, "emergency_cancelled")
+    sid = em.get("assigned_station_id")
+    assigned = (em.get("assigned_to") or "").lower()
+    if sid and assigned in ("police", "fire"):
+        _notify_role_operators(assigned, msg, eid, "emergency_cancelled", station_id=sid)
+    elif assigned in ("police", "fire"):
+        _notify_role_operators(assigned, msg, eid, "emergency_cancelled")
+
+    append_audit("citizen_cancel", "emergency", eid, {"reason": reason or None}, uid)
+    return jsonify({"success": True, "status": "cancelled", "id": eid})
+
+
 @app.route("/api/hospital/request/<int:eid>/accept", methods=["POST"])
 @role_required("hospital")
 def hospital_accept_request(eid):
@@ -3847,18 +5186,92 @@ def hospital_accept_request(eid):
         return jsonify({"success": False}), 404
     if em.get("assigned_hospital_id") != hid:
         return jsonify({"success": False, "message": "Not assigned to your hospital"}), 403
+    data = request.get_json(silent=True) or {}
+    amb_id = data.get("ambulance_unit_id")
+    unit = None
+    if amb_id not in (None, ""):
+        try:
+            unit = _assign_ambulance_to_emergency(em, amb_id, hid)
+        except ValueError as exc:
+            return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
     _append_status(em, "accepted", "Hospital accepted request")
     em["accepted_at"] = now_str()
     em["assigned_to"] = "hospital"
-    hdata = hl.load_hospitals(read_json, save_json)
-    hospital = hl.get_hospital_by_id(hdata, hid)
-    if hospital:
-        em["responder_latitude"] = hospital["latitude"]
-        em["responder_longitude"] = hospital["longitude"]
+    if not unit:
+        hdata = hl.load_hospitals(read_json, save_json)
+        hospital = hl.get_hospital_by_id(hdata, hid)
+        if hospital:
+            em["responder_latitude"] = hospital["latitude"]
+            em["responder_longitude"] = hospital["longitude"]
     save_emergencies(edata)
     _notify("patient", em.get("user_id"), "Your emergency request has been accepted.", eid, "request_accepted")
-    append_audit("hospital_accept", "emergency", eid)
-    return jsonify({"success": True, "status": em["status"]})
+    append_audit(
+        "hospital_accept",
+        "emergency",
+        eid,
+        {"ambulance_unit_id": em.get("assigned_ambulance_id")},
+    )
+    return jsonify({
+        "success": True,
+        "status": em["status"],
+        "assigned_ambulance_id": em.get("assigned_ambulance_id"),
+        "assigned_ambulance_call_sign": em.get("assigned_ambulance_call_sign"),
+    })
+
+
+@app.route("/api/hospital/request/<int:eid>/assign-ambulance", methods=["POST"])
+@role_required("hospital")
+def hospital_assign_ambulance(eid):
+    """Assign or re-assign a hospital unit to an active accepted case."""
+    user = current_user()
+    hid, _ = _get_user_hospital(user)
+    if not hid:
+        return jsonify({"success": False, "message": "Hospital not registered"}), 403
+    em, edata = get_emergency_by_id(eid)
+    if not em:
+        return jsonify({"success": False}), 404
+    if em.get("assigned_hospital_id") != hid:
+        return jsonify({"success": False, "message": "Not assigned to your hospital"}), 403
+    if (em.get("status") or "").lower() in COMPLETED_STATUSES:
+        return jsonify({"success": False, "message": "Case is already closed"}), 400
+    data = request.get_json(silent=True) or {}
+    amb_id = data.get("ambulance_unit_id")
+    if amb_id in (None, ""):
+        return jsonify({"success": False, "message": "ambulance_unit_id is required"}), 400
+    # Release previous unit if switching
+    prev = em.get("assigned_ambulance_id")
+    try:
+        if prev and int(prev) != int(amb_id):
+            _release_emergency_ambulance(em)
+            em["assigned_ambulance_id"] = None
+        unit = _assign_ambulance_to_emergency(em, amb_id, hid)
+    except ValueError as exc:
+        return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
+    if (em.get("status") or "").lower() in ("pending", "pending_hospital"):
+        _append_status(em, "accepted", "Hospital accepted with ambulance")
+        em["accepted_at"] = now_str()
+    elif (em.get("status") or "").lower() == "accepted":
+        _append_status(em, "dispatched", "Ambulance " + (unit.get("call_sign") or "") + " dispatched")
+        em["status"] = "dispatched"
+    save_emergencies(edata)
+    append_audit(
+        "hospital_ambulance_assigned",
+        "emergency",
+        eid,
+        {"ambulance_unit_id": unit.get("id"), "call_sign": unit.get("call_sign")},
+        user.get("id"),
+    )
+    return jsonify({
+        "success": True,
+        "emergency": em,
+        "ambulance": {
+            "id": unit.get("id"),
+            "call_sign": unit.get("call_sign"),
+            "status": "busy",
+            "driver_name": unit.get("driver_name"),
+            "driver_phone": unit.get("driver_phone"),
+        },
+    })
 
 
 @app.route("/api/hospital/request/<int:eid>/reject", methods=["POST"])
@@ -3966,6 +5379,21 @@ def api_messages(request_id):
         if session.get("role") == "citizen":
             if em.get("assigned_hospital_id"):
                 _notify("hospital", em.get("assigned_hospital_id"), f"New message on request #{request_id}", request_id)
+            elif em.get("assigned_station_id") and (em.get("assigned_to") or "") in ("police", "fire"):
+                _notify_role_operators(
+                    em.get("assigned_to"),
+                    f"New message on request #{request_id}",
+                    request_id,
+                    "system_alert",
+                    station_id=em.get("assigned_station_id"),
+                )
+            elif (em.get("assigned_to") or "") in ("police", "fire"):
+                _notify_role_operators(
+                    em.get("assigned_to"),
+                    f"New message on request #{request_id}",
+                    request_id,
+                    "system_alert",
+                )
             else:
                 _notify_admins(f"New citizen message on emergency #{request_id}", request_id, "system_alert")
         else:
@@ -4045,6 +5473,36 @@ def api_user_profile():
         user["profile_photo"] = photo
     save_users(udata)
     return jsonify({"success": True, "profile": public_user_profile(user)})
+
+
+@app.route("/api/user/password", methods=["POST"])
+@role_required("citizen")
+def api_user_change_password():
+    """Citizen changes their own password (current password required)."""
+    user, udata = get_user_by_id(session.get("user_id"))
+    if not user:
+        return jsonify({"success": False, "message": "Account not found"}), 404
+    data = request.get_json(silent=True) or {}
+    current_password = (data.get("current_password") or "").strip()
+    new_password = (data.get("new_password") or data.get("password") or "").strip()
+    confirm = (data.get("confirm_password") or "").strip()
+    if not current_password:
+        return jsonify({"success": False, "message": "Current password is required."}), 400
+    if not new_password:
+        return jsonify({"success": False, "message": "New password is required."}), 400
+    if not check_password_hash(user.get("password_hash") or "", current_password):
+        return jsonify({"success": False, "message": "Current password is incorrect."}), 400
+    if confirm and confirm != new_password:
+        return jsonify({"success": False, "message": "New passwords do not match."}), 400
+    if new_password == current_password:
+        return jsonify({"success": False, "message": "New password must be different from the current one."}), 400
+    pw_err = _password_policy_error(new_password)
+    if pw_err:
+        return jsonify({"success": False, "message": pw_err}), 400
+    user["password_hash"] = generate_password_hash(new_password)
+    save_users(udata)
+    append_audit("citizen_password_changed", "user", user.get("id"), {}, user.get("id"))
+    return jsonify({"success": True, "message": "Password updated successfully."})
 
 
 @app.route("/api/user/dashboard")
@@ -4159,7 +5617,7 @@ def _emergency_display_stage(em):
         return "arrived", DISPLAY_STAGE_LABELS["arrived"]
     if rs.get("en_route") or em.get("status") == "dispatched":
         return "on_the_way", DISPLAY_STAGE_LABELS["on_the_way"]
-    if em.get("assigned_hospital_id") or em.get("assigned_to") in RESPONSE_STATIONS:
+    if em.get("assigned_hospital_id") or em.get("assigned_to") in get_response_stations():
         return "team_assigned", DISPLAY_STAGE_LABELS["team_assigned"]
     if em.get("status") in ("pending", "pending_hospital", "accepted"):
         return "request_received", DISPLAY_STAGE_LABELS["request_received"]
@@ -4181,7 +5639,7 @@ def _build_emergency_timeline(em):
             done = bool(ts) or em.get("status") not in ("pending",)
         elif key == "team_assigned":
             ts = history.get("pending_hospital") or history.get("pending")
-            done = bool(em.get("assigned_hospital_id")) or em.get("assigned_to") in RESPONSE_STATIONS
+            done = bool(em.get("assigned_hospital_id")) or em.get("assigned_to") in get_response_stations()
             if done and not ts:
                 ts = em.get("timestamp")
         elif key == "en_route":
@@ -4255,7 +5713,7 @@ def _responder_base_location(em):
                     "longitude": coords[1],
                     "name": hospital["name"],
                 }
-    station = RESPONSE_STATIONS.get(assigned)
+    station = get_response_stations().get(assigned)
     if station and hl.is_in_somalia(station["latitude"], station["longitude"]):
         return dict(station)
     return None
@@ -4269,7 +5727,7 @@ def _compute_responder_location(em):
     if victim_lat is None or victim_lng is None or not hl.is_in_somalia(victim_lat, victim_lng):
         return None
     base = _responder_base_location(em)
-    if not base and not em.get("assigned_hospital_id") and em.get("assigned_to") not in RESPONSE_STATIONS:
+    if not base and not em.get("assigned_hospital_id") and em.get("assigned_to") not in get_response_stations():
         return None
     if not base:
         return None
@@ -4286,7 +5744,7 @@ def _compute_responder_location(em):
         progress = min(0.88, max(0.08, elapsed / 420))
     elif em.get("status") in ("accepted", "pending_hospital"):
         progress = 0.0
-    elif em.get("assigned_hospital_id") or em.get("assigned_to") in RESPONSE_STATIONS:
+    elif em.get("assigned_hospital_id") or em.get("assigned_to") in get_response_stations():
         progress = 0.04
     else:
         return None
@@ -4347,8 +5805,8 @@ def _emergency_tracking_payload(em):
                 "longitude": coords[1],
                 "phone": hospital.get("phone"),
             }
-    elif assigned in RESPONSE_STATIONS:
-        station = RESPONSE_STATIONS[assigned]
+    elif assigned in get_response_stations():
+        station = get_response_stations()[assigned]
         station_payload = {
             "type": assigned,
             "name": station["name"],
@@ -4362,12 +5820,26 @@ def _emergency_tracking_payload(em):
     else:
         location_label = district or "Location unavailable"
 
+    stored_lat, stored_lng = em.get("latitude"), em.get("longitude")
+    coords_corrected = False
+    if victim_lat is not None and victim_lng is not None:
+        if stored_lat is None or stored_lng is None or not hl.is_in_somalia(stored_lat, stored_lng):
+            coords_corrected = True
+        else:
+            try:
+                if abs(float(stored_lat) - float(victim_lat)) > 1e-5 or abs(
+                    float(stored_lng) - float(victim_lng)
+                ) > 1e-5:
+                    coords_corrected = True
+            except (TypeError, ValueError):
+                coords_corrected = True
+
     return {
         "emergency_id": em["id"],
         "latitude": victim_lat,
         "longitude": victim_lng,
         "coords_valid": coords_valid,
-        "coords_corrected": False,
+        "coords_corrected": coords_corrected,
         "accuracy_m": em.get("accuracy_m"),
         "district": district,
         "location": location_label,
@@ -4476,10 +5948,12 @@ def send_alert():
         "responder_status": {},
     }
     _apply_tracking_fields(emergency, fix)
+    # Persist first so notification FKs (request_id → emergencies.id) succeed on MySQL
+    edata["emergencies"].append(emergency)
+    save_emergencies(edata)
     _auto_dispatch_emergency(emergency)
     if (emergency.get("status") or "").lower() in COMPLETED_STATUSES:
         _stop_sos_tracking(emergency)
-    edata["emergencies"].append(emergency)
     save_emergencies(edata)
     citizen, _ = get_user_by_id(session.get("user_id"))
     _notify_emergency_contact(citizen, emergency)
@@ -4492,7 +5966,9 @@ def send_alert():
         "id": eid,
         "status": emergency.get("status"),
         "team": emergency.get("assigned_team_label"),
+        "assigned_to": emergency.get("assigned_to"),
         "assigned_hospital": emergency.get("assigned_hospital_name"),
+        "assigned_station_id": emergency.get("assigned_station_id"),
         "hospital_distance_km": emergency.get("hospital_distance_km"),
         "message": "Emergency dispatched to response team.",
     })
@@ -4680,6 +6156,7 @@ def responder_status_update(eid):
     elif action == "reached_victim":
         em["status"] = "completed"
         _stop_sos_tracking(em)
+        _release_emergency_ambulance(em)
         _notify("patient", uid, "Your emergency has been resolved.", eid, "emergency_completed")
     save_emergencies(edata)
     append_audit(action, "emergency", eid)
@@ -4769,6 +6246,7 @@ def get_emergencies():
     result = []
     user = current_user()
     hospital_id = _user_hospital_id(user) if role == "hospital" else None
+    station_id = _user_station_id(user) if role in ("police", "fire") else None
     if role == "hospital" and not hospital_id:
         return jsonify({
             "emergencies": [],
@@ -4777,11 +6255,24 @@ def get_emergencies():
             "avg_response_time": None,
             "message": "Complete hospital registration to receive dispatch requests.",
         })
+    if role in ("police", "fire") and not station_id:
+        return jsonify({
+            "emergencies": [],
+            "count": 0,
+            "refresh_interval": load_settings().get("refresh_interval", 5),
+            "avg_response_time": None,
+            "message": "Link a police/fire station to your account (Admin → Stations / Users).",
+        })
+    import police_logic as pl
+
     for em in edata["emergencies"]:
         if role not in STAFF_ADMIN_ROLES and not matches_filter(em["type"], filter_type):
             continue
         if role == "hospital":
             if em.get("assigned_hospital_id") != hospital_id:
+                continue
+        if role in ("police", "fire"):
+            if not pl.emergency_visible_to_station(em, station_id, role):
                 continue
         if status_filter:
             allowed_statuses = {s.strip() for s in status_filter.split(",") if s.strip()}
@@ -4804,6 +6295,7 @@ def get_emergencies():
             "count": len(result),
             "refresh_interval": settings.get("refresh_interval", 5),
             "avg_response_time": _avg_response_minutes(result),
+            "station_id": station_id,
         }
     )
 
@@ -4832,10 +6324,12 @@ def update_status():
                 _notify("patient", uid, "Your emergency response team has been dispatched.", eid, "team_dispatched")
             elif new_status in ("completed", "resolved"):
                 _stop_sos_tracking(em)
+                _release_emergency_ambulance(em)
                 _notify("patient", uid, "Your emergency has been completed.", eid, "emergency_completed")
                 _ai_record_outcome(em)
             elif new_status in COMPLETED_STATUSES:
                 _stop_sos_tracking(em)
+                _release_emergency_ambulance(em)
             save_emergencies(edata)
             append_audit("status_update", "emergency", eid, {"status": new_status})
             return jsonify({"success": True, "emergency": em})
@@ -5026,11 +6520,40 @@ def _admin_command_payload():
         if h.get("ambulance_available"):
             ambulances_free += count or 1
 
-    police_online = by_role.get("police", 0)
-    fire_online = by_role.get("fire", 0)
+    # Police / fire "units online" = open stations (same idea as hospitals online).
+    # Operator accounts are staff linked to those stations — shown in trends / map meta.
+    import facility_registry as fr
+
+    stations_data = fr.load_stations(read_json)
+    stations = stations_data.get("stations") or []
+    stations_by_id = {s.get("id"): s for s in stations if s.get("id") is not None}
+    police_stations = [s for s in stations if (s.get("kind") or "").lower() == "police"]
+    fire_stations = [s for s in stations if (s.get("kind") or "").lower() == "fire"]
+    police_stations_online = sum(
+        1 for s in police_stations if (s.get("operating_status") or "open").lower() != "closed"
+    )
+    fire_stations_online = sum(
+        1 for s in fire_stations if (s.get("operating_status") or "open").lower() != "closed"
+    )
+    police_operators = sum(
+        1
+        for u in users
+        if (u.get("role") or "").lower() == "police"
+        and (u.get("status") or "active").lower() != "blocked"
+    )
+    fire_operators = sum(
+        1
+        for u in users
+        if (u.get("role") or "").lower() == "fire"
+        and (u.get("status") or "active").lower() != "blocked"
+    )
+    # Prefer stations on the map/KPI (aligned with Hospitals Online).
+    # Operator accounts are staff — counted in trends, not as map unit pins when a station exists.
+    police_online = police_stations_online
+    fire_online = fire_stations_online
     citizens = by_role.get("citizen", 0)
 
-    # Map markers — live GPS preferred (latest location_history fix)
+    # Map markers — hospitals + police/fire stations (+ operators with live/station GPS)
     map_markers = []
     for h in hospitals:
         lat, lng = h.get("latitude"), h.get("longitude")
@@ -5047,22 +6570,68 @@ def _admin_command_payload():
             })
         except (TypeError, ValueError):
             pass
-    # Police / fire unit accounts with stored coords (live ops positions when available)
+
+    for s in stations:
+        kind = (s.get("kind") or "").lower()
+        if kind not in ("police", "fire"):
+            continue
+        if (s.get("operating_status") or "open").lower() == "closed":
+            continue
+        lat, lng = s.get("latitude"), s.get("longitude")
+        if lat is None or lng is None:
+            continue
+        try:
+            map_markers.append({
+                "kind": kind,
+                "id": s.get("id"),
+                "name": s.get("name") or (kind.title() + " Station"),
+                "lat": float(lat),
+                "lng": float(lng),
+                "meta": {
+                    "source": "station",
+                    "phone": s.get("phone"),
+                    "status": s.get("operating_status") or "open",
+                    "city": s.get("city") or "",
+                },
+            })
+        except (TypeError, ValueError):
+            pass
+
+    # Operators: use own GPS, else fall back to linked station coords (avoid duplicate station pin)
+    station_coords = {
+        sid: (st.get("latitude"), st.get("longitude"))
+        for sid, st in stations_by_id.items()
+        if st.get("latitude") is not None and st.get("longitude") is not None
+    }
     for u in users:
         role = (u.get("role") or "").lower()
         if role not in ("police", "fire"):
             continue
+        if (u.get("status") or "active").lower() == "blocked":
+            continue
         lat, lng = u.get("latitude"), u.get("longitude")
+        source = "operator"
+        sid = u.get("station_id")
+        if (lat is None or lng is None) and sid:
+            coords = station_coords.get(sid) or station_coords.get(int(sid) if str(sid).isdigit() else None)
+            if coords:
+                # Already have a station pin — skip duplicate at same place
+                continue
         if lat is None or lng is None:
             continue
         try:
             map_markers.append({
                 "kind": role,
-                "id": u.get("id"),
-                "name": u.get("name") or role.title(),
+                "id": "op-" + str(u.get("id")),
+                "name": user_name(u) or role.title(),
                 "lat": float(lat),
                 "lng": float(lng),
-                "meta": {"phone": u.get("phone"), "status": u.get("status")},
+                "meta": {
+                    "source": source,
+                    "phone": u.get("phone"),
+                    "status": u.get("status"),
+                    "station_id": sid,
+                },
             })
         except (TypeError, ValueError):
             pass
@@ -5207,16 +6776,30 @@ def _admin_command_payload():
     except Exception:
         email_ok = False
 
-    db_ok = True
-    try:
-        load_users()
-    except Exception:
-        db_ok = False
+    storage = _storage_status()
+    db_ok = bool(storage.get("live")) if USE_MYSQL else False
+    if not USE_MYSQL and _json_store_allowed():
+        try:
+            load_users()
+            db_ok = True
+        except Exception:
+            db_ok = False
 
     health = {
         "database": {
             "status": "healthy" if db_ok else "degraded",
-            "detail": "MySQL" if USE_MYSQL else "JSON store",
+            "detail": (
+                "MySQL {db}@{host} ({user})".format(
+                    db=storage.get("database") or "?",
+                    host=storage.get("host") or "?",
+                    user=storage.get("user") or "?",
+                )
+                if USE_MYSQL and storage.get("live")
+                else (storage.get("error") or ("JSON store" if not USE_MYSQL else "MySQL offline"))
+            ),
+            "backend": storage.get("backend"),
+            "live": storage.get("live"),
+            "table_counts": storage.get("table_counts") or {},
         },
         "api": {"status": "healthy", "detail": "Online"},
         "sms_gateway": {
@@ -5278,6 +6861,10 @@ def _admin_command_payload():
         "hospitals_total": len(hospitals),
         "police_online": police_online,
         "fire_online": fire_online,
+        "police_stations_total": len(police_stations),
+        "fire_stations_total": len(fire_stations),
+        "police_operators": police_operators,
+        "fire_operators": fire_operators,
         "ambulances_available": ambulances_free,
         "ambulances_total": ambulances_total,
         "active_emergencies": len(active_emergencies),
@@ -5833,9 +7420,28 @@ def admin_users():
         {"id": h["id"], "name": h.get("name") or f"Hospital #{h['id']}"}
         for h in (hdata.get("hospitals") or [])
     ]
+    import facility_registry as fr
+    sdata = fr.load_stations(read_json)
+    station_options = [
+        {
+            "id": s["id"],
+            "name": s.get("name") or f"Station #{s['id']}",
+            "kind": s.get("kind"),
+        }
+        for s in (sdata.get("stations") or [])
+    ]
+    snames = {s["id"]: s.get("name") for s in station_options}
+    ccdata = fr.load_call_centers(read_json)
+    call_center_options = [
+        {"id": c["id"], "name": c.get("name") or f"Call Center #{c['id']}"}
+        for c in (ccdata.get("call_centers") or [])
+    ]
+    ccnames = {c["id"]: c.get("name") for c in call_center_options}
     safe = []
     for u in users:
         hid = u.get("hospital_id")
+        sid = u.get("station_id")
+        cid = u.get("call_center_id")
         safe.append(
             {
                 "id": u["id"],
@@ -5846,6 +7452,10 @@ def admin_users():
                 "status": u.get("status", "active"),
                 "hospital_id": hid,
                 "hospital_name": hnames.get(hid) if hid else None,
+                "station_id": sid,
+                "station_name": snames.get(sid) if sid else None,
+                "call_center_id": cid,
+                "call_center_name": ccnames.get(cid) if cid else None,
                 "created_at": u.get("created_at"),
                 "last_login": u.get("last_login"),
                 "activity": u.get("activity", []),
@@ -5857,6 +7467,8 @@ def admin_users():
     return jsonify({
         "users": safe,
         "hospitals": hospital_options,
+        "stations": station_options,
+        "call_centers": call_center_options,
         "current_user_id": me,
         "active_admins": _count_active_privileged(udata),
         "active_super_admins": _count_active_super_admins(udata),
@@ -6005,21 +7617,57 @@ def admin_edit_user():
                 if not hl.get_hospital_by_id(hl.load_hospitals(read_json, save_json), hid):
                     return jsonify({"success": False, "message": "Hospital not found"}), 400
                 u["hospital_id"] = hid
+                u["station_id"] = None
+                u["call_center_id"] = None
                 save_users(udata)
                 _link_user_to_hospital(uid, hid, set_owner=True)
                 udata = load_users()
                 u = next((x for x in udata["users"] if x["id"] == uid), u)
-            elif u.get("hospital_id"):
-                # Role changed away from hospital — clear link
+            elif u.get("role") in ("police", "fire"):
+                import facility_registry as fr
+                raw_sid = data.get("station_id", u.get("station_id"))
+                try:
+                    sid = int(raw_sid or 0)
+                except (TypeError, ValueError):
+                    sid = 0
+                if not sid:
+                    return jsonify({
+                        "success": False,
+                        "message": "Select a station facility for this account",
+                    }), 400
+                stn = fr.get_station(fr.load_stations(read_json), sid)
+                if not stn or stn.get("kind") != u.get("role"):
+                    return jsonify({"success": False, "message": "Matching station not found"}), 400
+                u["station_id"] = sid
                 u["hospital_id"] = None
-                save_users(udata)
-                hdata = hl.load_hospitals(read_json, save_json)
-                for h in hdata.get("hospitals") or []:
-                    if h.get("owner_user_id") == uid:
-                        h["owner_user_id"] = None
-                hl.save_hospitals(hdata, save_json)
-                udata = load_users()
-                u = next((x for x in udata["users"] if x["id"] == uid), u)
+                u["call_center_id"] = None
+            elif u.get("role") == "call_center":
+                import facility_registry as fr
+                raw_cid = data.get("call_center_id", u.get("call_center_id"))
+                try:
+                    cid = int(raw_cid or 0)
+                except (TypeError, ValueError):
+                    cid = 0
+                if not cid:
+                    return jsonify({
+                        "success": False,
+                        "message": "Select a call center facility for this account",
+                    }), 400
+                if not fr.get_call_center(fr.load_call_centers(read_json), cid):
+                    return jsonify({"success": False, "message": "Call center not found"}), 400
+                u["call_center_id"] = cid
+                u["hospital_id"] = None
+                u["station_id"] = None
+            else:
+                if u.get("hospital_id"):
+                    u["hospital_id"] = None
+                    hdata = hl.load_hospitals(read_json, save_json)
+                    for h in hdata.get("hospitals") or []:
+                        if h.get("owner_user_id") == uid:
+                            h["owner_user_id"] = None
+                    hl.save_hospitals(hdata, save_json)
+                u["station_id"] = None
+                u["call_center_id"] = None
 
             log_activity(u, "Profile updated by admin")
             save_users(udata)
@@ -6031,6 +7679,8 @@ def admin_edit_user():
                     "role": u.get("role"),
                     "status": u.get("status"),
                     "hospital_id": u.get("hospital_id"),
+                    "station_id": u.get("station_id"),
+                    "call_center_id": u.get("call_center_id"),
                 },
                 session.get("user_id"),
             )
@@ -6053,23 +7703,33 @@ def admin_create_user():
     if role not in VALID_ROLES:
         return jsonify({"success": False, "message": "Invalid role"}), 400
 
-    # + Add user → citizens only (Admin or Super Admin with users_ops)
-    # + Create staff → Super Admin only: admin, hospital, police, fire
+    # + Add user → citizens (users_ops)
+    # + Create staff → hospital/police/fire/call_center (users_ops); admin (users_admins)
     if role == "citizen":
         denied = _require_admin_perm("users_ops")
         if denied:
             return denied
+    elif role in OPS_CREATE_ROLES:
+        denied = _require_admin_perm("users_ops")
+        if denied:
+            return denied
+    elif role == "admin":
+        if not _has_admin_perm("users_admins"):
+            return jsonify({
+                "success": False,
+                "message": "Only Super Admin can create Admin accounts",
+            }), 403
     elif role in SUPER_CREATE_ROLES:
         if not _has_admin_perm("users_admins"):
             return jsonify({
                 "success": False,
-                "message": "Only Super Admin can create Admin, Hospital, Police, or Fire accounts",
+                "message": "Only Super Admin can create this account type",
             }), 403
     else:
         return jsonify({
             "success": False,
             "message": "This role cannot be created here. Use Add user for citizens, "
-            "or Create staff for Admin / Hospital / Police / Fire.",
+            "or Create staff for Hospital / Police / Fire / Call Center.",
         }), 400
 
     name = (data.get("name") or data.get("full_name") or "").strip()
@@ -6082,13 +7742,32 @@ def admin_create_user():
     # Test domains (example.com) allowed only when EMAIL_PROVIDER=memory / ALLOW_TEST_EMAILS.
     if reject and not allow_test_email_domains():
         return jsonify({"success": False, "message": reject}), 400
-    if any(u["email"].lower() == email for u in udata["users"]):
-        return jsonify({"success": False, "message": "Email already registered"}), 400
     password = (data.get("password") or "").strip()
     pw_err = _password_policy_error(password)
     if pw_err:
         return jsonify({"success": False, "message": pw_err}), 400
-    udata["next_id"] += 1
+
+    existing = next(
+        (u for u in udata["users"] if (u.get("email") or "").lower() == email),
+        None,
+    )
+    # Creating a new citizen must not collide; staff create may upgrade a citizen.
+    if existing and role == "citizen":
+        return jsonify({"success": False, "message": "Email already registered"}), 400
+    if existing and role != "citizen":
+        existing_role = (existing.get("role") or "").lower()
+        if existing_role not in ("citizen", role):
+            return jsonify({
+                "success": False,
+                "message": (
+                    f"Email already registered as {existing_role}. "
+                    "Open Users → Edit that account, or use a different email."
+                ),
+            }), 400
+        # Fall through — upgrade / refresh staff fields on existing user below.
+    elif existing:
+        return jsonify({"success": False, "message": "Email already registered"}), 400
+
     actor = current_user() or {}
     if role == "admin":
         created_label = "Admin account created by " + (actor.get("name") or "Super Admin")
@@ -6097,6 +7776,8 @@ def admin_create_user():
     else:
         created_label = "Citizen created by admin"
     hospital_id = None
+    station_id = None
+    call_center_id = None
     if role == "hospital":
         try:
             hospital_id = int(data.get("hospital_id") or 0)
@@ -6109,7 +7790,87 @@ def admin_create_user():
             }), 400
         if not hl.get_hospital_by_id(hl.load_hospitals(read_json, save_json), hospital_id):
             return jsonify({"success": False, "message": "Hospital not found"}), 400
+    if role in ("police", "fire"):
+        import facility_registry as fr
+        try:
+            station_id = int(data.get("station_id") or 0)
+        except (TypeError, ValueError):
+            station_id = 0
+        if not station_id:
+            return jsonify({
+                "success": False,
+                "message": "Select a police/fire station facility to link this account",
+            }), 400
+        stn = fr.get_station(fr.load_stations(read_json), station_id)
+        if not stn or stn.get("kind") != role:
+            return jsonify({"success": False, "message": "Matching station not found"}), 400
+    if role == "call_center":
+        import facility_registry as fr
+        try:
+            call_center_id = int(data.get("call_center_id") or 0)
+        except (TypeError, ValueError):
+            call_center_id = 0
+        if not call_center_id:
+            return jsonify({
+                "success": False,
+                "message": "Select a call center facility to link this account",
+            }), 400
+        if not fr.get_call_center(fr.load_call_centers(read_json), call_center_id):
+            return jsonify({"success": False, "message": "Call center not found"}), 400
 
+    if existing:
+        # Promote citizen (or refresh same-role staff) instead of failing duplicate email.
+        existing["name"] = name
+        existing["phone"] = (data.get("phone") or "").strip()
+        existing["password_hash"] = generate_password_hash(password)
+        existing["role"] = role
+        existing["status"] = "active"
+        existing["email_verified"] = True
+        existing["hospital_id"] = hospital_id
+        existing["station_id"] = station_id
+        existing["call_center_id"] = call_center_id
+        existing.setdefault("activity", [])
+        existing["activity"] = (
+            [{"action": created_label + " (upgraded)", "timestamp": now_str()}]
+            + existing["activity"]
+        )[:50]
+        save_users(udata)
+        if role == "hospital" and hospital_id:
+            _link_user_to_hospital(existing["id"], hospital_id, set_owner=True)
+        if role == "call_center" and call_center_id:
+            try:
+                import facility_registry as fr
+
+                ccdata = fr.load_call_centers(read_json)
+                row = fr.get_call_center(ccdata, call_center_id)
+                if row is not None:
+                    row["owner_user_id"] = existing["id"]
+                    fr.save_call_centers(ccdata, save_json)
+            except Exception:
+                logging.getLogger(__name__).exception("call center owner link failed")
+        append_audit(
+            "admin_user_upgraded",
+            "user",
+            existing["id"],
+            {
+                "role": role, "email": email, "name": name,
+                "hospital_id": hospital_id, "station_id": station_id,
+                "call_center_id": call_center_id,
+            },
+            session.get("user_id"),
+        )
+        return jsonify({
+            "success": True,
+            "id": existing["id"],
+            "role": role,
+            "upgraded": True,
+            "hospital_id": hospital_id,
+            "station_id": station_id,
+            "call_center_id": call_center_id,
+            "message": "Existing account upgraded to " + role,
+        })
+
+    udata["next_id"] += 1
     user = {
         "id": uid,
         "name": name,
@@ -6123,6 +7884,8 @@ def admin_create_user():
         "email_verify_token": None,
         "email_verify_expires": None,
         "hospital_id": hospital_id,
+        "station_id": station_id,
+        "call_center_id": call_center_id,
         "created_at": now_str(),
         "last_login": None,
         "created_by": session.get("user_id"),
@@ -6132,14 +7895,33 @@ def admin_create_user():
     save_users(udata)
     if role == "hospital" and hospital_id:
         _link_user_to_hospital(uid, hospital_id, set_owner=True)
+    if role == "call_center" and call_center_id:
+        try:
+            import facility_registry as fr
+
+            ccdata = fr.load_call_centers(read_json)
+            row = fr.get_call_center(ccdata, call_center_id)
+            if row is not None:
+                row["owner_user_id"] = uid
+                fr.save_call_centers(ccdata, save_json)
+        except Exception:
+            logging.getLogger(__name__).exception("call center owner link failed")
     append_audit(
         "admin_user_created",
         "user",
         uid,
-        {"role": role, "email": email, "name": name, "hospital_id": hospital_id},
+        {
+            "role": role, "email": email, "name": name,
+            "hospital_id": hospital_id, "station_id": station_id,
+            "call_center_id": call_center_id,
+        },
         session.get("user_id"),
     )
-    return jsonify({"success": True, "id": uid, "role": role, "hospital_id": hospital_id})
+    return jsonify({
+        "success": True, "id": uid, "role": role,
+        "hospital_id": hospital_id, "station_id": station_id,
+        "call_center_id": call_center_id,
+    })
 
 
 @app.route("/api/admin/content")
@@ -6262,8 +8044,16 @@ def admin_system_settings_get():
     if denied:
         return denied
     settings = load_settings()
+    storage = _storage_status()
     db_info = {
-        "backend": "MySQL" if USE_MYSQL else "JSON file store",
+        "backend": "MySQL" if USE_MYSQL else "JSON file store (tests only)",
+        "live": storage.get("live"),
+        "database": storage.get("database"),
+        "user": storage.get("user"),
+        "host": storage.get("host"),
+        "port": storage.get("port"),
+        "table_counts": storage.get("table_counts") or {},
+        "error": storage.get("error"),
         "database_dir": DATABASE_DIR,
     }
     return jsonify({
@@ -6374,13 +8164,62 @@ def admin_emergencies_update():
     eid = int(data.get("id", 0))
     edata = load_emergencies()
     for em in edata["emergencies"]:
-        if em["id"] == eid:
-            if "status" in data:
-                em["status"] = data["status"]
-            if "assigned_to" in data:
-                em["assigned_to"] = data["assigned_to"]
-            save_emergencies(edata)
-            return jsonify({"success": True, "emergency": em})
+        if em["id"] != eid:
+            continue
+        normalize_emergency_record(em)
+        if "status" in data:
+            st = (data.get("status") or "").strip()
+            allowed = set(STATUS_VALUES) | set(COMPLETED_STATUSES) | {"no_hospital_available", "rejected_by_hospital"}
+            if st not in allowed:
+                return jsonify({"success": False, "message": "Invalid status"}), 400
+            _append_status(em, st, data.get("note") or "Admin status update")
+            if st in COMPLETED_STATUSES:
+                _stop_sos_tracking(em)
+        if "assigned_to" in data:
+            em["assigned_to"] = data["assigned_to"]
+            em["assigned_team_label"] = TEAM_LABELS.get(data["assigned_to"], em.get("assigned_team_label") or "")
+        if "assigned_hospital_id" in data:
+            hid = data.get("assigned_hospital_id")
+            if hid in (None, "", 0, "0"):
+                em["assigned_hospital_id"] = None
+                em["assigned_hospital_name"] = ""
+            else:
+                try:
+                    hid = int(hid)
+                except (TypeError, ValueError):
+                    return jsonify({"success": False, "message": "Invalid hospital id"}), 400
+                h = hl.get_hospital_by_id(hl.load_hospitals(read_json, save_json), hid)
+                if not h:
+                    return jsonify({"success": False, "message": "Hospital not found"}), 400
+                em["assigned_hospital_id"] = hid
+                em["assigned_hospital_name"] = h.get("name") or ""
+        if "assigned_station_id" in data:
+            sid = data.get("assigned_station_id")
+            if sid in (None, "", 0, "0"):
+                em["assigned_station_id"] = None
+            else:
+                import facility_registry as fr
+                try:
+                    sid = int(sid)
+                except (TypeError, ValueError):
+                    return jsonify({"success": False, "message": "Invalid station id"}), 400
+                stn = fr.get_station(fr.load_stations(read_json), sid)
+                if not stn:
+                    return jsonify({"success": False, "message": "Station not found"}), 400
+                em["assigned_station_id"] = sid
+                em["assigned_team_label"] = stn.get("name") or em.get("assigned_team_label")
+        if "notes" in data and data["notes"] is not None:
+            em["notes"] = str(data["notes"])
+        if "assigned_team_label" in data and data["assigned_team_label"] is not None:
+            em["assigned_team_label"] = str(data["assigned_team_label"])
+        save_emergencies(edata)
+        append_audit("emergency_updated", "emergency", eid, {
+            "status": em.get("status"),
+            "assigned_to": em.get("assigned_to"),
+            "assigned_hospital_id": em.get("assigned_hospital_id"),
+            "assigned_station_id": em.get("assigned_station_id"),
+        }, session.get("user_id"))
+        return jsonify({"success": True, "emergency": em})
     return jsonify({"success": False}), 404
 
 
@@ -6430,7 +8269,107 @@ def admin_emergencies_export():
     )
 
 
-def _create_emergency_from_call(call, etype, team, operator, notes=""):
+def _sync_emergency_location_from_call(emergency, call):
+    """Copy current call GPS/address onto an emergency (after operator location fix)."""
+    lat = call.get("latitude")
+    lng = call.get("longitude")
+    if lat is None or lng is None:
+        return emergency
+    try:
+        lat, lng = float(lat), float(lng)
+    except (TypeError, ValueError):
+        return emergency
+    address = (call.get("address") or call.get("district") or "").strip()
+    emergency["latitude"] = lat
+    emergency["longitude"] = lng
+    emergency["location"] = address or emergency.get("location") or f"GPS {lat:.5f}, {lng:.5f}"
+    emergency["district"] = (call.get("district") or address or emergency.get("district") or "")
+    if call.get("accuracy_m") is not None:
+        emergency["accuracy_m"] = call.get("accuracy_m")
+    fix = build_location_fix({
+        "latitude": lat,
+        "longitude": lng,
+        "district": emergency["district"],
+        "method": "gps",
+        "accuracy_m": emergency.get("accuracy_m"),
+        "confidence": 90,
+    })
+    emergency.setdefault("location_history", [])
+    if fix.get("latitude") is not None:
+        emergency["location_history"].append(fix)
+    _apply_tracking_fields(emergency, fix if fix.get("latitude") is not None else None)
+    return emergency
+
+
+def _force_assign_call_center_facility(emergency, team, preferred_id):
+    """Pin the emergency to the nearest facility shown on the Call Center card."""
+    if preferred_id is None or preferred_id == "":
+        return emergency
+    try:
+        preferred_id = int(preferred_id)
+    except (TypeError, ValueError):
+        return emergency
+
+    if team == "hospital":
+        hdata = hl.seed_hospitals_if_empty(read_json, save_json)
+        hospital = hl.get_hospital_by_id(hdata, preferred_id)
+        if not hospital:
+            return emergency
+        queue = [preferred_id] + [
+            hid for hid in (emergency.get("escalation_queue") or []) if hid != preferred_id
+        ]
+        emergency["escalation_queue"] = queue
+        emergency["escalation_index"] = 0
+        settings = load_settings()
+        timeout = int(settings.get("hospital_response_timeout_sec", 120))
+        assigned = hl.assign_next_hospital(emergency, hdata, timeout)
+        if assigned:
+            dist = emergency.get("hospital_distance_km")
+            dist_txt = f" ({dist} km)" if dist is not None else ""
+            _append_status(
+                emergency,
+                "pending_hospital",
+                f"Call Center nearest hospital: {assigned['name']}{dist_txt}",
+            )
+        return emergency
+
+    if team in ("police", "fire"):
+        import facility_registry as fr
+        import police_logic as pl
+
+        data = fr.load_stations(read_json)
+        station = fr.get_station(data, preferred_id)
+        if not station or (station.get("kind") or "") != team:
+            # Fall back to nearest open by current GPS
+            station = pl.nearest_open_station(
+                team, emergency.get("latitude"), emergency.get("longitude"), read_json
+            )
+        if not station:
+            return emergency
+        emergency["assigned_station_id"] = station.get("id")
+        emergency["assigned_team_label"] = station.get("name") or emergency.get("assigned_team_label")
+        if station.get("phone"):
+            emergency["contact_number"] = station.get("phone")
+        try:
+            dist = hl.haversine_km(
+                float(emergency.get("latitude") or 0),
+                float(emergency.get("longitude") or 0),
+                float(station["latitude"]),
+                float(station["longitude"]),
+            )
+            dist = round(dist, 2)
+        except (TypeError, ValueError, KeyError):
+            dist = None
+        dist_txt = f" ({dist} km)" if dist is not None else ""
+        _append_status(
+            emergency,
+            emergency.get("status") or "pending",
+            f"Call Center nearest {team}: {station.get('name')}{dist_txt}",
+        )
+    return emergency
+
+
+def _create_emergency_from_call(call, etype, team, operator, notes="", preferred_facility_id=None):
     """Create a standard emergency record from a call-center session (reuses auto-dispatch)."""
     edata = load_emergencies()
     eid = edata["next_id"]
@@ -6469,14 +8408,35 @@ def _create_emergency_from_call(call, etype, team, operator, notes=""):
         "request_mode": "call_center",
     }
     _apply_tracking_fields(emergency, fix if fix.get("latitude") is not None else None)
-    _auto_dispatch_emergency(emergency)
+    # Pin preferred hospital before auto-dispatch so the correct desk is notified once
+    if preferred_facility_id is not None and team == "hospital":
+        try:
+            pid = int(preferred_facility_id)
+            emergency["escalation_queue"] = [pid]
+            emergency["escalation_index"] = 0
+        except (TypeError, ValueError):
+            pass
     edata["emergencies"].append(emergency)
+    save_emergencies(edata)
+    _auto_dispatch_emergency(emergency)
+    # Pin preferred police/fire station after soft-assign
+    if preferred_facility_id is not None and team in ("police", "fire"):
+        _force_assign_call_center_facility(emergency, team, preferred_facility_id)
+    # Ensure hospital preferred stuck (re-pin if auto-dispatch drifted)
+    if preferred_facility_id is not None and team == "hospital":
+        if emergency.get("assigned_hospital_id") != int(preferred_facility_id):
+            _force_assign_call_center_facility(emergency, team, preferred_facility_id)
     save_emergencies(edata)
     append_audit(
         "call_center_dispatch",
         "emergency",
         eid,
-        {"call_id": call.get("id"), "type": etype, "team": team},
+        {
+            "call_id": call.get("id"),
+            "type": etype,
+            "team": team,
+            "preferred_facility_id": preferred_facility_id,
+        },
         (operator or {}).get("id"),
     )
     # Parallel AI memory for learning; operator already approved via Call Center UI
@@ -6570,7 +8530,7 @@ def call_center_dashboard():
     return render_template(
         "call_center_dashboard.html",
         user=user,
-        call_center_phone=settings.get("call_center_phone", "+252612000999"),
+        call_center_phone=settings.get("call_center_phone") or "",
         type_options=cc.EMERGENCY_TYPE_OPTIONS,
     )
 
@@ -6584,7 +8544,7 @@ def call_center_history_page():
 @app.route("/api/call-center/initiate", methods=["POST"])
 @role_required("citizen")
 def api_call_center_initiate():
-    """Citizen presses Call Emergency Center — silent GPS + open tel: link."""
+    """Citizen starts an in-app WebRTC voice session with Call Center (no tel: dialer)."""
     settings = load_settings()
     if not settings.get("call_center_enabled", True):
         return jsonify({"success": False, "message": "Call Center is currently unavailable."}), 403
@@ -6593,6 +8553,7 @@ def api_call_center_initiate():
 
     data = request.get_json(silent=True) or {}
     user = current_user()
+    # Always bind call to the authenticated session user — never trust client citizen_id.
     payload = {
         "user_id": session.get("user_id"),
         "name": data.get("name") or (user.get("name") if user else "") or session.get("name"),
@@ -6602,16 +8563,25 @@ def api_call_center_initiate():
         "address": data.get("address") or data.get("district") or "",
         "district": data.get("district") or "",
         "accuracy_m": data.get("accuracy_m"),
+        "voice_mode": True,
         "device_info": data.get("device_info") or {
             "user_agent": request.headers.get("User-Agent", "")[:300],
         },
     }
     try:
-        call = cc.create_incoming_call(payload, read_json, save_json)
+        call = cc.create_incoming_call(
+            payload, read_json, save_json, stations=get_response_station_list()
+        )
     except ValueError as exc:
         return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
 
-    phone = settings.get("call_center_phone") or cc.default_call_center_settings()["phone_primary"]
+    from voice_signaling import emit_incoming_call, ice_servers
+
+    try:
+        emit_incoming_call(call)
+    except Exception:
+        logging.getLogger(__name__).exception("emit_incoming_call failed")
+
     _notify_admins(
         f"Incoming Call Center call #{call['id']} from {call['caller_name']} ({call['phone']})",
         None,
@@ -6621,8 +8591,8 @@ def api_call_center_initiate():
     return jsonify({
         "success": True,
         "call_id": call["id"],
-        "call_center_phone": phone,
-        "tel_href": "tel:" + phone.replace(" ", ""),
+        "voice_mode": True,
+        "ice_servers": ice_servers(),
         "message": "Connecting to Emergency Call Center. Your location was shared with the operator.",
         "call": {
             "id": call["id"],
@@ -6630,6 +8600,9 @@ def api_call_center_initiate():
             "latitude": call["latitude"],
             "longitude": call["longitude"],
             "address": call["address"],
+            "voice_mode": True,
+            "caller_name": call.get("caller_name"),
+            "phone": call.get("phone"),
         },
     })
 
@@ -6679,7 +8652,7 @@ def api_call_center_get(call_id):
         return jsonify({"success": False, "message": "Not found"}), 404
     if call.get("latitude") and call.get("longitude"):
         call["nearest"] = cc.find_nearest_responders(
-            call["latitude"], call["longitude"], read_json, save_json, RESPONSE_STATIONS
+            call["latitude"], call["longitude"], read_json, save_json, get_response_station_list()
         )
     history = _citizen_emergency_history(call.get("user_id"))
     call["emergency_history"] = history
@@ -6700,14 +8673,16 @@ def api_call_center_get(call_id):
 @call_center_required
 def api_call_center_answer(call_id):
     try:
-        call = cc.answer_call(call_id, current_user(), read_json, save_json)
+        call = cc.answer_call(
+            call_id, current_user(), read_json, save_json, stations=get_response_station_list()
+        )
     except ValueError as exc:
         return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
     history = _citizen_emergency_history(call.get("user_id"))
     call["emergency_history"] = history
     if call.get("latitude") is not None and call.get("longitude") is not None:
         call["nearest"] = cc.find_nearest_responders(
-            call["latitude"], call["longitude"], read_json, save_json, RESPONSE_STATIONS
+            call["latitude"], call["longitude"], read_json, save_json, get_response_station_list()
         )
     ai_payload = None
     try:
@@ -6720,6 +8695,41 @@ def api_call_center_answer(call_id):
         "call": call,
         "emergency_history": history,
         "ai": ai_payload,
+    })
+
+
+@app.route("/api/call-center/calls/<int:call_id>/location", methods=["POST"])
+@call_center_required
+def api_call_center_location(call_id):
+    """Operator corrects caller GPS/address; nearest hospital/police/fire recomputed."""
+    payload = request.get_json(silent=True) or {}
+    try:
+        call = cc.update_call_location(
+            call_id,
+            payload,
+            read_json,
+            save_json,
+            stations=get_response_station_list(),
+            operator=current_user(),
+        )
+    except ValueError as exc:
+        return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
+    append_audit(
+        "call_center_location_update",
+        "call",
+        call_id,
+        {
+            "latitude": call.get("latitude"),
+            "longitude": call.get("longitude"),
+            "address": call.get("address"),
+        },
+        current_user().get("id"),
+    )
+    return jsonify({
+        "success": True,
+        "message": "Location updated — nearest responders refreshed.",
+        "call": call,
+        "nearest": call.get("nearest") or {},
     })
 
 
@@ -6855,7 +8865,9 @@ def api_call_center_ai_decision(call_id):
 
     if not call.get("operator_id"):
         try:
-            call = cc.answer_call(call_id, operator, read_json, save_json)
+            call = cc.answer_call(
+                call_id, operator, read_json, save_json, stations=get_response_station_list()
+            )
         except ValueError:
             pass
         data = cc.load_calls(read_json, save_json)
@@ -6921,7 +8933,7 @@ def api_call_center_nearest(call_id):
     if not call:
         return jsonify({"success": False, "message": "Not found"}), 404
     nearest = cc.find_nearest_responders(
-        call["latitude"], call["longitude"], read_json, save_json, RESPONSE_STATIONS
+        call["latitude"], call["longitude"], read_json, save_json, get_response_station_list()
     )
     call["nearest"] = nearest
     cc.save_calls(data, save_json)
@@ -6947,7 +8959,9 @@ def api_call_center_dispatch(call_id):
     operator = current_user()
     if not call.get("operator_id"):
         try:
-            call = cc.answer_call(call_id, operator, read_json, save_json)
+            call = cc.answer_call(
+                call_id, operator, read_json, save_json, stations=get_response_station_list()
+            )
         except ValueError:
             pass
         data = cc.load_calls(read_json, save_json)
@@ -6997,6 +9011,181 @@ def api_call_center_dispatch(call_id):
             for e in created
         ],
         "message": f"Dispatched to {', '.join(teams)}.",
+    })
+
+
+@app.route("/api/call-center/calls/<int:call_id>/alert", methods=["POST"])
+@call_center_required
+def api_call_center_alert(call_id):
+    """
+    Friin / alert nearest hospital, police, or fire.
+    Uses current call GPS + the exact nearest facility on the Call Center card.
+    """
+    payload = request.get_json(silent=True) or {}
+    target = (payload.get("target") or payload.get("team") or "").strip().lower()
+    type_map = {
+        "hospital": "medical",
+        "medical": "medical",
+        "police": "security",
+        "security": "security",
+        "fire": "fire",
+    }
+    etype = type_map.get(target)
+    if not etype:
+        return jsonify({
+            "success": False,
+            "message": "target must be hospital, police, or fire",
+        }), 400
+    team = "hospital" if etype == "medical" else ("police" if etype == "security" else "fire")
+
+    call_data = cc.load_calls(read_json, save_json)
+    call = cc.get_call_by_id(call_data, call_id)
+    if not call:
+        return jsonify({"success": False, "message": "Call not found"}), 404
+    if call.get("status") in ("completed", "cancelled", "missed"):
+        return jsonify({"success": False, "message": "Call is closed."}), 400
+    if call.get("latitude") is None or call.get("longitude") is None:
+        return jsonify({"success": False, "message": "Call has no GPS. Update location first."}), 400
+
+    operator = current_user()
+    if not call.get("operator_id"):
+        try:
+            call = cc.answer_call(
+                call_id, operator, read_json, save_json, stations=get_response_station_list()
+            )
+        except ValueError:
+            pass
+        call_data = cc.load_calls(read_json, save_json)
+        call = cc.get_call_by_id(call_data, call_id)
+
+    # Always recompute nearest from the *current* call GPS (after operator corrections)
+    nearest = cc.find_nearest_responders(
+        call["latitude"],
+        call["longitude"],
+        read_json,
+        save_json,
+        get_response_station_list(),
+    )
+    call["nearest"] = nearest
+    cc.save_calls(call_data, save_json)
+
+    preferred_id = payload.get("preferred_id") or payload.get("facility_id")
+    if preferred_id is None and nearest.get(team):
+        preferred_id = nearest[team].get("id")
+    # Ignore non-numeric legacy ids like "police"
+    try:
+        preferred_id = int(preferred_id) if preferred_id is not None else None
+    except (TypeError, ValueError):
+        preferred_id = nearest.get(team, {}).get("id") if nearest.get(team) else None
+        try:
+            preferred_id = int(preferred_id) if preferred_id is not None else None
+        except (TypeError, ValueError):
+            preferred_id = None
+
+    notes = (payload.get("notes") or call.get("notes") or "").strip()
+    existing_teams = set(call.get("dispatched_to") or [])
+    created = None
+    if team not in existing_teams:
+        created = _create_emergency_from_call(
+            call,
+            etype,
+            team,
+            operator,
+            notes or f"Call Center alert ({team})",
+            preferred_facility_id=preferred_id,
+        )
+        _notify_call_dispatch(call, created, [team])
+        existing_ids = list(dict.fromkeys((call.get("emergency_ids") or []) + [created["id"]]))
+        existing_types = list(dict.fromkeys((call.get("emergency_types") or []) + [created.get("type")]))
+        call = cc.record_dispatch(
+            call_id,
+            existing_types,
+            existing_ids,
+            list(existing_teams | {team}),
+            read_json,
+            save_json,
+        )
+        emergency = created
+        fac_name = (
+            (nearest.get(team) or {}).get("name")
+            or created.get("assigned_hospital_name")
+            or created.get("assigned_team_label")
+            or team
+        )
+        message = f"Alert sent to {fac_name} with caller GPS {call.get('latitude')}, {call.get('longitude')}."
+    else:
+        # Re-alert: sync corrected GPS onto existing emergency, then notify again
+        edata = load_emergencies()
+        emergency = None
+        for em in edata.get("emergencies") or []:
+            if em.get("call_id") == call_id and em.get("assigned_to") == team:
+                emergency = em
+                break
+        if not emergency:
+            for em in edata.get("emergencies") or []:
+                if em.get("id") in (call.get("emergency_ids") or []) and em.get("assigned_to") == team:
+                    emergency = em
+                    break
+        if not emergency:
+            return jsonify({"success": False, "message": "No existing case to re-alert."}), 404
+
+        _sync_emergency_location_from_call(emergency, call)
+        if preferred_id is not None:
+            _force_assign_call_center_facility(emergency, team, preferred_id)
+        save_emergencies(edata)
+
+        gps_line = (
+            f"{call.get('caller_name')} — GPS {call.get('latitude')}, {call.get('longitude')} "
+            f"— {call.get('address')}"
+        )
+        friin = f"FRIIN / ALERT from Call Center (updated location): {gps_line}"
+        if team == "hospital" and emergency.get("assigned_hospital_id"):
+            _notify("hospital", emergency["assigned_hospital_id"], friin, emergency["id"], "team_assigned")
+        elif team in ("police", "fire"):
+            udata = load_users()
+            for u in udata["users"]:
+                if u.get("status") == "blocked":
+                    continue
+                if u.get("role") != team:
+                    continue
+                sid = emergency.get("assigned_station_id")
+                if sid and u.get("station_id") and int(u.get("station_id") or 0) != int(sid):
+                    continue
+                _notify(team, u["id"], friin, emergency["id"], "team_assigned")
+        message = (
+            f"Re-alert sent with corrected GPS {call.get('latitude')}, {call.get('longitude')}."
+        )
+
+    append_audit(
+        "call_center_alert",
+        "call",
+        call_id,
+        {
+            "target": team,
+            "emergency_id": (emergency or {}).get("id"),
+            "created": bool(created),
+            "preferred_facility_id": preferred_id,
+            "latitude": call.get("latitude"),
+            "longitude": call.get("longitude"),
+        },
+        operator.get("id"),
+    )
+    return jsonify({
+        "success": True,
+        "message": message,
+        "target": team,
+        "call": call,
+        "nearest": nearest,
+        "emergency": {
+            "id": emergency.get("id"),
+            "assigned_to": emergency.get("assigned_to"),
+            "assigned_hospital_id": emergency.get("assigned_hospital_id"),
+            "assigned_hospital_name": emergency.get("assigned_hospital_name"),
+            "assigned_station_id": emergency.get("assigned_station_id"),
+            "latitude": emergency.get("latitude"),
+            "longitude": emergency.get("longitude"),
+            "location": emergency.get("location"),
+        } if emergency else None,
     })
 
 
@@ -7162,7 +9351,7 @@ def api_call_center_settings():
         "success": True,
         "settings": {
             "enabled": settings.get("call_center_enabled", True),
-            "phone_primary": settings.get("call_center_phone", "+252612000999"),
+            "phone_primary": settings.get("call_center_phone") or "",
             "phone_secondary": settings.get("call_center_phone_secondary", ""),
             "auto_nearest": settings.get("call_center_auto_nearest", True),
             "heartbeat_sec": settings.get("call_center_heartbeat_sec", 45),
@@ -7266,23 +9455,210 @@ def api_admin_ai_stats():
     })
 
 
+# Facility registries + command workflow admin APIs
+from admin_registry_api import register_admin_registry_routes
+
+register_admin_registry_routes(app, {
+    "admin_required": admin_required,
+    "_require_admin_perm": _require_admin_perm,
+    "read_json": read_json,
+    "save_json": save_json,
+    "load_users": load_users,
+    "load_emergencies": load_emergencies,
+    "save_emergencies": save_emergencies,
+    "save_users": save_users,
+    "append_audit": append_audit,
+    "user_name": user_name,
+    "_append_status": _append_status,
+    "TEAM_LABELS": TEAM_LABELS,
+    "ACTIVE_SOS_STATUSES": ACTIVE_SOS_STATUSES,
+    "STATUS_VALUES": STATUS_VALUES,
+    "COMPLETED_STATUSES": COMPLETED_STATUSES,
+    "normalize_emergency_record": normalize_emergency_record,
+    "now_str": now_str,
+    "load_settings": load_settings,
+    "normalize_email": normalize_email,
+    "signup_email_rejection_reason": signup_email_rejection_reason,
+    "allow_test_email_domains": allow_test_email_domains,
+    "_password_policy_error": _password_policy_error,
+    "_link_user_to_hospital": _link_user_to_hospital,
+    "notify": lambda target_type, target_id, message, request_id, ntype="dispatch": (
+        hl.add_notification(read_json, save_json, target_type, target_id, message, request_id, ntype)
+        if target_id else None
+    ),
+})
+
+# After all helpers exist: boot MySQL seed for gunicorn import path
+if USE_MYSQL and "pytest" not in sys.modules:
+    try:
+        ensure_mysql_boot()
+    except Exception:
+        logging.getLogger(__name__).exception("Deferred MySQL boot failed")
+
+# WebRTC voice signaling (Flask-SocketIO) — reuse existing auth/session
+try:
+    from voice_signaling import init_socketio
+
+    socketio = init_socketio(
+        app,
+        read_json=read_json,
+        save_json=save_json,
+        get_user_by_id=get_user_by_id,
+        now_str=now_str,
+    )
+except Exception:
+    socketio = None
+    logging.getLogger(__name__).exception("SocketIO voice signaling init failed")
+
+
 if __name__ == "__main__":
     # Ensure SMTP from .env wins over leftover shell EMAIL_PROVIDER=memory
     _apply_email_env_from_dotenv(force=True)
+    logging.basicConfig(level=logging.INFO, force=True)
+    log = logging.getLogger(__name__)
+
+    print("=" * 50, flush=True)
+    print("GurmadNet Starting", flush=True)
+    print("=" * 50, flush=True)
+
+    if not USE_MYSQL:
+        raise SystemExit(
+            "GurmadNet requires MySQL. Set database/db_config.env and ensure the "
+            "server is running. (GURMADNET_DB=json is for automated tests only.)"
+        )
+    status = _storage_status()
+    if not status.get("live"):
+        raise SystemExit(f"MySQL not live: {status.get('error')}")
+    print(
+        f"[OK] MySQL connected: {status.get('user')}@{status.get('host')}:"
+        f"{status.get('port')}/{status.get('database')}",
+        flush=True,
+    )
+    log.info("Live MySQL counts=%s", status.get("table_counts"))
+
     try:
         from email_service.factory import clear_email_provider_cache, get_email_provider
 
         clear_email_provider_cache()
         provider = get_email_provider(force_new=True)
-        logging.getLogger(__name__).info(
-            "Email provider active: %s (configured=%s)",
-            getattr(provider, "name", type(provider).__name__),
-            getattr(provider, "configured", lambda: True)(),
+        configured = getattr(provider, "configured", lambda: True)()
+        print(
+            f"[OK] SMTP configured: {getattr(provider, 'name', type(provider).__name__)} "
+            f"(configured={configured})",
+            flush=True,
         )
     except Exception:
-        logging.getLogger(__name__).exception("Email provider init failed")
+        log.exception("Email provider init failed")
+        print("[WARN] SMTP init failed — continuing without blocking startup", flush=True)
 
     ensure_database_dir()
-    seed_defaults()
+    ensure_mysql_boot()
+    print("[OK] Flask application initialized", flush=True)
+
     debug = os.environ.get("FLASK_DEBUG", "").lower() in ("1", "true", "yes", "on")
-    app.run(debug=debug, host="127.0.0.1", port=int(os.environ.get("PORT", "5000")))
+    # Mobile / LAN testing: bind all interfaces by default (override with HOST=127.0.0.1).
+    host = (os.environ.get("HOST") or os.environ.get("GURMADNET_HOST") or "0.0.0.0").strip() or "0.0.0.0"
+    port = int(os.environ.get("PORT", "5000"))
+
+    if socketio is None:
+        print("[WARN] Socket.IO not available — falling back to plain Flask", flush=True)
+    else:
+        mode = getattr(socketio, "async_mode", "?")
+        print(f"[OK] Socket.IO initialized (async_mode={mode})", flush=True)
+        print("[OK] WebRTC signaling ready", flush=True)
+
+    # Fail fast with a clear message if something else already owns the port.
+    import socket as _socket
+
+    def _lan_ipv4s():
+        addrs = []
+        try:
+            import psutil
+
+            for _name, snics in psutil.net_if_addrs().items():
+                for snic in snics:
+                    if getattr(snic, "family", None) != _socket.AF_INET:
+                        continue
+                    ip = snic.address or ""
+                    if ip.startswith("127.") or ip.startswith("169.254."):
+                        continue
+                    addrs.append(ip)
+        except Exception:
+            pass
+        if not addrs:
+            try:
+                hostname = _socket.gethostname()
+                for info in _socket.getaddrinfo(hostname, None, _socket.AF_INET):
+                    ip = info[4][0]
+                    if not ip.startswith("127.") and not ip.startswith("169.254."):
+                        addrs.append(ip)
+            except Exception:
+                pass
+        # Stable unique order
+        seen = set()
+        out = []
+        for ip in addrs:
+            if ip not in seen:
+                seen.add(ip)
+                out.append(ip)
+        return out
+
+    _probe = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
+    try:
+        _probe.setsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEADDR, 1)
+        _probe.bind((host, port))
+    except OSError as exc:
+        raise SystemExit(
+            f"\nPort {port} is already in use.\n"
+            f"GurmadNet is probably already running at http://127.0.0.1:{port}\n"
+            f"Open that URL — do NOT start a second python app.py.\n"
+            f"To restart: stop the other python process, then run once.\n"
+            f"Detail: {exc}\n"
+        ) from exc
+    finally:
+        try:
+            _probe.close()
+        except Exception:
+            pass
+
+    lan_ips = _lan_ipv4s()
+    print(flush=True)
+    print("Server URLs:", flush=True)
+    print(f"  Local:  http://127.0.0.1:{port}", flush=True)
+    for ip in lan_ips:
+        print(f"  Phone:  http://{ip}:{port}  (same Wi-Fi)", flush=True)
+    if not lan_ips:
+        print("  Phone:  (no LAN IPv4 detected — check Wi-Fi)", flush=True)
+    print("  Bind:   {}:{}".format(host, port), flush=True)
+    print("=" * 50, flush=True)
+    print("Press CTRL+C to stop", flush=True)
+    print(flush=True)
+    # Force debug off for LAN/mobile exposure unless explicitly enabled.
+    if host in ("0.0.0.0", "::") and not (os.environ.get("FLASK_DEBUG") or "").strip():
+        debug = False
+
+    try:
+        if socketio is not None:
+            # use_reloader=False: Windows + SocketIO must not spawn a second process
+            socketio.run(
+                app,
+                debug=debug,
+                host=host,
+                port=port,
+                allow_unsafe_werkzeug=True,
+                use_reloader=False,
+            )
+        else:
+            app.run(debug=debug, host=host, port=port, use_reloader=False)
+    except OSError as exc:
+        err = str(exc).lower()
+        if getattr(exc, "winerror", None) == 10048 or "address already in use" in err or "10048" in err:
+            raise SystemExit(
+                f"\nPort {port} is already in use.\n"
+                f"GurmadNet is probably already running at http://127.0.0.1:{port}\n"
+                f"Open that URL in the browser — do NOT run python app.py again.\n"
+                f"To restart: close the other terminal / stop the old python process, then run once.\n"
+            ) from exc
+        raise
+    except KeyboardInterrupt:
+        print("\nGurmadNet stopped.", flush=True)

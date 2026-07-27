@@ -13,6 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+os.environ["TESTING"] = "1"
 os.environ["GURMADNET_DB"] = "json"
 os.environ["EMAIL_PROVIDER"] = "memory"
 os.environ["AI_PROVIDER"] = "rule_based"
@@ -76,7 +77,98 @@ for name, email, pw, role, phone in [
         udata["users"].append(u)
 for u in udata["users"]:
     u["email_verified"] = True
+    if u.get("role") == "hospital" and not u.get("hospital_id"):
+        u["hospital_id"] = 1
+    if u.get("role") == "police" and not u.get("station_id"):
+        u["station_id"] = 1
+    if u.get("role") == "fire" and not u.get("station_id"):
+        u["station_id"] = 2
 ers.save_users(udata)
+
+import hospital_logic as hl
+import facility_registry as fr
+
+hl.save_hospitals(
+    {
+        "hospitals": [
+            {
+                "id": 1,
+                "name": "Audit Test Hospital",
+                "city": "Mogadishu",
+                "region": "Banadir",
+                "district": "Hodan",
+                "address": "Hodan",
+                "latitude": 2.0469,
+                "longitude": 45.3182,
+                "phone": "0622222222",
+                "emergency_contacts": ["0622222222"],
+                "services": ["Emergency"],
+                "specialties": ["Emergency"],
+                "ambulance_available": True,
+                "ambulance_count": 2,
+                "emergency_capacity": 20,
+                "rating": 4.5,
+                "operating_status": "open",
+                "contact_email": "amina@hospital.com",
+                "owner_user_id": next(
+                    (u["id"] for u in udata["users"] if u["email"] == "amina@hospital.com"),
+                    None,
+                ),
+                "location_verified": True,
+                "created_at": ers.now_str(),
+                "updated_at": ers.now_str(),
+            }
+        ],
+        "next_id": 2,
+    },
+    ers.save_json,
+)
+fr.save_stations(
+    {
+        "stations": [
+            {
+                "id": 1,
+                "kind": "police",
+                "name": "Audit Police Station",
+                "city": "Mogadishu",
+                "region": "Banadir",
+                "district": "Hodan",
+                "address": "Hodan",
+                "latitude": 2.038,
+                "longitude": 45.315,
+                "phone": "0633333333",
+                "operating_status": "open",
+                "owner_user_id": next(
+                    (u["id"] for u in udata["users"] if u["email"] == "hassan@police.com"),
+                    None,
+                ),
+                "created_at": ers.now_str(),
+                "updated_at": ers.now_str(),
+            },
+            {
+                "id": 2,
+                "kind": "fire",
+                "name": "Audit Fire Station",
+                "city": "Mogadishu",
+                "region": "Banadir",
+                "district": "Hodan",
+                "address": "Hodan",
+                "latitude": 2.052,
+                "longitude": 45.328,
+                "phone": "0644444444",
+                "operating_status": "open",
+                "owner_user_id": next(
+                    (u["id"] for u in udata["users"] if u["email"] == "muse@fire.com"),
+                    None,
+                ),
+                "created_at": ers.now_str(),
+                "updated_at": ers.now_str(),
+            },
+        ],
+        "next_id": 3,
+    },
+    ers.save_json,
+)
 
 client = ers.app.test_client()
 passed = failed = 0

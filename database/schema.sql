@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS hospitals (
   contact_email VARCHAR(180) DEFAULT '',
   owner_user_id INT NULL,
   location_verified TINYINT(1) DEFAULT 0,
+  logo_url VARCHAR(255) DEFAULT '',
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   INDEX idx_hospitals_region (region),
@@ -63,6 +64,8 @@ CREATE TABLE IF NOT EXISTS users (
   allergies VARCHAR(500) DEFAULT '',
   saved_locations JSON,
   hospital_id INT NULL,
+  station_id INT NULL,
+  call_center_id INT NULL,
   reset_token VARCHAR(64) NULL,
   reset_expires DATETIME NULL,
   email_verified TINYINT(1) NOT NULL DEFAULT 0,
@@ -79,6 +82,8 @@ CREATE TABLE IF NOT EXISTS users (
   INDEX idx_users_role (role),
   INDEX idx_users_role_status (role, status),
   INDEX idx_users_hospital (hospital_id),
+  INDEX idx_users_station (station_id),
+  INDEX idx_users_call_center (call_center_id),
   INDEX idx_users_email_verify_token (email_verify_token),
   INDEX idx_users_reset_token (reset_token),
   CONSTRAINT fk_users_hospital FOREIGN KEY (hospital_id) REFERENCES hospitals(id) ON DELETE SET NULL
@@ -102,6 +107,7 @@ CREATE TABLE IF NOT EXISTS emergencies (
   assigned_team_label VARCHAR(120) DEFAULT '',
   assigned_hospital_id INT NULL,
   assigned_hospital_name VARCHAR(180) DEFAULT '',
+  assigned_station_id INT NULL,
   hospital_distance_km DOUBLE NULL,
   tracking_active TINYINT(1) DEFAULT 0,
   last_location_update DATETIME NULL,
@@ -111,6 +117,7 @@ CREATE TABLE IF NOT EXISTS emergencies (
   INDEX idx_emergencies_user (user_id),
   INDEX idx_emergencies_status (status),
   INDEX idx_emergencies_hospital (assigned_hospital_id),
+  INDEX idx_emergencies_station (assigned_station_id),
   INDEX idx_emergencies_timestamp (timestamp),
   INDEX idx_emergencies_status_ts (status, timestamp),
   INDEX idx_emergencies_type_status (type, status),
@@ -223,8 +230,73 @@ CREATE TABLE IF NOT EXISTS call_center_calls (
   CONSTRAINT fk_cc_operator FOREIGN KEY (operator_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
--- hospitals.owner_user_id FK is deferred (hospitals created before users).
--- Applied by mysql_store.ensure_production_integrity() as fk_hospitals_owner.
+-- Facility registries (police/fire stations, ambulance fleet, call centers)
+CREATE TABLE IF NOT EXISTS response_stations (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  kind ENUM('police','fire') NOT NULL,
+  name VARCHAR(180) NOT NULL,
+  city VARCHAR(80) DEFAULT '',
+  region VARCHAR(80) DEFAULT '',
+  district VARCHAR(80) DEFAULT '',
+  address VARCHAR(255) DEFAULT '',
+  latitude DOUBLE NULL,
+  longitude DOUBLE NULL,
+  phone VARCHAR(40) DEFAULT '',
+  operating_status ENUM('open','limited','closed') NOT NULL DEFAULT 'open',
+  owner_user_id INT NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  INDEX idx_stations_kind (kind),
+  INDEX idx_stations_status (operating_status),
+  INDEX idx_stations_city (city),
+  INDEX idx_stations_owner (owner_user_id)
+);
+
+CREATE TABLE IF NOT EXISTS ambulance_units (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  hospital_id INT NOT NULL,
+  call_sign VARCHAR(80) NOT NULL,
+  plate_number VARCHAR(40) DEFAULT '',
+  status ENUM('available','busy','maintenance','offline') NOT NULL DEFAULT 'available',
+  latitude DOUBLE NULL,
+  longitude DOUBLE NULL,
+  driver_name VARCHAR(120) DEFAULT '',
+  driver_phone VARCHAR(40) DEFAULT '',
+  driver_photo_url VARCHAR(255) DEFAULT '',
+  vehicle_photo_url VARCHAR(255) DEFAULT '',
+  gps_share_token VARCHAR(64) DEFAULT '',
+  notes TEXT,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  INDEX idx_amb_hospital (hospital_id),
+  INDEX idx_amb_status (status),
+  INDEX idx_amb_gps_token (gps_share_token),
+  CONSTRAINT fk_amb_hospital FOREIGN KEY (hospital_id) REFERENCES hospitals(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS call_centers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(180) NOT NULL,
+  city VARCHAR(80) DEFAULT '',
+  region VARCHAR(80) DEFAULT '',
+  district VARCHAR(80) DEFAULT '',
+  address VARCHAR(255) DEFAULT '',
+  latitude DOUBLE NULL,
+  longitude DOUBLE NULL,
+  phone VARCHAR(40) DEFAULT '',
+  operating_status ENUM('open','limited','closed') NOT NULL DEFAULT 'open',
+  owner_user_id INT NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  INDEX idx_cc_fac_status (operating_status),
+  INDEX idx_cc_fac_city (city),
+  INDEX idx_cc_fac_owner (owner_user_id)
+);
+
+-- Deferred FKs (users/stations circular): applied by ensure_production_integrity()
+-- fk_users_station, fk_users_call_center, fk_emergencies_station,
+-- fk_stations_owner, fk_cc_fac_owner, fk_hospitals_owner
+
 
 -- AI Emergency Engine
 CREATE TABLE IF NOT EXISTS ai_analysis (

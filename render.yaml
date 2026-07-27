@@ -1,5 +1,5 @@
-# Render Blueprint — deployment only. Does not change application code.
-# Dashboard: New → Blueprint → connect this GitHub repo
+# Render Blueprint — MySQL is required (single source of truth).
+# Set DB_* (or database/db_config.env equivalent) in the Render dashboard secrets.
 
 services:
   - type: web
@@ -8,12 +8,24 @@ services:
     plan: free
     region: oregon
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120
+    # Threading async_mode — matches Flask-SocketIO default (no eventlet).
+    # Single worker + many threads keeps Socket.IO rooms in one process.
+    startCommand: gunicorn --worker-class gthread --threads 25 -w 1 --bind 0.0.0.0:$PORT --timeout 120 app:app
     healthCheckPath: /login
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.8"
       - key: GURMADNET_DB
-        value: json
+        value: mysql
       - key: SECRET_KEY
         generateValue: true
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "3306"
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false

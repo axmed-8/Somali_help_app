@@ -468,6 +468,13 @@
     });
   });
 
+  document.querySelectorAll(".gn-idle-chip[data-panel]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var p = btn.getAttribute("data-panel");
+      if (p) showPanel(p);
+    });
+  });
+
   document.getElementById("btn-scroll-notif").onclick = function () { showPanel("notifications"); };
 
   document.getElementById("btn-open-chat").onclick = function () { showPanel("chat"); };
@@ -607,6 +614,26 @@
       else alert(d.message || "Save failed");
     });
   };
+
+  var passwordForm = document.getElementById("password-form");
+  if (passwordForm) {
+    passwordForm.onsubmit = function (e) {
+      e.preventDefault();
+      api("/api/user/password", {
+        method: "POST",
+        body: {
+          current_password: document.getElementById("pw-current").value,
+          new_password: document.getElementById("pw-new").value,
+          confirm_password: document.getElementById("pw-confirm").value
+        }
+      }).then(function (d) {
+        if (d.success) {
+          passwordForm.reset();
+          alert(d.message || "Password updated.");
+        } else alert(d.message || "Could not update password");
+      });
+    };
+  }
 
   document.getElementById("profile-photo-input").onchange = function (e) {
     var file = e.target.files[0];

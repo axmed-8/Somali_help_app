@@ -1,0 +1,96 @@
+/* Driver GPS share — mobile-first */
+:root {
+  --dgps-bg: #071018;
+  --dgps-card: #12202b;
+  --dgps-text: #e8eef8;
+  --dgps-muted: #8aa0b2;
+  --dgps-green: #00a884;
+  --dgps-red: #ef4444;
+  --dgps-amber: #f59e0b;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+.dgps-body {
+  min-height: 100vh;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  color: var(--dgps-text);
+  background:
+    radial-gradient(ellipse at top, rgba(0, 168, 132, 0.18), transparent 50%),
+    linear-gradient(165deg, #071018 0%, #0d1b24 55%, #102433 100%);
+}
+.dgps-shell {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 28px 18px 40px;
+}
+.dgps-hero { margin-bottom: 18px; }
+.dgps-kicker {
+  margin: 0 0 6px;
+  color: var(--dgps-green);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.dgps-hero h1 {
+  margin: 0 0 6px;
+  font-size: 1.8rem;
+  line-height: 1.15;
+}
+.dgps-hero p { margin: 0; color: var(--dgps-muted); }
+.dgps-card {
+  background: rgba(18, 32, 43, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+.dgps-card h1 { margin: 0 0 10px; font-size: 1.4rem; }
+.dgps-status {
+  font-size: 0.95rem;
+  font-weight: 650;
+  margin-bottom: 8px;
+}
+.dgps-status.is-live { color: var(--dgps-green); }
+.dgps-status.is-error { color: var(--dgps-red); }
+.dgps-status.is-wait { color: var(--dgps-amber); }
+.dgps-coords {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+  color: var(--dgps-muted);
+  margin-bottom: 16px;
+  word-break: break-all;
+}
+.dgps-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.dgps-btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 14px 18px;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 750;
+  cursor: pointer;
+  flex: 1;
+  min-width: 120px;
+}
+.dgps-btn-primary {
+  background: var(--dgps-green);
+  color: #042f2e;
+}
+.dgps-btn-stop {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fecaca;
+  border: 1px solid rgba(239, 68, 68, 0.45);
+}
+.dgps-btn:disabled { opacity: 0.55; cursor: wait; }
+.dgps-hint {
+  margin: 14px 0 0;
+  color: var(--dgps-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}

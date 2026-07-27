@@ -8,6 +8,7 @@ import tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
+os.environ["TESTING"] = "1"
 os.environ["GURMADNET_DB"] = "json"
 os.environ["AI_PROVIDER"] = "rule_based"
 os.environ["EMAIL_PROVIDER"] = "memory"
@@ -63,8 +64,95 @@ for name, email, pw, role, phone in [
     }
     if role == "hospital":
         u["hospital_id"] = 1
+    if role == "police":
+        u["station_id"] = 1
+    if role == "fire":
+        u["station_id"] = 2
     udata["users"].append(u)
 ers.save_users(udata)
+
+# Test facilities (production never auto-seeds these)
+import hospital_logic as hl
+import facility_registry as fr
+
+hl.save_hospitals(
+    {
+        "hospitals": [
+            {
+                "id": 1,
+                "name": "Smoke Test Hospital",
+                "city": "Mogadishu",
+                "region": "Banadir",
+                "district": "Hodan",
+                "address": "Hodan",
+                "latitude": 2.0469,
+                "longitude": 45.3182,
+                "phone": "0622222222",
+                "emergency_contacts": ["0622222222"],
+                "services": ["Emergency"],
+                "specialties": ["Emergency"],
+                "ambulance_available": True,
+                "ambulance_count": 2,
+                "emergency_capacity": 20,
+                "rating": 4.5,
+                "operating_status": "open",
+                "contact_email": "amina@hospital.com",
+                "owner_user_id": next(
+                    u["id"] for u in udata["users"] if u["email"] == "amina@hospital.com"
+                ),
+                "location_verified": True,
+                "created_at": ers.now_str(),
+                "updated_at": ers.now_str(),
+            }
+        ],
+        "next_id": 2,
+    },
+    ers.save_json,
+)
+fr.save_stations(
+    {
+        "stations": [
+            {
+                "id": 1,
+                "kind": "police",
+                "name": "Smoke Police Station",
+                "city": "Mogadishu",
+                "region": "Banadir",
+                "district": "Hodan",
+                "address": "Hodan",
+                "latitude": 2.038,
+                "longitude": 45.315,
+                "phone": "0633333333",
+                "operating_status": "open",
+                "owner_user_id": next(
+                    u["id"] for u in udata["users"] if u["email"] == "hassan@police.com"
+                ),
+                "created_at": ers.now_str(),
+                "updated_at": ers.now_str(),
+            },
+            {
+                "id": 2,
+                "kind": "fire",
+                "name": "Smoke Fire Station",
+                "city": "Mogadishu",
+                "region": "Banadir",
+                "district": "Hodan",
+                "address": "Hodan",
+                "latitude": 2.052,
+                "longitude": 45.328,
+                "phone": "0644444444",
+                "operating_status": "open",
+                "owner_user_id": next(
+                    u["id"] for u in udata["users"] if u["email"] == "muse@fire.com"
+                ),
+                "created_at": ers.now_str(),
+                "updated_at": ers.now_str(),
+            },
+        ],
+        "next_id": 3,
+    },
+    ers.save_json,
+)
 ai_service._engine_singleton = None
 
 ers.app.config["TESTING"] = True
@@ -104,7 +192,7 @@ r = c.post(
         "emergency_contact_name": "Contact User",
         "emergency_contact_email": "contact.new@test.so",
         "emergency_contact_phone": "0618888888",
-        "emergency_contact_relation": "Parent",
+        "emergency_contact_relation": "Father",
         "national_id": "556677889900",
         "blood_type": "",
         "medical_conditions": "",
@@ -125,7 +213,8 @@ m = re.search(r"verification code is:\s*(\d{6})", OUTBOX[-1]["text"], re.I)
 otp_v = m.group(1) if m else ""
 check("Verify OTP in email", bool(otp_v))
 r = c.post("/verify-email", data={"email": "newuser@test.so", "otp": otp_v}, follow_redirects=True)
-check("Email verified", b"verified" in r.data.lower())
+nu2 = next((u for u in ers.load_users()["users"] if u.get("email") == "newuser@test.so"), None)
+check("Email verified", bool(nu2 and nu2.get("email_verified")), str(r.status_code))
 r = c.post("/login", data={"username": "newuser@test.so", "password": "123456"}, follow_redirects=True)
 check("Login after verify", r.status_code == 200)
 c.get("/logout", follow_redirects=True)

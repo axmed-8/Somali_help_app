@@ -3,307 +3,339 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fire &amp; Rescue Dashboard</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <title>{{ station.name }} — Fire Command</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/hospital_command.css') }}?v=fcc2">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/fire_command.css') }}?v=fcc2">
   {% include "_google_maps.html" %}
 </head>
-<body class="dashboard-fire">
-  <div class="dashboard-container">
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-brand">
-        <h2>Fire &amp; Rescue</h2>
-        <span>Operations desk</span>
+<body class="hcc-body fcc-body">
+  <div class="hcc-shell">
+    <aside class="hcc-sidebar" id="sidebar">
+      <div class="hcc-brand">
+        <div class="hcc-brand-mark fcc-brand-mark">{{ (station.name or 'F')[:1]|upper }}</div>
+        <div>
+          <strong id="fcc-brand-name">{{ station.name or 'Fire Station' }}</strong>
+          <span>Fire Command Center</span>
+        </div>
       </div>
-      <nav>
-        <a href="#" class="active" data-panel="live">Live Alerts</a>
+      <nav class="hcc-nav">
+        <a href="#" class="active" data-panel="live">Dashboard</a>
+        <a href="#" data-panel="queue">Fire Queue <span class="hcc-nav-badge" id="nav-queue-badge" hidden>0</span></a>
+        <a href="#" data-panel="chat">Case Chat <span class="hcc-nav-badge hcc-nav-badge-blue" id="nav-chat-badge" hidden>0</span></a>
         <a href="#" data-panel="history">History</a>
-        <a href="#" data-panel="settings">Settings</a>
+        <a href="#" data-panel="station">Station</a>
+        <a href="#" data-panel="notifications">Notifications <span class="hcc-nav-badge hcc-nav-badge-blue" id="nav-notif-badge" hidden>0</span></a>
       </nav>
-      <div class="dashboard-links">
-        <span>Logged in as <strong>{{ user.name }}</strong> (fire)</span>
+      <div class="hcc-sidebar-foot">
+        <button type="button" class="hcc-sos-btn fcc-refresh-btn" id="btn-sos-refresh" title="Refresh live desk">Refresh Desk</button>
+        <div class="hcc-sys-card">
+          <span class="hcc-sys-ok"></span>
+          <div>
+            <strong>System Status</strong>
+            <em>{% if station_linked %}Station linked{% else %}Station not linked{% endif %}</em>
+          </div>
+        </div>
+        <p class="hcc-user-line">{{ user.name }}</p>
+        <a href="{{ url_for('logout') }}" class="hcc-logout">Logout</a>
+        <p class="hcc-foot-brand">GurmadNet AI · Fire Desk</p>
       </div>
     </aside>
 
-    <div class="main-content">
-      <header class="top-bar">
-        <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="Menu">☰</button>
-        <h1>{{ content.fire_dashboard_title }}</h1>
-        <div class="top-bar-actions">
-          <span class="user-badge">{{ user.name }}</span>
-          <span class="status-badge online">Online</span>
-          <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
+    <div class="hcc-main">
+      <header class="hcc-top">
+        <button type="button" class="hcc-menu" id="sidebar-toggle" aria-label="Menu">☰</button>
+        <div class="hcc-top-title">
+          <h1 id="fcc-page-title">{{ station.name or 'Fire Command' }}</h1>
+          <p class="hcc-sub" id="fcc-status-line">
+            <span class="hcc-online-dot"></span>
+            <strong id="fcc-op-status">{{ (station.operating_status or 'open')|capitalize }}</strong>
+            · {{ station.city or station.district or 'Somalia' }}
+          </p>
+        </div>
+        <div class="hcc-top-actions">
+          <time class="hcc-clock" id="hcc-clock">—</time>
+          <span class="hcc-live-dot" id="refresh-time">Live</span>
+          <button type="button" class="hcc-icon-btn" id="btn-open-notifs" title="Notifications">
+            🔔 <span id="notif-count">0</span>
+          </button>
+          <div class="hcc-user-chip">
+            <span class="hcc-avatar fcc-avatar">{{ user.name[:1]|upper }}</span>
+            <span>
+              <strong>{{ user.name }}</strong>
+              <em>Fire Operator</em>
+            </span>
+          </div>
         </div>
       </header>
 
-      <div class="content-area">
-        <div id="panel-live">
-          <div class="stats">
-            <div class="stat-card">
-              <div class="stat-value" id="stat-calls">0</div>
-              <div class="stat-label">Fire calls today</div>
+      <div class="hcc-content">
+        {% if not station_linked %}
+        <div class="fcc-banner-warn" id="fcc-unlink-banner">
+          This account has no station linked. Ask Admin to set <strong>station_id</strong> for your fire user, then refresh.
+        </div>
+        {% endif %}
+
+        <section id="panel-live" class="hcc-panel">
+          <div class="fcc-duty-banner" id="fcc-duty-banner">
+            <div class="fcc-duty-left">
+              <span class="fcc-duty-pulse" aria-hidden="true"></span>
+              <div>
+                <strong id="fcc-duty-title">Desk clear — standing by</strong>
+                <em id="fcc-duty-sub">Fire emergencies for your station</em>
+              </div>
             </div>
-            <div class="stat-card">
-              <div class="stat-value" id="stat-avg">No data available</div>
-              <div class="stat-label">Average arrival time</div>
+            <span class="fcc-duty-meta" id="fcc-duty-meta">WATCH · LIVE</span>
+          </div>
+
+          <div class="fcc-station-strip" id="fcc-station-strip">
+            <div class="fcc-station-chip">
+              <span>Station</span>
+              <strong id="chip-station-name">{{ station.name or '—' }}</strong>
             </div>
-            <div class="stat-card">
-              <div class="stat-value" id="stat-trucks">No data available</div>
-              <div class="stat-label">Available trucks</div>
+            <div class="fcc-station-chip">
+              <span>District</span>
+              <strong id="chip-station-area">{{ station.district or station.city or '—' }}</strong>
+            </div>
+            <div class="fcc-station-chip">
+              <span>Phone</span>
+              <strong id="chip-station-phone">{{ station.phone or '—' }}</strong>
+            </div>
+            <div class="fcc-station-chip">
+              <span>Status</span>
+              <strong id="chip-station-status">{{ (station.operating_status or 'open')|capitalize }}</strong>
             </div>
           </div>
 
-          <h2 class="section-title">
-            Active fire alerts
-            <span class="refresh-indicator" id="refresh-time">Updating...</span>
-          </h2>
-          <div class="alerts-grid" id="alerts-container"></div>
-
-          <h2 class="section-title">Fire trucks status</h2>
-          <div class="trucks-grid" id="trucks-container">
-            <div class="empty-alerts">No data available</div>
+          <div class="hcc-kpis">
+            <article class="hcc-kpi hcc-kpi-red">
+              <span class="hcc-kpi-label">Active Fires</span>
+              <strong id="kpi-active">0</strong>
+              <em id="kpi-active-sub">In your queue</em>
+            </article>
+            <article class="hcc-kpi hcc-kpi-amber">
+              <span class="hcc-kpi-label">Pending Accept</span>
+              <strong id="kpi-pending">0</strong>
+              <em>Awaiting station</em>
+            </article>
+            <article class="hcc-kpi hcc-kpi-blue">
+              <span class="hcc-kpi-label">Dispatched</span>
+              <strong id="kpi-dispatched">0</strong>
+              <em>Crews en route</em>
+            </article>
+            <article class="hcc-kpi hcc-kpi-green">
+              <span class="hcc-kpi-label">Completed Today</span>
+              <strong id="kpi-done">0</strong>
+              <em>Resolved / completed</em>
+            </article>
+            <article class="hcc-kpi hcc-kpi-teal">
+              <span class="hcc-kpi-label">Avg. Response</span>
+              <strong id="kpi-avg">—</strong>
+              <em>Minutes</em>
+            </article>
           </div>
 
-          <h2 class="section-title" style="margin-top: 24px;">Fire incidents map</h2>
-          <div id="fire-overview-map" class="leaflet-map-container dashboard-map"></div>
-        </div>
+          <div class="hcc-card hcc-cc-inbox" id="fcc-cc-inbox">
+            <div class="hcc-card-head">
+              <h2>From Call Center</h2>
+              <span class="hcc-pill-blue" id="cc-inbox-pill">0</span>
+            </div>
+            <p class="hcc-cc-inbox-hint">Cases the Call Center operator sent to fire (Alert / Dispatch).</p>
+            <div id="cc-inbox-list" class="hcc-queue"></div>
+          </div>
 
-        <div id="panel-history" class="hidden-panel panel-section">
-          <h2 class="section-title">Call history</h2>
-          <div class="alerts-grid" id="history-container"></div>
-        </div>
+          <div class="hcc-desk-3 fcc-desk-2">
+            <div class="hcc-card hcc-queue-pane">
+              <div class="hcc-card-head">
+                <h2>Live Fire Queue</h2>
+                <span class="hcc-pill-red" id="queue-high-pill">0 pending</span>
+              </div>
+              <div id="queue-list" class="hcc-queue"></div>
+            </div>
 
-        <div id="panel-settings" class="hidden-panel panel-section">
-          <h2 class="section-title">Settings</h2>
-          <p><strong>Operator:</strong> {{ user.name }}</p>
-          <p><strong>Role:</strong> Fire &amp; Rescue</p>
-        </div>
+            <div class="hcc-card hcc-map-pane">
+              <div class="hcc-card-head">
+                <h2>Fire Map</h2>
+                <span class="hcc-muted" id="map-eta-line">Fire incidents</span>
+              </div>
+              <div class="fcc-map-wrap">
+                <div id="fcc-map" class="hcc-map"></div>
+              </div>
+              <div class="fcc-map-legend">
+                <span class="fcc-lg fcc-lg-station"><i></i> Station</span>
+                <span class="fcc-lg fcc-lg-open"><i></i> Open incident</span>
+                <span class="fcc-lg fcc-lg-mine"><i></i> Your case</span>
+              </div>
+              <div class="hcc-map-toolbar">
+                <button type="button" class="hcc-btn hcc-btn-ghost hcc-btn-sm" id="btn-map-fit">Fit all</button>
+                <button type="button" class="hcc-btn hcc-btn-ghost hcc-btn-sm" id="btn-map-refresh">Refresh</button>
+              </div>
+            </div>
+
+            <div class="hcc-card hcc-side-pane">
+              <div class="hcc-card-head">
+                <h2>Notifications</h2>
+              </div>
+              <div id="live-notif-list" class="hcc-notif-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="panel-queue" class="hcc-panel hidden-panel">
+          <div class="hcc-card">
+            <div class="hcc-card-head">
+              <h2>Fire Queue</h2>
+              <button type="button" class="hcc-btn hcc-btn-ghost hcc-btn-sm" id="btn-queue-refresh">Refresh</button>
+            </div>
+            <div id="queue-full-list" class="hcc-queue hcc-queue-full"></div>
+          </div>
+        </section>
+
+        <section id="panel-chat" class="hcc-panel hidden-panel">
+          <div class="hcc-chat-shell">
+            <aside class="hcc-card hcc-chat-cases">
+              <div class="hcc-wa-head">
+                <div class="hcc-wa-head-row">
+                  <h2>Chats</h2>
+                  <span class="hcc-muted" id="hcc-chat-case-count">0</span>
+                </div>
+                <label class="hcc-wa-search">
+                  <span class="sr-only">Search chats</span>
+                  <input type="search" id="hcc-chat-search" placeholder="Search name, phone, or case #" autocomplete="off">
+                </label>
+                <div class="hcc-wa-filters" role="tablist">
+                  <button type="button" class="hcc-wa-filter is-active" data-chat-filter="all">All</button>
+                  <button type="button" class="hcc-wa-filter" data-chat-filter="unread">Unread</button>
+                  <button type="button" class="hcc-wa-filter" data-chat-filter="active">Active</button>
+                </div>
+              </div>
+              <div id="hcc-chat-case-list" class="hcc-chat-case-list" role="list"></div>
+            </aside>
+            <div class="hcc-card hcc-chat-thread">
+              <div class="hcc-chat-thread-head" id="hcc-chat-thread-head">
+                <div class="hcc-wa-thread-who">
+                  <div class="hcc-wa-avatar" id="hcc-chat-avatar" aria-hidden="true">?</div>
+                  <div class="hcc-wa-thread-meta">
+                    <h2 id="hcc-chat-title">Case Chat</h2>
+                    <p class="hcc-muted" id="hcc-chat-sub">Dooro qof liiska ka mid ah · Select a person</p>
+                    <label class="hcc-wa-case-switch" id="hcc-chat-case-switch-wrap" hidden>
+                      <span>Case</span>
+                      <select id="hcc-chat-case-switch" aria-label="Select emergency case for this person"></select>
+                    </label>
+                  </div>
+                </div>
+                <button type="button" class="hcc-btn hcc-btn-ghost hcc-btn-sm" id="hcc-chat-refresh" hidden>Refresh</button>
+              </div>
+              <div id="hcc-chat-messages" class="hcc-chat-messages" aria-live="polite">
+                <div class="hcc-chat-empty">
+                  <strong>Dooro chat</strong>
+                  <p>Liiska bidix — qof dooro, fariinta ayaad u furaysaa sida WhatsApp.</p>
+                </div>
+              </div>
+              <div class="hcc-chat-quick" id="hcc-chat-quick" hidden>
+                <button type="button" class="hcc-chat-chip" data-chat-text="Fire crews are on the way. Please stay clear of the building. / Kooxda dabdamisku waa soo socdaan — ka fogaato dhismaha.">On the way</button>
+                <button type="button" class="hcc-chat-chip" data-chat-text="We have arrived at your location. / Waan soo gaarnay meeshaada.">Arrived</button>
+                <button type="button" class="hcc-chat-chip" data-chat-text="Please confirm landmarks near you. / Fadlan sheeg calaamado u dhow.">Landmarks?</button>
+                <button type="button" class="hcc-chat-chip" data-chat-text="Is a family member with you? Please share an emergency contact. / Qof qoyska ah ma kula jiraa? Fadlan sheeg number-ka xiriirka degdegga.">Family / contact</button>
+                <button type="button" class="hcc-chat-chip" data-chat-text="Fire is under control. Stay clear until crews clear the area. / Dabka waa la xakameeyay — ka fogow ilaa kooxdu oggolaato.">All clear</button>
+              </div>
+              <form id="hcc-chat-form" class="hcc-chat-composer" hidden>
+                <input type="text" id="hcc-chat-input" placeholder="Qor fariin / Type a message…" maxlength="1000" autocomplete="off">
+                <button type="submit" class="hcc-btn hcc-btn-primary" id="hcc-chat-send" aria-label="Send">Send</button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <section id="panel-history" class="hcc-panel hidden-panel">
+          <div class="hcc-card">
+            <div class="hcc-card-head"><h2>History</h2></div>
+            <div id="history-list" class="hcc-queue hcc-queue-full"></div>
+          </div>
+        </section>
+
+        <section id="panel-station" class="hcc-panel hidden-panel">
+          <div class="hcc-card">
+            <div class="hcc-card-head"><h2>Station Profile</h2></div>
+            <form id="station-form" class="hcc-form">
+              <div class="hcc-form-row">
+                <label>Station name
+                  <input type="text" id="st-name" maxlength="120" required>
+                </label>
+                <label>Operating status
+                  <select id="st-status">
+                    <option value="open">Open</option>
+                    <option value="limited">Limited</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                </label>
+              </div>
+              <div class="hcc-form-row">
+                <label>Phone
+                  <input type="tel" id="st-phone" maxlength="40">
+                </label>
+                <label>City
+                  <input type="text" id="st-city" maxlength="80">
+                </label>
+              </div>
+              <div class="hcc-form-row">
+                <label>District
+                  <input type="text" id="st-district" maxlength="80">
+                </label>
+                <label>Address
+                  <input type="text" id="st-address" maxlength="200">
+                </label>
+              </div>
+              <div class="hcc-form-row">
+                <label>Latitude
+                  <input type="text" id="st-lat" inputmode="decimal">
+                </label>
+                <label>Longitude
+                  <input type="text" id="st-lng" inputmode="decimal">
+                </label>
+              </div>
+              <p class="hcc-form-error" id="st-form-error" hidden></p>
+              <div class="hcc-modal-actions">
+                <button type="submit" class="hcc-btn hcc-btn-primary" id="st-save">Save station</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <section id="panel-notifications" class="hcc-panel hidden-panel">
+          <div class="hcc-card">
+            <div class="hcc-card-head">
+              <h2>All Notifications</h2>
+              <button type="button" class="hcc-btn hcc-btn-ghost hcc-btn-sm" id="btn-mark-read">Mark all read</button>
+            </div>
+            <div id="notif-full-list" class="hcc-notif-list"></div>
+          </div>
+        </section>
       </div>
     </div>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="{{ url_for('static', filename='js/location.js') }}"></script>
-  <div
-    id="fire-dash-config"
-    hidden
-    data-config='{{ {"refreshMs": settings.refresh_interval * 1000}|tojson }}'
-  ></div>
+  <div id="fcc-detail-modal" class="hcc-modal hidden" role="dialog" aria-modal="true">
+    <div class="hcc-modal-box">
+      <h3 id="fcc-detail-title">Incident</h3>
+      <div id="fcc-detail-body" class="fcc-detail-body"></div>
+      <div class="hcc-modal-actions" id="fcc-detail-actions"></div>
+    </div>
+  </div>
+
+  <script type="application/json" id="fire-boot">{{ {
+    "station": station,
+    "stationLinked": station_linked,
+    "userName": user.name,
+    "refreshMs": ((settings.refresh_interval if settings is defined else 5) * 1000)
+  } | tojson }}</script>
   <script>
-    (function () {
-      const API_TYPE = "fire";
-      let REFRESH_MS = JSON.parse(
-        document.getElementById("fire-dash-config").getAttribute("data-config")
-      ).refreshMs;
-
-      function formatTime(iso) {
-        try {
-          return new Date(iso).toLocaleString("en-GB", {
-            hour: "2-digit",
-            minute: "2-digit",
-            day: "numeric",
-            month: "short"
-          });
-        } catch (e) {
-          return iso;
-        }
-      }
-
-      function escapeHtml(str) {
-        const d = document.createElement("div");
-        d.textContent = str || "";
-        return d.innerHTML;
-      }
-
-      function escapeAttr(str) {
-        return String(str || "")
-          .replace(/&/g, "&amp;")
-          .replace(/"/g, "&quot;")
-          .replace(/</g, "&lt;");
-      }
-
-      function setAvg(value) {
-        var el = document.getElementById("stat-avg");
-        if (!el) return;
-        el.textContent = value != null ? value + " min" : "No data available";
-      }
-
-      function renderCard(em) {
-        const card = document.createElement("div");
-        card.className = "alert-card";
-        card.innerHTML =
-          '<div class="alert-type">FIRE EMERGENCY' +
-          (em.source === "call_center" ? " · CALL CENTER" : "") +
-          "</div>" +
-          '<div class="alert-location">' +
-          escapeHtml(em.location) +
-          "</div>" +
-          '<div class="alert-meta">Caller: ' +
-          escapeHtml(em.caller_name || "Unknown") +
-          " · " +
-          escapeHtml(em.phone || "N/A") +
-          "</div>" +
-          '<div class="alert-meta">Time: ' +
-          formatTime(em.timestamp) +
-          "</div>" +
-          '<span class="alert-status ' +
-          em.status +
-          '">' +
-          em.status +
-          "</span>" +
-          '<div class="alert-actions">' +
-          '<button type="button" class="btn-action btn-dispatch" data-id="' +
-          em.id +
-          '">Dispatch</button>' +
-          '<button type="button" class="btn-action btn-complete" data-id="' +
-          em.id +
-          '">Mark Complete</button>' +
-          '<button type="button" class="btn-action btn-view" data-emergency="' +
-          escapeAttr(JSON.stringify(em)) +
-          '">View on Map</button>' +
-          "</div>";
-        return card;
-      }
-
-      function loadEmergencies() {
-        fetch("/api/get_emergencies?type=" + API_TYPE, { credentials: "same-origin" })
-          .then(function (res) {
-            return res.json();
-          })
-          .then(function (data) {
-            if (data.refresh_interval) REFRESH_MS = data.refresh_interval * 1000;
-            const list = (data.emergencies || []).filter(function (e) {
-              return e.status !== "completed" && e.status !== "resolved" && e.status !== "cancelled";
-            });
-            const container = document.getElementById("alerts-container");
-            container.innerHTML = "";
-
-            if (list.length === 0) {
-              container.innerHTML =
-                '<div class="empty-alerts">No data available</div>';
-            } else {
-              list.forEach(function (em) {
-                container.appendChild(renderCard(em));
-              });
-            }
-
-            const today = list.filter(function (e) {
-              const d = new Date(e.timestamp);
-              const now = new Date();
-              return d.toDateString() === now.toDateString();
-            });
-            document.getElementById("stat-calls").textContent = today.length;
-            setAvg(data.avg_response_time);
-
-            document.getElementById("refresh-time").textContent =
-              "Last updated " + new Date().toLocaleTimeString();
-
-            bindActions();
-            if (window.EmergencyLocation) {
-              EmergencyLocation.initOverviewMap("fire-overview-map", list);
-            }
-          })
-          .catch(function () {
-            document.getElementById("alerts-container").innerHTML =
-              '<div class="empty-alerts">Could not load alerts. Retrying...</div>';
-          });
-      }
-
-      function loadHistory() {
-        fetch("/api/get_emergencies?type=" + API_TYPE + "&status=completed,resolved", {
-          credentials: "same-origin"
-        })
-          .then(function (res) { return res.json(); })
-          .then(function (data) {
-            const container = document.getElementById("history-container");
-            container.innerHTML = "";
-            const list = data.emergencies || [];
-            if (list.length === 0) {
-              container.innerHTML =
-                '<div class="empty-alerts">No data available</div>';
-            } else {
-              list.forEach(function (em) {
-                container.appendChild(renderCard(em));
-              });
-            }
-          })
-          .catch(function () {
-            document.getElementById("history-container").innerHTML =
-              '<div class="empty-alerts">Could not load history.</div>';
-          });
-      }
-
-      function bindActions() {
-        document.querySelectorAll(".btn-dispatch").forEach(function (btn) {
-          btn.onclick = function () {
-            const id = parseInt(btn.getAttribute("data-id"), 10);
-            fetch("/api/update_status", {
-              method: "POST",
-              credentials: "same-origin",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ id: id, status: "dispatched" })
-            }).then(function () {
-              loadEmergencies();
-            });
-          };
-        });
-
-        document.querySelectorAll(".btn-complete").forEach(function (btn) {
-          btn.onclick = function () {
-            const id = parseInt(btn.getAttribute("data-id"), 10);
-            fetch("/api/update_status", {
-              method: "POST",
-              credentials: "same-origin",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ id: id, status: "completed" })
-            }).then(function () {
-              loadEmergencies();
-              loadHistory();
-            });
-          };
-        });
-
-        document.querySelectorAll(".btn-view").forEach(function (btn) {
-          btn.onclick = function () {
-            try {
-              var em = JSON.parse(btn.getAttribute("data-emergency"));
-              EmergencyLocation.showEmergencyOnMap(em);
-            } catch (e) {
-              alert("Could not open map.");
-            }
-          };
-        });
-      }
-
-      document.querySelectorAll(".sidebar nav a").forEach(function (link) {
-        link.addEventListener("click", function (e) {
-          e.preventDefault();
-          document.querySelectorAll(".sidebar nav a").forEach(function (a) {
-            a.classList.remove("active");
-          });
-          link.classList.add("active");
-          const panel = link.getAttribute("data-panel");
-          document.getElementById("panel-live").style.display =
-            panel === "live" ? "block" : "none";
-          document.getElementById("panel-history").classList.toggle(
-            "hidden-panel",
-            panel !== "history"
-          );
-          document.getElementById("panel-settings").classList.toggle(
-            "hidden-panel",
-            panel !== "settings"
-          );
-          if (panel === "history") loadHistory();
-        });
-      });
-
-      document.getElementById("sidebar-toggle").addEventListener("click", function () {
-        document.getElementById("sidebar").classList.toggle("open");
-      });
-
-      loadEmergencies();
-      setInterval(loadEmergencies, REFRESH_MS);
-    })();
+    window.FIRE_BOOT = JSON.parse(document.getElementById("fire-boot").textContent);
   </script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="{{ url_for('static', filename='js/csrf.js') }}?v=fcc2"></script>
+  <script src="{{ url_for('static', filename='js/fire_command.js') }}?v=fcc2"></script>
 </body>
 </html>

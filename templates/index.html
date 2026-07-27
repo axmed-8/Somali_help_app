@@ -2,138 +2,362 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <title>{{ content.app_name }} — Somalia</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/gurmadnet.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/gurmadnet.css') }}?v=cit32">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/citizen_app.css') }}?v=cit33">
   {% include "_google_maps.html" %}
 </head>
-<body class="gn-user user-app" data-user-name="{{ user.name }}" data-user-phone="{{ user.phone or '' }}">
-  <header class="app-header-red">
-    <div class="app-header-text">
-      <h1>{{ content.app_name }}</h1>
-      <p>Somalia Emergency Response</p>
+<body class="gn-user user-app cit-app" data-user-name="{{ user.name if user else '' }}" data-user-phone="{{ (user.phone if user else '') or '' }}">
+  <div class="cit-atmosphere" aria-hidden="true"></div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="cit-flash-wrap" role="status">
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <header class="cit-topbar">
+    <div class="cit-brand">
+      <span class="cit-brand-mark" aria-hidden="true">G</span>
+      <div>
+        <strong>{{ content.app_name or 'GurmadNet AI' }}</strong>
+        <em>Gargaar degdeg ah · Somalia</em>
+      </div>
     </div>
-    <a href="{{ url_for('user_dashboard') }}" class="btn-header-dash" title="Dashboard">📊</a>
-    <a href="{{ url_for('logout') }}" class="btn-logout-header" aria-label="Logout">
-      <span class="logout-icon">⏻</span>
-    </a>
+    <div class="cit-top-actions">
+      <a href="{{ url_for('user_dashboard') }}" class="cit-icon-btn cit-icon-live" title="Live track" aria-label="Live track">
+        <span class="cit-ico-live" aria-hidden="true"></span>
+      </a>
+      <button type="button" class="cit-icon-btn cit-icon-home" id="btn-top-home" title="Home" aria-label="Go to home">
+        <span class="cit-ico-home" aria-hidden="true"></span>
+      </button>
+    </div>
   </header>
 
-  <div class="user-container">
-    <section id="page-home" class="user-page active">
-      <p class="sos-hint">{{ content.sos_subtitle }}</p>
-      <p class="dispatch-note">Help is dispatched automatically — no hospital selection needed.</p>
+  <div class="user-container cit-shell">
+    <!-- HOME — compact single-screen -->
+    <section id="page-home" class="user-page active cit-home-fit cit-screen-fit">
+      <div class="cit-home-head">
+        <p class="cit-greet">Salaan, <strong id="home-user-name">{{ user.name.split()[0] if user.name else 'Citizen' }}</strong></p>
+        <h1 class="cit-display">Ma u baahan tahay gargaar?</h1>
+      </div>
 
-      <div class="sos-wrap">
-        <span class="sos-ring sos-ring-3"></span>
-        <span class="sos-ring sos-ring-2"></span>
-        <span class="sos-ring sos-ring-1"></span>
-        <button type="button" class="sos-button" id="btn-sos" aria-label="SOS Emergency">
-          <span class="sos-icon">!</span>
-          <span class="sos-label">{{ content.sos_button_text }}</span>
+      <div class="cit-sos-card">
+        <div class="cit-sos-card-row">
+          <div>
+            <h2>SOS</h2>
+            <p>Ambalaas · Booliis · Dab</p>
+          </div>
+          <button type="button" class="sos-button cit-sos-btn" id="btn-sos" aria-label="Report Emergency">
+            <span class="sos-icon">!</span>
+            <span class="sos-label">SOS</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="cit-service-grid" aria-label="Quick services">
+        <button type="button" class="cit-service-tile" data-type="medical">
+          <span class="cit-service-ico cit-svc-med" aria-hidden="true">🚑</span>
+          <strong>Ambalaas</strong>
+          <em>Isbitaal</em>
+        </button>
+        <button type="button" class="cit-service-tile" data-type="security">
+          <span class="cit-service-ico cit-svc-pol" aria-hidden="true">👮</span>
+          <strong>Booliis</strong>
+          <em>Amniga</em>
+        </button>
+        <button type="button" class="cit-service-tile" data-type="fire">
+          <span class="cit-service-ico cit-svc-fire" aria-hidden="true">🔥</span>
+          <strong>Dab</strong>
+          <em>Qiiq / dab</em>
+        </button>
+        <button type="button" class="cit-service-tile" data-nav-page="hospitals">
+          <span class="cit-service-ico cit-svc-hosp" aria-hidden="true">🏥</span>
+          <strong>Isbitaal</strong>
+          <em>U dhow</em>
+        </button>
+        <button type="button" class="cit-service-tile" id="btn-call-center-tile" data-action="call-center">
+          <span class="cit-service-ico cit-svc-cc" aria-hidden="true">📞</span>
+          <strong>Call Center</strong>
+          <em>Wac</em>
+        </button>
+        <button type="button" class="cit-service-tile" data-nav-page="status">
+          <span class="cit-service-ico cit-svc-safe" aria-hidden="true">🛡️</span>
+          <strong>Badbaado</strong>
+          <em>Xaaladayda</em>
         </button>
       </div>
 
-      <div class="cc-call-center-wrap" id="call-center" style="margin:16px 0 8px;text-align:center;">
-        <button type="button" class="btn-primary" id="btn-call-center"
-          style="width:100%;max-width:360px;background:linear-gradient(135deg,#0D47A1,#1565C0);border:none;padding:14px 20px;border-radius:16px;font-weight:700;font-size:1rem;"
-          aria-label="Call Emergency Center">
-          Call Emergency Center
-        </button>
-        <p class="hint-text" style="margin-top:8px;">{{ content.call_center_hint or 'Speak with an operator — your GPS is shared automatically' }}</p>
-        <p id="call-center-status" class="hint-text hidden" style="color:#2E7D32;"></p>
+      <div class="cit-quick-row cit-sr-only" id="call-center">
+        <button type="button" class="cit-pill-btn" id="btn-call-center" aria-label="Call Emergency Center">Call Center</button>
+      </div>
+      <p id="call-center-status" class="hint-text hidden cit-cc-status"></p>
+
+      <div id="home-loc-card" class="cit-loc-card is-searching" role="status">
+        <span class="cit-loc-dot" aria-hidden="true"></span>
+        <div>
+          <strong id="home-loc-title">Goobta…</strong>
+          <span id="home-loc-detail">GPS</span>
+        </div>
       </div>
 
-      <div class="service-grid">
-        <button type="button" class="service-btn" data-type="medical">
-          <span class="service-icon ambulance">🚑</span><span>Ambulance</span>
-        </button>
-        <button type="button" class="service-btn" data-type="security">
-          <span class="service-icon police">🛡</span><span>Police</span>
-        </button>
-        <button type="button" class="service-btn" data-type="fire">
-          <span class="service-icon fire">🔥</span><span>Fire</span>
-        </button>
-        <button type="button" class="service-btn" data-type="family_help">
-          <span class="service-icon family">🏠</span><span>Family</span>
-        </button>
-      </div>
+      <div id="home-active-banner" class="home-active-banner cit-active-banner hidden"></div>
 
-      <div id="home-active-banner" class="home-active-banner hidden"></div>
-
-      <div class="recent-block">
-        <h3 class="recent-title">Recent Requests</h3>
+      <div class="recent-block cit-recent cit-recent-compact">
         <div id="recent-list" class="recent-list">
-          <p class="recent-empty">No recent requests yet.</p>
+          <p class="recent-empty">Weli ma jiraan codsiyo dhowaan.</p>
         </div>
       </div>
     </section>
 
-    <section id="page-type" class="user-page">
-      <h2 class="page-heading">What type of emergency?</h2>
-      <div class="emergency-types">
-        <button type="button" class="type-btn" data-type="medical"><span class="type-icon">🚑</span> {{ content.emergency_type_medical }}</button>
-        <button type="button" class="type-btn" data-type="accident"><span class="type-icon">🚗</span> {{ content.emergency_type_accident }}</button>
-        <button type="button" class="type-btn" data-type="fire"><span class="type-icon">🔥</span> {{ content.emergency_type_fire }}</button>
-        <button type="button" class="type-btn" data-type="security"><span class="type-icon">🛡</span> {{ content.emergency_type_security }}</button>
-        <button type="button" class="type-btn" data-type="family_help"><span class="type-icon">🏠</span> {{ content.emergency_type_family }}</button>
+    <!-- TYPE — all choices visible on one screen -->
+    <section id="page-type" class="user-page cit-screen-fit">
+      <div class="cit-type-stage cit-type-stage-compact">
+        <p class="cit-eyebrow">Gargaar degdeg ah</p>
+        <h1 class="cit-display cit-display-sm">Maxaad u baahan tahay?</h1>
+        <p class="cit-lede cit-lede-one">Door mid · Degganow · Taleefanka ha xirin</p>
       </div>
-      <button type="button" class="btn-secondary" id="btn-back-home-1">Back</button>
+
+      <div class="cit-type-grid" role="list">
+        <button type="button" class="cit-type-tile cit-type-medical type-btn" data-type="medical" role="listitem">
+          <span class="cit-type-glyph" aria-hidden="true">🚑</span>
+          <strong>Ambalaas</strong>
+          <em>Buka / dhaawac</em>
+        </button>
+        <button type="button" class="cit-type-tile cit-type-fire type-btn" data-type="fire" role="listitem">
+          <span class="cit-type-glyph" aria-hidden="true">🔥</span>
+          <strong>Dab</strong>
+          <em>Dab ama qiiq</em>
+        </button>
+        <button type="button" class="cit-type-tile cit-type-security type-btn" data-type="security" role="listitem">
+          <span class="cit-type-glyph" aria-hidden="true">👮</span>
+          <strong>Booliis</strong>
+          <em>Khatar / tuugo</em>
+        </button>
+        <button type="button" class="cit-type-tile cit-type-family type-btn" data-type="family_help" role="listitem">
+          <span class="cit-type-glyph" aria-hidden="true">👨‍👩‍👧</span>
+          <strong>Qoys</strong>
+          <em>Gargaar qoys</em>
+        </button>
+      </div>
+
+      <p class="cit-reassure cit-reassure-compact">GPS-kaaga waa la diraa · Location is sent</p>
+      <button type="button" class="cit-ghost-btn cit-ghost-compact" id="btn-back-home-1">← Dib ugu noqo</button>
     </section>
 
+    <!-- LOCATION -->
     <section id="page-location" class="user-page">
-      <h2 class="page-heading" id="location-heading">Confirm your location</h2>
-      <p class="hint-text">GPS is required. Your location is sent to the emergency dispatch center.</p>
-      <div class="location-box">
-        <p class="location-status" id="location-status">Requesting GPS permission...</p>
+      <div class="cit-type-stage">
+        <p class="cit-eyebrow">Tallaabo 2 · Location</p>
+        <h2 class="cit-display cit-display-sm" id="location-heading">Xaqiiji goobtaada</h2>
+        <p class="cit-lede">GPS waa loo baahan yahay si kooxda kuu hesho. <span class="cit-lede-en">Turn on location so help can find you.</span></p>
+      </div>
+      <div class="location-box cit-glass">
+        <p class="location-status" id="location-status">GPS waa la waydiinayaa…</p>
         <p class="location-coords" id="location-coords"></p>
         <p class="location-accuracy hidden" id="location-accuracy"></p>
-        <span class="live-gps-badge hidden" id="live-gps-badge">● Live GPS tracking</span>
+        <span class="live-gps-badge hidden" id="live-gps-badge">● Live GPS</span>
       </div>
-      <div id="user-location-map" class="leaflet-map-container user-map"></div>
-      <div class="location-notes-wrap" style="text-align:left;margin:12px 0;">
-        <label for="emergency-notes" style="font-size:0.78rem;font-weight:600;color:#64748B;display:block;margin-bottom:6px;">Additional notes (optional)</label>
-        <textarea id="emergency-notes" rows="2" placeholder="Describe your emergency, injuries, landmarks…" style="width:100%;padding:12px;border-radius:14px;border:1.5px solid rgba(13,71,161,0.1);font-family:inherit;font-size:0.9rem;resize:vertical;"></textarea>
+      <div id="user-location-map" class="leaflet-map-container user-map cit-map"></div>
+      <div class="location-notes-wrap cit-notes">
+        <label for="emergency-notes">Maxaa dhacay? (ikhtiyaari)</label>
+        <textarea id="emergency-notes" rows="2" placeholder="Dhaawac, calaamado, cidda kula jirta…"></textarea>
       </div>
-      <button type="button" class="btn-primary" id="btn-send-alert" disabled>Send Emergency — Auto Dispatch</button>
-      <button type="button" class="btn-secondary" id="btn-back-type">Back</button>
+      <button type="button" class="btn-primary cit-send" id="btn-send-alert" disabled>Dir gargaarka</button>
+      <button type="button" class="cit-ghost-btn" id="btn-back-type">← Beddel nooca</button>
     </section>
 
+    <!-- MAP -->
+    <section id="page-map" class="user-page">
+      <p class="cit-eyebrow">Agagaarka</p>
+      <h1 class="cit-display cit-display-sm">Khariidad</h1>
+      <p class="cit-lede" id="map-lede">Isbitaal · Saldhig · Dab-demis kuu dhow</p>
+      <div class="cit-cat-toolbar" role="tablist" aria-label="Nooca xarunta">
+        <button type="button" class="cit-cat-btn active" data-map-cat="hospital">🏥 Isbitaal</button>
+        <button type="button" class="cit-cat-btn" data-map-cat="police">👮 Saldhig</button>
+        <button type="button" class="cit-cat-btn" data-map-cat="fire">🔥 Dab-demis</button>
+      </div>
+      <div class="cit-map-toolbar" role="tablist">
+        <button type="button" class="cit-toggle-btn active" id="map-view-map" data-map-mode="map">Map</button>
+        <button type="button" class="cit-toggle-btn" id="map-view-list" data-map-mode="list">List</button>
+      </div>
+      <div id="citizen-map" class="leaflet-map-container user-map cit-map"></div>
+      <div id="map-hospitals-list" class="cit-card">
+        <h3 class="cit-section-title" id="map-list-title">Isbitaallada ugu dhow</h3>
+        <div id="map-hospital-items"><p class="cit-empty">Waa la soo rarayaa…</p></div>
+      </div>
+    </section>
+
+    <!-- HOSPITALS -->
+    <section id="page-hospitals" class="user-page">
+      <p class="cit-eyebrow">Xarumaha</p>
+      <h1 class="cit-display cit-display-sm">Isbitaallo</h1>
+      <p class="cit-lede">Liiska isbitaallada. Masaafada waxay ku xiran tahay GPS-kaaga.</p>
+      <div id="hospitals-list" class="cit-card">
+        <p class="cit-empty">Waa la soo rarayaa…</p>
+      </div>
+      <button type="button" class="cit-ghost-btn" id="btn-hospitals-to-map">Ku arag khariidadda →</button>
+    </section>
+
+    <!-- ALERTS / STATUS -->
     <section id="page-status" class="user-page">
-      <h2 class="page-heading">Emergency Status</h2>
-      <div id="status-panel" class="status-panel"></div>
-      <span class="live-gps-badge hidden" id="status-live-badge">● Sharing live location with response team</span>
-      <div id="status-map" class="leaflet-map-container user-map"></div>
-      <div id="chat-box" class="chat-box">
-        <h3>Chat with Response Team</h3>
+      <div class="cit-type-stage">
+        <p class="cit-eyebrow">Ogeysiisyo</p>
+        <h2 class="cit-display cit-display-sm">Badbaadadayda</h2>
+        <p class="cit-lede">Xaaladda codsiga, taariikhda, iyo wada hadalka kooxda. <span class="cit-lede-en">Status, timeline, and team chat.</span></p>
+      </div>
+      <div id="status-panel" class="status-panel cit-glass"></div>
+      <span class="live-gps-badge hidden" id="status-live-badge">● Goobtaada waa la wadaagayaa</span>
+      <div id="status-map" class="leaflet-map-container user-map cit-map"></div>
+      <div id="chat-box" class="chat-box cit-glass">
+        <h3>La hadal kooxda</h3>
         <div class="chat-quick-replies" id="chat-quick">
-          <button type="button" class="quick-reply" data-text="I need help now">Need help now</button>
-          <button type="button" class="quick-reply" data-text="My condition is worsening">Worsening</button>
-          <button type="button" class="quick-reply" data-text="I am at the location shown">At location</button>
+          <button type="button" class="quick-reply" data-text="I need help now">Gargaar hadda</button>
+          <button type="button" class="quick-reply" data-text="My condition is worsening">Xaaladdu way xumaanaysaa</button>
+          <button type="button" class="quick-reply" data-text="I am at the location shown">Waxaan joogaa goobta</button>
+          <button type="button" class="quick-reply" data-text="I am safe for now">Waan nabadqabaa hadda</button>
         </div>
         <div id="chat-messages" class="chat-messages"></div>
         <div class="chat-input-row">
-          <input type="text" id="chat-text" placeholder="Message response team...">
-          <button type="button" id="btn-send-chat" class="btn-primary btn-chat-send">Send</button>
+          <input type="text" id="chat-text" placeholder="Qor fariin…">
+          <button type="button" id="btn-send-chat" class="btn-primary btn-chat-send">Dir</button>
         </div>
       </div>
-      <a href="{{ url_for('user_dashboard') }}" class="btn-primary" style="display:block;text-align:center;text-decoration:none;margin-top:12px;">Open Full Dashboard</a>
-      <button type="button" class="btn-secondary" id="btn-back-home-4">Back to Home</button>
+      <a href="{{ url_for('user_dashboard') }}" class="btn-primary cit-send" style="display:block;text-align:center;text-decoration:none;margin-top:12px;">Fur live tracker</a>
+      <button type="button" class="cit-ghost-btn" id="btn-back-home-4">← Dib ugu noqo</button>
+    </section>
+
+    <!-- PROFILE -->
+    <section id="page-profile" class="user-page">
+      <p class="cit-eyebrow">Akoonka</p>
+      <div class="cit-profile-hero">
+        <div class="cit-avatar" id="cit-profile-avatar">{{ user.name[:1] if user.name else 'U' }}</div>
+        <div>
+          <h2 id="cit-profile-name">{{ user.name }}</h2>
+          <p id="cit-profile-phone">{{ user.phone or user.email }}</p>
+        </div>
+      </div>
+
+      <div class="cit-menu-list">
+        <button type="button" class="cit-menu-item" data-profile-panel="personal">Macluumaadka shakhsiyeed <span>Edit →</span></button>
+        <button type="button" class="cit-menu-item" data-profile-panel="contacts">Xiriiriyeyaasha degdegga <span>Edit →</span></button>
+        <button type="button" class="cit-menu-item" data-profile-panel="medical">Caafimaad / Badbaado <span>Info →</span></button>
+        <button type="button" class="cit-menu-item" data-profile-panel="password">Furaha sirta <span>Change →</span></button>
+        <button type="button" class="cit-menu-item" data-profile-panel="help">Caawimaad &amp; About <span>→</span></button>
+      </div>
+
+      <div id="cit-profile-personal" class="cit-card hidden">
+        <h3 class="cit-section-title">Macluumaadka shakhsiyeed</h3>
+        <form id="cit-profile-form">
+          <div class="cit-field"><label for="cit-pf-name">Magaca oo buuxa</label><input type="text" id="cit-pf-name" autocomplete="name"></div>
+          <div class="cit-field"><label for="cit-pf-phone">Taleefan</label><input type="tel" id="cit-pf-phone" autocomplete="tel"></div>
+          <div class="cit-field"><label for="cit-pf-email">Email</label><input type="email" id="cit-pf-email" readonly></div>
+          <div class="cit-field"><label for="cit-pf-address">Cinwaanka</label><input type="text" id="cit-pf-address"></div>
+          <div class="cit-field"><label for="cit-pf-city">Magaalada</label><input type="text" id="cit-pf-city"></div>
+          <label class="cit-photo-label">Beddel sawirka
+            <input type="file" id="cit-profile-photo-input" accept="image/*" hidden>
+          </label>
+          <button type="submit" class="btn-primary cit-send">Kaydi</button>
+        </form>
+      </div>
+
+      <div id="cit-profile-contacts" class="cit-card hidden">
+        <h3 class="cit-section-title">Xiriiriyeyaasha degdegga</h3>
+        <form id="cit-contacts-form">
+          <div class="cit-field"><label for="cit-pf-ec-name">Magaca</label><input type="text" id="cit-pf-ec-name"></div>
+          <div class="cit-field"><label for="cit-pf-ec-phone">Taleefanka</label><input type="tel" id="cit-pf-ec-phone"></div>
+          <div class="cit-field"><label for="cit-pf-ec-relation">Xiriirka</label><input type="text" id="cit-pf-ec-relation" placeholder="tusaale: xaas, walaal"></div>
+          <button type="submit" class="btn-primary cit-send">Kaydi</button>
+        </form>
+      </div>
+
+      <div id="cit-profile-medical" class="cit-card hidden">
+        <h3 class="cit-section-title">Caafimaad / Badbaado</h3>
+        <form id="cit-medical-form">
+          <div class="cit-field"><label for="cit-pf-blood">Nooca dhiigga</label><input type="text" id="cit-pf-blood" placeholder="tusaale: O+"></div>
+          <div class="cit-field"><label for="cit-pf-notes">Xusuusin caafimaad</label><textarea id="cit-pf-notes" rows="3" placeholder="Xasaasiyad, xaalado muhiim ah…"></textarea></div>
+          <p class="cit-help-block">Waxaan kaydinayaa akoonkaaga si kooxda gargaarka u aragto marka loo baahdo.</p>
+          <button type="submit" class="btn-primary cit-send">Kaydi</button>
+        </form>
+      </div>
+
+      <div id="cit-profile-password" class="cit-card hidden">
+        <h3 class="cit-section-title">Beddel furaha sirta</h3>
+        <form id="cit-password-form" class="password-form" autocomplete="off">
+          <div class="cit-field"><label for="cit-pw-current">Furaha hadda</label><input type="password" id="cit-pw-current" required autocomplete="current-password"></div>
+          <div class="cit-field"><label for="cit-pw-new">Furaha cusub</label><input type="password" id="cit-pw-new" required autocomplete="new-password"></div>
+          <div class="cit-field"><label for="cit-pw-confirm">Xaqiiji furaha cusub</label><input type="password" id="cit-pw-confirm" required autocomplete="new-password"></div>
+          <button type="submit" class="btn-primary cit-send">Cusboonaysii</button>
+        </form>
+      </div>
+
+      <div id="cit-profile-help" class="cit-card hidden">
+        <h3 class="cit-section-title">Caawimaad &amp; About</h3>
+        <p class="cit-help-block">
+          GurmadNet AI wuxuu ku xiraa muwaadiniinta Somalia ambalaas, booliis, dab-demis, iyo Call Center.
+          Taabo SOS si aad u diraan gargaar GPS-kaaga. Call Center wuxuu la wadaagayaa goobtaada operator.
+          Live tracker-ka buuxa waxaad ka furtaa icon-ka kor ku yaal.
+        </p>
+      </div>
+
+      <a href="{{ url_for('logout') }}" class="cit-logout">Ka bax / Log out</a>
     </section>
   </div>
 
-  <nav class="gn-bottom-nav gn-user-nav" aria-label="Main navigation">
-    <button type="button" class="gn-bnav-item active" data-nav="home"><span>🏠</span><small>Home</small></button>
-    <button type="button" class="gn-bnav-item" data-nav="type"><span>!</span><small>Emergency</small></button>
-    <button type="button" class="gn-bnav-sos" data-nav="type" aria-label="SOS"><span>!</span></button>
-    <a href="{{ url_for('user_dashboard') }}" class="gn-bnav-item"><span>🗺</span><small>Track</small></a>
-    <button type="button" class="gn-bnav-item" data-nav="status"><span>💬</span><small>Status</small></button>
+  <nav class="gn-bottom-nav gn-user-nav cit-dock" aria-label="Main navigation">
+    <button type="button" class="gn-bnav-item active" data-nav="home"><span class="cit-nav-ico">⌂</span><small>Guriga</small></button>
+    <button type="button" class="gn-bnav-item" data-nav="map"><span class="cit-nav-ico">🗺</span><small>Map</small></button>
+    <button type="button" class="gn-bnav-sos cit-dock-sos" data-nav="type" aria-label="Report Emergency"><span>!</span></button>
+    <button type="button" class="gn-bnav-item" data-nav="status"><span class="cit-nav-ico">◉</span><small>Ogeysiis</small></button>
+    <button type="button" class="gn-bnav-item" data-nav="profile"><span class="cit-nav-ico">👤</span><small>Profile</small></button>
   </nav>
 
+  <!-- In-app WebRTC voice calling (WhatsApp-style) — never opens tel: dialer -->
+  <div id="cit-voice-overlay" class="cit-voice-overlay" aria-hidden="true">
+    <div class="cit-voice-screen">
+      <div class="cit-voice-top">
+        <p class="cit-voice-brand">GurmadNet</p>
+        <div class="cit-voice-avatar" aria-hidden="true">CC</div>
+        <h2 class="cit-voice-name">Call Center</h2>
+        <p id="cit-voice-status" class="cit-voice-status">Calling...</p>
+        <p id="cit-voice-conn" class="cit-voice-conn">Connecting...</p>
+        <p id="cit-voice-timer" class="cit-voice-timer hidden">00:00</p>
+      </div>
+      <div class="cit-voice-controls">
+        <button type="button" class="cit-voice-btn" id="cit-voice-more" disabled title="More">
+          <span>⋯</span><small>More</small>
+        </button>
+        <button type="button" class="cit-voice-btn" id="cit-voice-video" disabled title="Video unavailable">
+          <span>◉</span><small>Video</small>
+        </button>
+        <button type="button" class="cit-voice-btn is-active" id="cit-voice-speaker" aria-pressed="true">
+          <span>🔊</span><small>Speaker</small>
+        </button>
+        <button type="button" class="cit-voice-btn" id="cit-voice-mute" aria-pressed="false">
+          <span>🎙</span><small>Mute</small>
+        </button>
+        <button type="button" class="cit-voice-btn cit-voice-end" id="cit-voice-end" aria-label="End Call">
+          <span>✕</span><small>End</small>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
   <script src="{{ url_for('static', filename='js/location.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/patient.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/webrtc_call.js') }}?v=voice2"></script>
+  <script src="{{ url_for('static', filename='js/patient.js') }}?v=cit34"></script>
 </body>
 </html>

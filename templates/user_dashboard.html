@@ -6,10 +6,10 @@
   <title>{{ content.app_name }} — Dashboard</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/gurmadnet.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/gurmadnet.css') }}?v=cit26">
   {% include "_google_maps.html" %}
 </head>
-<body class="gn-app">
+<body class="gn-app gn-citizen-dash">
   <div class="gn-shell">
     <!-- Sidebar (desktop) -->
     <aside class="gn-sidebar" aria-label="Main navigation">
@@ -29,10 +29,10 @@
         <button type="button" class="gn-nav-item" data-panel="profile"><span class="gn-nav-ico">👤</span> Profile</button>
         <button type="button" class="gn-nav-item" data-panel="settings"><span class="gn-nav-ico">⚙</span> Settings</button>
       </nav>
-      <a href="{{ url_for('index') }}" class="gn-sidebar-sos">
+      <a href="{{ url_for('index') }}#type" class="gn-sidebar-sos">
         <span class="gn-sos-pulse"></span>
         <strong>SOS</strong>
-        <small>Emergency — Tap to Call</small>
+        <small>Report Emergency</small>
       </a>
     </aside>
 
@@ -57,12 +57,18 @@
         <section id="ers-idle" class="gn-idle-hero">
           <h2>You're all set</h2>
           <p>No active emergency. Help is one tap away.</p>
-          <div class="gn-card gn-card-pad">
-            <a href="{{ url_for('index') }}" class="gn-btn-alert">🚨 Report Emergency</a>
+          <div class="gn-card gn-card-pad gn-idle-actions">
+            <a href="{{ url_for('index') }}#type" class="gn-btn-alert">Report Emergency</a>
             <a href="{{ url_for('index') }}#call-center" class="gn-btn-outline" id="dash-btn-call-center"
               style="display:block;text-align:center;margin-top:10px;text-decoration:none;padding:12px;">
               📞 Call Emergency Center
             </a>
+            <div class="gn-idle-quick">
+              <a href="{{ url_for('index') }}#map" class="gn-idle-chip">🗺 Map</a>
+              <button type="button" class="gn-idle-chip" data-panel="chat">💬 Chat</button>
+              <button type="button" class="gn-idle-chip" data-panel="notifications">🔔 Alerts</button>
+              <button type="button" class="gn-idle-chip" data-panel="profile">👤 Profile</button>
+            </div>
           </div>
         </section>
 
@@ -238,6 +244,15 @@
           </div>
           <button type="submit" class="gn-btn-primary">Save Profile</button>
         </form>
+        <form id="password-form" class="gn-card gn-card-pad password-form" autocomplete="off" style="margin-top:14px;">
+          <h3 class="gn-card-title" style="margin-top:0;">Change password</h3>
+          <div class="gn-field-grid">
+            <div class="gn-field full"><label for="pw-current">Current password</label><input type="password" id="pw-current" required autocomplete="current-password"></div>
+            <div class="gn-field"><label for="pw-new">New password</label><input type="password" id="pw-new" required autocomplete="new-password"></div>
+            <div class="gn-field"><label for="pw-confirm">Confirm</label><input type="password" id="pw-confirm" required autocomplete="new-password"></div>
+          </div>
+          <button type="submit" class="gn-btn-primary">Update password</button>
+        </form>
         <label class="gn-photo-change">Change profile photo <input type="file" id="profile-photo-input" accept="image/*" hidden></label>
         <a href="{{ url_for('logout') }}" class="gn-btn-outline gn-logout-btn">Log out</a>
       </section>
@@ -257,13 +272,13 @@
   <nav class="gn-bottom-nav" aria-label="Mobile navigation">
     <button type="button" class="gn-bnav-item active" data-panel="overview"><span>🏠</span><small>Home</small></button>
     <button type="button" class="gn-bnav-item" data-panel="map"><span>🗺</span><small>Map</small></button>
-    <a href="{{ url_for('index') }}" class="gn-bnav-sos" aria-label="SOS Emergency"><span>!</span></a>
+    <a href="{{ url_for('index') }}#type" class="gn-bnav-sos" aria-label="Report Emergency"><span>!</span></a>
     <button type="button" class="gn-bnav-item" data-panel="chat"><span>💬</span><small>Chat</small></button>
     <button type="button" class="gn-bnav-item" data-panel="profile"><span>👤</span><small>Profile</small></button>
   </nav>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="{{ url_for('static', filename='js/location.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/user_dashboard.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/user_dashboard.js') }}?v=cit26"></script>
 </body>
 </html>

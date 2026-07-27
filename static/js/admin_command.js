@@ -37,6 +37,11 @@
   var SECTION_PERMS = {
     overview: "dashboard",
     users: "users_ops",
+    hospitals: "users_ops",
+    ambulances: "users_ops",
+    police: "users_ops",
+    fire: "users_ops",
+    callcenters: "users_ops",
     emergencies: "emergencies_view",
     dispatch: "emergencies_view",
     sos: "emergencies_view",
@@ -176,11 +181,16 @@
     if (name === "overview") loadCommandCenter();
     if (name === "content" && can("content_edit")) loadContentEditor();
     if (name === "users" && can("users_ops")) loadUsers();
+    if (name === "hospitals" && can("users_ops")) loadHospitalsRegistry();
+    if (name === "ambulances" && can("users_ops")) loadAmbulancesRegistry();
+    if (name === "police" && can("users_ops")) loadStationsRegistry("police");
+    if (name === "fire" && can("users_ops")) loadStationsRegistry("fire");
+    if (name === "callcenters" && can("users_ops")) loadCallCentersRegistry();
+    if (name === "emergencies" && can("emergencies_view")) loadEmergencies();
+    if (name === "dispatch" && can("emergencies_view")) loadDispatchCenter();
+    if (name === "sos" && can("emergencies_view")) loadSosQueue();
     if (name === "settings" && can("settings_ops")) loadSettingsForm();
     if (name === "system" && can("settings_system")) loadSystemConfig();
-    if ((name === "emergencies" || name === "dispatch" || name === "sos") && can("emergencies_view")) {
-      loadEmergencies();
-    }
     if (name === "callcenter" && can("call_center")) loadCallCenter();
     if (name === "ai" && can("ai")) loadAiIntelligence();
     if (name === "reports" && can("reports")) loadReports();
@@ -216,8 +226,20 @@
         if (role != null && $("user-role-filter")) {
           $("user-role-filter").value = role;
         }
+        var emFilter = a.getAttribute("data-em-filter");
+        if (emFilter && $("em-view-filter")) {
+          $("em-view-filter").value = emFilter === "history" ? "history" : "active";
+        }
         showSection(section);
         if (section === "users") loadUsers();
+        if (section === "hospitals") loadHospitalsRegistry();
+        if (section === "ambulances") loadAmbulancesRegistry();
+        if (section === "police") loadStationsRegistry("police");
+        if (section === "fire") loadStationsRegistry("fire");
+        if (section === "callcenters") loadCallCentersRegistry();
+        if (section === "emergencies") loadEmergencies();
+        if (section === "dispatch") loadDispatchCenter();
+        if (section === "sos") loadSosQueue();
       });
     });
 
@@ -1189,6 +1211,16 @@
       setText("kpi-hospitals", d.hospitals_online != null ? d.hospitals_online : 0);
       setText("kpi-police", d.police_online != null ? d.police_online : 0);
       setText("kpi-fire", d.fire_online != null ? d.fire_online : 0);
+      setText(
+        "kpi-police-trend",
+        (d.police_stations_total != null ? d.police_stations_total + " stations" : "Stations") +
+          (d.police_operators != null ? " · " + d.police_operators + " operators" : "")
+      );
+      setText(
+        "kpi-fire-trend",
+        (d.fire_stations_total != null ? d.fire_stations_total + " stations" : "Stations") +
+          (d.fire_operators != null ? " · " + d.fire_operators + " operators" : "")
+      );
       setText("kpi-ambulances", d.ambulances_available != null ? d.ambulances_available : 0);
       setText("kpi-ai", d.ai_alerts != null ? d.ai_alerts : 0);
       setText(
@@ -1199,8 +1231,6 @@
       setText("kpi-citizens-trend", "From database");
       setText("kpi-active-trend", (d.emergencies_today || 0) + " today");
       setText("kpi-hospitals-trend", (d.hospitals_total || 0) + " registered");
-      setText("kpi-police-trend", "Registered accounts");
-      setText("kpi-fire-trend", "Registered accounts");
       setText("kpi-ambulances-trend", "From hospital records");
       setText("kpi-ai-trend", "Decisions today");
       setText(
@@ -1505,7 +1535,10 @@
     ["hospital", "Hospital"],
     ["police", "Police"],
     ["fire", "Fire"],
+    ["call_center", "Call Center"],
   ];
+  var stationsCache = [];
+  var callCentersCache = [];
 
   function staffRoleOptionsHtml(selected) {
     return STAFF_CREATE_ROLES.map(function (r) {
@@ -1565,8 +1598,7 @@
       idAttr +
       '">' +
       hospitalOptionsHtml(selectedId, true) +
-      "</select>" +
-      '<p class="hint">Hospital login must belong to a facility in the hospitals table.</p></label>'
+      "</select></label>"
     );
   }
 
@@ -1578,26 +1610,85 @@
     wrap.hidden = role !== "hospital";
   }
 
-  function ensureHospitalsCache() {
-    if (hospitalsCache && hospitalsCache.length) {
+  function toggleLinkFields() {
+    var role = ($("nu-role") && $("nu-role").value) || "";
+    function showWrap(el, on) {
+      if (!el) return;
+      el.hidden = !on;
+      el.style.display = on ? "" : "none";
+    }
+    showWrap($("nu-hospital-wrap"), role === "hospital");
+    showWrap($("nu-station-wrap"), role === "police" || role === "fire");
+    showWrap($("nu-cc-wrap"), role === "call_center");
+    if (role === "police" || role === "fire") {
+      var sel = $("nu-station");
+      if (sel) {
+        Array.prototype.forEach.call(sel.options, function (opt) {
+          if (!opt.value) return;
+          var kind = opt.getAttribute("data-kind");
+          opt.hidden = kind && kind !== role;
+        });
+      }
+    }
+  }
+
+  function ensureHospitalsCache(forceRefresh) {
+    // Always refetch from MySQL-backed API unless caller explicitly wants memory only
+    if (forceRefresh === false && hospitalsCache && hospitalsCache.length) {
       return Promise.resolve(hospitalsCache);
     }
-    return api("/api/hospitals").then(function (data) {
+    return api("/api/admin/hospitals").then(function (data) {
       hospitalsCache = (data && data.hospitals) || [];
       return hospitalsCache;
     });
   }
 
-  /** + Create staff — Super Admin only: Admin, Hospital, Police, Fire */
+  function ensureFacilityCaches() {
+    return Promise.all([
+      ensureHospitalsCache(true),
+      api("/api/admin/stations"),
+      api("/api/admin/call-centers"),
+    ]).then(function (results) {
+      stationsCache = (results[1] && results[1].stations) || [];
+      callCentersCache = (results[2] && results[2].call_centers) || [];
+    });
+  }
+
+  /** + Create staff — Super Admin only */
   function openCreateStaffModal(presetRole) {
     if (!can("users_admins")) {
-      alert("Only Super Admin can create Admin, Hospital, Police, or Fire accounts.");
+      alert("Only Super Admin can create staff accounts.");
       return;
     }
-    var selected = presetRole && ["admin", "hospital", "police", "fire"].indexOf(presetRole) >= 0
-      ? presetRole
-      : "admin";
-    ensureHospitalsCache().then(function () {
+    var selected =
+      presetRole && ["admin", "hospital", "police", "fire", "call_center"].indexOf(presetRole) >= 0
+        ? presetRole
+        : "admin";
+    ensureFacilityCaches().then(function () {
+      var stationOpts =
+        '<option value="">— Select station —</option>' +
+        stationsCache
+          .map(function (s) {
+            return (
+              '<option value="' +
+              s.id +
+              '" data-kind="' +
+              esc(s.kind) +
+              '">' +
+              esc(s.kind) +
+              ": " +
+              esc(s.name) +
+              "</option>"
+            );
+          })
+          .join("");
+      var ccOpts =
+        '<option value="">— Select call center —</option>' +
+        callCentersCache
+          .map(function (c) {
+            return '<option value="' + c.id + '">' + esc(c.name) + "</option>";
+          })
+          .join("");
       openModal(
         "Create staff account",
         '<label class="sac-field"><span>Full name</span><input id="nu-name" placeholder="Full name" required></label>' +
@@ -1608,15 +1699,16 @@
           staffRoleOptionsHtml(selected) +
           "</select></label>" +
           hospitalFieldHtml("", "nu-hospital") +
-          '<p class="hint">Choose one: <strong>Admin</strong>, <strong>Hospital</strong>, <strong>Police</strong>, or <strong>Fire</strong>.</p>'
+          '<label class="sac-field" id="nu-station-wrap" hidden><span>Linked station</span><select id="nu-station">' +
+          stationOpts +
+          "</select></label>" +
+          '<label class="sac-field" id="nu-cc-wrap" hidden><span>Linked call center</span><select id="nu-cc">' +
+          ccOpts +
+          "</select></label>"
       );
       if ($("nu-role")) $("nu-role").value = selected;
-      toggleHospitalField("nu-role", "nu-hospital-wrap");
-      if ($("nu-role")) {
-        $("nu-role").addEventListener("change", function () {
-          toggleHospitalField("nu-role", "nu-hospital-wrap");
-        });
-      }
+      toggleLinkFields();
+      if ($("nu-role")) $("nu-role").addEventListener("change", toggleLinkFields);
       $("modal-save").onclick = function () {
         var role = ($("nu-role") && $("nu-role").value) || "admin";
         submitCreateUser(role, roleLabel(role) + " account created successfully.");
@@ -1636,6 +1728,20 @@
       payload.hospital_id = ($("nu-hospital") && $("nu-hospital").value) || "";
       if (!payload.hospital_id) {
         alert("Select a hospital facility to link this account");
+        return;
+      }
+    }
+    if (payload.role === "police" || payload.role === "fire") {
+      payload.station_id = ($("nu-station") && $("nu-station").value) || "";
+      if (!payload.station_id) {
+        alert("Select a station facility to link this account");
+        return;
+      }
+    }
+    if (payload.role === "call_center") {
+      payload.call_center_id = ($("nu-cc") && $("nu-cc").value) || "";
+      if (!payload.call_center_id) {
+        alert("Select a call center facility to link this account");
         return;
       }
     }
@@ -1668,6 +1774,827 @@
     openCreateStaffModal(opts.role);
   }
 
+  var ACTIVE_EM = { pending: 1, dispatched: 1, in_progress: 1, pending_hospital: 1, accepted: 1 };
+  var facilityCache = { hospitals: [], stations: [], ambulances: [], callCenters: [] };
+
+  function historyHtml(entries) {
+    if (!(entries || []).length) return "<p class='hint'>No audit history yet.</p>";
+    return (
+      "<ul class='sac-history'>" +
+      entries
+        .slice(0, 12)
+        .map(function (e) {
+          return (
+            "<li><strong>" +
+            esc(e.action) +
+            "</strong> · " +
+            esc(fmtTime(e.timestamp)) +
+            "</li>"
+          );
+        })
+        .join("") +
+      "</ul>"
+    );
+  }
+
+  function facilityFormFields(opts) {
+    opts = opts || {};
+    return (
+      '<label><span>Name *</span><input id="rf-name" value="' +
+      esc(opts.name || "") +
+      '" required></label>' +
+      '<label><span>City</span><input id="rf-city" value="' +
+      esc(opts.city || "") +
+      '"></label>' +
+      '<label><span>Region</span><input id="rf-region" value="' +
+      esc(opts.region || "") +
+      '"></label>' +
+      '<label><span>District</span><input id="rf-district" value="' +
+      esc(opts.district || "") +
+      '"></label>' +
+      '<label><span>Address</span><input id="rf-address" value="' +
+      esc(opts.address || "") +
+      '"></label>' +
+      '<label><span>Phone</span><input id="rf-phone" value="' +
+      esc(opts.phone || "") +
+      '"></label>' +
+      '<label><span>Latitude</span><input id="rf-lat" value="' +
+      esc(opts.latitude != null ? opts.latitude : "") +
+      '"></label>' +
+      '<label><span>Longitude</span><input id="rf-lng" value="' +
+      esc(opts.longitude != null ? opts.longitude : "") +
+      '"></label>' +
+      '<label><span>Status</span><select id="rf-status">' +
+      ["open", "limited", "closed"]
+        .map(function (s) {
+          return (
+            '<option value="' +
+            s +
+            '"' +
+            ((opts.operating_status || "open") === s ? " selected" : "") +
+            ">" +
+            s +
+            "</option>"
+          );
+        })
+        .join("") +
+      "</select></label>"
+    );
+  }
+
+  function readFacilityForm() {
+    return {
+      name: ($("rf-name") && $("rf-name").value) || "",
+      city: ($("rf-city") && $("rf-city").value) || "",
+      region: ($("rf-region") && $("rf-region").value) || "",
+      district: ($("rf-district") && $("rf-district").value) || "",
+      address: ($("rf-address") && $("rf-address").value) || "",
+      phone: ($("rf-phone") && $("rf-phone").value) || "",
+      latitude: ($("rf-lat") && $("rf-lat").value) || "",
+      longitude: ($("rf-lng") && $("rf-lng").value) || "",
+      operating_status: ($("rf-status") && $("rf-status").value) || "open",
+    };
+  }
+
+  function loadHospitalsRegistry() {
+    closeFacilityProfiles();
+    var q = ($("hospital-search") && $("hospital-search").value) || "";
+    var st = ($("hospital-status-filter") && $("hospital-status-filter").value) || "";
+    var url =
+      "/api/admin/hospitals?q=" +
+      encodeURIComponent(q) +
+      "&status=" +
+      encodeURIComponent(st);
+    api(url).then(function (data) {
+      var tbody = document.querySelector("#hospitals-table tbody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      var list = (data && data.hospitals) || [];
+      facilityCache.hospitals = list;
+      if (!list.length) {
+        tbody.innerHTML = "<tr><td colspan='9' class='sac-empty-cell'>No hospitals in MySQL</td></tr>";
+        return;
+      }
+      list.forEach(function (h) {
+        var tr = document.createElement("tr");
+        tr.innerHTML =
+          "<td>" +
+          esc(h.id) +
+          "</td><td><strong>" +
+          esc(h.name) +
+          "</strong></td><td>" +
+          esc(h.city) +
+          "</td><td>" +
+          esc(h.district) +
+          "</td><td>" +
+          esc(h.phone) +
+          "</td><td>" +
+          esc(h.operating_status) +
+          "</td><td>" +
+          (h.ambulance_available ? "Yes (" + esc(h.ambulance_count || 0) + ")" : "No") +
+          "</td><td>" +
+          esc(h.owner_name || "—") +
+          '</td><td class="actions-cell">' +
+          '<button type="button" class="btn-sm h-profile" data-id="' +
+          h.id +
+          '">Profile</button> ' +
+          '<button type="button" class="btn-sm h-edit" data-id="' +
+          h.id +
+          '">Edit</button> ' +
+          '<button type="button" class="btn-sm h-toggle" data-id="' +
+          h.id +
+          '">' +
+          ((h.operating_status || "") === "closed" ? "Activate" : "Deactivate") +
+          "</button> " +
+          '<button type="button" class="btn-sm h-del" data-id="' +
+          h.id +
+          '">Delete</button></td>';
+        tbody.appendChild(tr);
+      });
+      tbody.querySelectorAll(".h-profile").forEach(function (b) {
+        b.onclick = function () {
+          showHospitalProfile(parseInt(b.getAttribute("data-id"), 10));
+        };
+      });
+      tbody.querySelectorAll(".h-edit").forEach(function (b) {
+        b.onclick = function () {
+          openHospitalEditor(parseInt(b.getAttribute("data-id"), 10));
+        };
+      });
+      tbody.querySelectorAll(".h-toggle").forEach(function (b) {
+        b.onclick = function () {
+          api("/api/admin/hospitals/" + b.getAttribute("data-id") + "/toggle", { method: "POST", body: "{}" }).then(
+            loadHospitalsRegistry
+          );
+        };
+      });
+      tbody.querySelectorAll(".h-del").forEach(function (b) {
+        b.onclick = function () {
+          if (!confirm("Delete this hospital facility?")) return;
+          api("/api/admin/hospitals/" + b.getAttribute("data-id"), { method: "DELETE" }).then(function (r) {
+            if (r && r.success === false) alert(r.message || "Delete failed");
+            loadHospitalsRegistry();
+          });
+        };
+      });
+    });
+  }
+
+  function openFacilityProfile(panel, bodyHtml) {
+    if (!panel) return;
+    var body = panel.querySelector("[id$='-profile-body']") || panel.querySelector("div");
+    if (body && bodyHtml != null) body.innerHTML = bodyHtml;
+    panel.hidden = false;
+    var split = panel.closest(".sac-split");
+    if (split) split.classList.add("is-profile-open");
+  }
+
+  function closeFacilityProfiles() {
+    document.querySelectorAll(".sac-profile-panel").forEach(function (panel) {
+      panel.hidden = true;
+      var split = panel.closest(".sac-split");
+      if (split) split.classList.remove("is-profile-open");
+    });
+  }
+
+  function showHospitalProfile(hid) {
+    api("/api/admin/hospitals/" + hid).then(function (data) {
+      var panel = $("hospital-profile");
+      var body = $("hospital-profile-body");
+      if (!panel || !body || !data.hospital) return;
+      var h = data.hospital;
+      var users = (data.linked_users || [])
+        .map(function (u) {
+          return esc(u.name) + " (" + esc(u.email) + ")";
+        })
+        .join("<br>") || "—";
+      body.innerHTML =
+        "<p><strong>" +
+        esc(h.name) +
+        "</strong></p><p>" +
+        esc(h.address || "") +
+        "<br>" +
+        esc(h.city || "") +
+        " · " +
+        esc(h.phone || "") +
+        "</p><p>Status: " +
+        esc(h.operating_status) +
+        "</p><p>GPS: " +
+        esc(h.latitude) +
+        ", " +
+        esc(h.longitude) +
+        "</p><h4>Linked accounts</h4><p>" +
+        users +
+        "</p><h4>History</h4>" +
+        historyHtml(data.history);
+      openFacilityProfile(panel);
+    });
+  }
+
+  function openHospitalEditor(hid) {
+    var existing = null;
+    if (hid) {
+      existing = (facilityCache.hospitals || []).filter(function (h) {
+        return h.id === hid;
+      })[0];
+    }
+    var loginFields = hid
+      ? ""
+      : '<div class="sac-form-divider"><strong>Login account</strong><p class="sac-hint">Magaca iyo password — ka dib hospital-ku wuu geli karaa.</p></div>' +
+        '<label><span>Full name *</span><input id="rf-owner-name" placeholder="Hospital account name" required></label>' +
+        '<label><span>Login email *</span><input id="rf-owner-email" type="email" placeholder="hospital@example.com" required></label>' +
+        '<label><span>Password *</span><input id="rf-owner-pass" type="password" placeholder="Min. 6 characters" autocomplete="new-password" required></label>';
+    openModal(
+      hid ? "Edit hospital" : "Add hospital + login",
+      '<div class="sac-form-divider"><strong>Hospital details</strong></div>' +
+        facilityFormFields(existing || {}) +
+        '<label><span>Services (comma-separated) *</span><input id="rf-services" value="' +
+        esc(((existing && existing.services) || ["Emergency Care"]).join(", ")) +
+        '"></label>' +
+        '<label><span>Contact email</span><input id="rf-email" value="' +
+        esc((existing && existing.contact_email) || "") +
+        '"></label>' +
+        '<label><span>Capacity</span><input id="rf-cap" type="number" value="' +
+        esc((existing && existing.emergency_capacity) || 10) +
+        '"></label>' +
+        loginFields
+    );
+    $("modal-save").onclick = function () {
+      var payload = readFacilityForm();
+      payload.services = ($("rf-services") && $("rf-services").value) || "Emergency Care";
+      payload.contact_email = ($("rf-email") && $("rf-email").value) || "";
+      payload.emergency_capacity = ($("rf-cap") && $("rf-cap").value) || 10;
+      payload.ambulance_available = true;
+      if (!payload.latitude || !payload.longitude) {
+        payload.latitude = 2.0469;
+        payload.longitude = 45.3182;
+      }
+      if (!payload.region) payload.region = "Banadir";
+      if (!payload.district) payload.district = payload.city || "Mogadishu";
+      if (!payload.address) payload.address = payload.city || "Mogadishu";
+      if (!payload.phone) payload.phone = "000000000";
+      if (!hid) {
+        payload.owner_name = ($("rf-owner-name") && $("rf-owner-name").value) || "";
+        payload.owner_email = ($("rf-owner-email") && $("rf-owner-email").value) || "";
+        payload.owner_password = ($("rf-owner-pass") && $("rf-owner-pass").value) || "";
+        if (!payload.owner_name.trim()) {
+          alert("Geli magaca login-ka (full name)");
+          return;
+        }
+        if (!payload.owner_email.trim()) {
+          alert("Geli email-ka login-ka");
+          return;
+        }
+        if (!payload.owner_password || payload.owner_password.length < 6) {
+          alert("Password waa inuu ugu yaraan 6 xaraf yahay");
+          return;
+        }
+        if (!payload.contact_email) payload.contact_email = payload.owner_email;
+      }
+      var req = hid
+        ? api("/api/admin/hospitals/" + hid, { method: "PUT", body: JSON.stringify(payload) })
+        : api("/api/admin/hospitals", { method: "POST", body: JSON.stringify(payload) });
+      req.then(function (r) {
+        if (r && r.success === false) {
+          alert(r.message || "Save failed");
+          return;
+        }
+        closeModal();
+        loadHospitalsRegistry();
+        if (!hid && r && r.owner) {
+          alert(
+            "Hospital + login la sameeyay.\nEmail: " +
+              (r.owner.email || "") +
+              "\nHadda hospital-ku wuu login kari karaa."
+          );
+        }
+      });
+    };
+  }
+
+  function loadStationsRegistry(kind) {
+    closeFacilityProfiles();
+    var searchId = kind === "police" ? "police-search" : "fire-search";
+    var statusId = kind === "police" ? "police-status-filter" : "fire-status-filter";
+    var tableId = kind === "police" ? "police-table" : "fire-table";
+    var profileId = kind === "police" ? "police-profile" : "fire-profile";
+    var profileBodyId = kind === "police" ? "police-profile-body" : "fire-profile-body";
+    var q = ($(searchId) && $(searchId).value) || "";
+    var st = ($(statusId) && $(statusId).value) || "";
+    api(
+      "/api/admin/stations?kind=" +
+        encodeURIComponent(kind) +
+        "&q=" +
+        encodeURIComponent(q) +
+        "&status=" +
+        encodeURIComponent(st)
+    ).then(function (data) {
+      var tbody = document.querySelector("#" + tableId + " tbody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      var list = (data && data.stations) || [];
+      if (!list.length) {
+        tbody.innerHTML = "<tr><td colspan='6' class='sac-empty-cell'>No stations in MySQL</td></tr>";
+        return;
+      }
+      list.forEach(function (s) {
+        var tr = document.createElement("tr");
+        tr.innerHTML =
+          "<td>" +
+          esc(s.id) +
+          "</td><td><strong>" +
+          esc(s.name) +
+          "</strong></td><td>" +
+          esc(s.city) +
+          "</td><td>" +
+          esc(s.phone) +
+          "</td><td>" +
+          esc(s.operating_status) +
+          '</td><td class="actions-cell">' +
+          '<button type="button" class="btn-sm s-profile" data-id="' +
+          s.id +
+          '">Profile</button> ' +
+          '<button type="button" class="btn-sm s-edit" data-id="' +
+          s.id +
+          '">Edit</button> ' +
+          '<button type="button" class="btn-sm s-toggle" data-id="' +
+          s.id +
+          '">' +
+          ((s.operating_status || "") === "closed" ? "Activate" : "Deactivate") +
+          "</button> " +
+          '<button type="button" class="btn-sm s-del" data-id="' +
+          s.id +
+          '">Delete</button></td>';
+        tbody.appendChild(tr);
+      });
+      tbody.querySelectorAll(".s-profile").forEach(function (b) {
+        b.onclick = function () {
+          api("/api/admin/stations/" + b.getAttribute("data-id")).then(function (d) {
+            var panel = $(profileId);
+            var body = $(profileBodyId);
+            if (!panel || !body || !d.station) return;
+            var s = d.station;
+            body.innerHTML =
+              "<p><strong>" +
+              esc(s.name) +
+              "</strong> (" +
+              esc(s.kind) +
+              ")</p><p>" +
+              esc(s.address || "") +
+              "<br>" +
+              esc(s.phone || "") +
+              "</p><h4>Linked staff</h4><p>" +
+              ((d.linked_users || [])
+                .map(function (u) {
+                  return esc(u.name);
+                })
+                .join(", ") || "—") +
+              "</p><h4>History</h4>" +
+              historyHtml(d.history);
+            openFacilityProfile(panel);
+          });
+        };
+      });
+      tbody.querySelectorAll(".s-edit").forEach(function (b) {
+        b.onclick = function () {
+          openStationEditor(kind, parseInt(b.getAttribute("data-id"), 10), list);
+        };
+      });
+      tbody.querySelectorAll(".s-toggle").forEach(function (b) {
+        b.onclick = function () {
+          api("/api/admin/stations/" + b.getAttribute("data-id") + "/toggle", { method: "POST", body: "{}" }).then(
+            function () {
+              loadStationsRegistry(kind);
+            }
+          );
+        };
+      });
+      tbody.querySelectorAll(".s-del").forEach(function (b) {
+        b.onclick = function () {
+          if (!confirm("Delete this station?")) return;
+          api("/api/admin/stations/" + b.getAttribute("data-id"), { method: "DELETE" }).then(function (r) {
+            if (r && r.success === false) alert(r.message || "Delete failed");
+            loadStationsRegistry(kind);
+          });
+        };
+      });
+    });
+  }
+
+  function openStationEditor(kind, sid, list) {
+    var existing = (list || []).filter(function (s) {
+      return s.id === sid;
+    })[0];
+    openModal((sid ? "Edit " : "Add ") + kind + " station", facilityFormFields(existing || {}));
+    $("modal-save").onclick = function () {
+      var payload = readFacilityForm();
+      payload.kind = kind;
+      var req = sid
+        ? api("/api/admin/stations/" + sid, { method: "PUT", body: JSON.stringify(payload) })
+        : api("/api/admin/stations", { method: "POST", body: JSON.stringify(payload) });
+      req.then(function (r) {
+        if (r && r.success === false) {
+          alert(r.message || "Save failed");
+          return;
+        }
+        closeModal();
+        loadStationsRegistry(kind);
+      });
+    };
+  }
+
+  function loadAmbulancesRegistry() {
+    closeFacilityProfiles();
+    var q = ($("ambulance-search") && $("ambulance-search").value) || "";
+    var st = ($("ambulance-status-filter") && $("ambulance-status-filter").value) || "";
+    api(
+      "/api/admin/ambulances?q=" + encodeURIComponent(q) + "&status=" + encodeURIComponent(st)
+    ).then(function (data) {
+      var tbody = document.querySelector("#ambulances-table tbody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      var list = (data && data.ambulances) || [];
+      facilityCache.ambulances = list;
+      if (!list.length) {
+        tbody.innerHTML =
+          "<tr><td colspan='7' class='sac-empty-cell'>No hospital ambulances shared for dispatch yet</td></tr>";
+        return;
+      }
+      list.forEach(function (a) {
+        var gps =
+          a.latitude != null && a.longitude != null
+            ? Number(a.latitude).toFixed(4) + ", " + Number(a.longitude).toFixed(4)
+            : "—";
+        var driver = [a.driver_name, a.driver_phone].filter(Boolean).join(" · ") || "—";
+        var tr = document.createElement("tr");
+        tr.innerHTML =
+          "<td>" +
+          esc(a.id) +
+          "</td><td><strong>" +
+          esc(a.call_sign) +
+          "</strong></td><td>" +
+          esc(a.hospital_name) +
+          "</td><td>" +
+          esc(a.status) +
+          "</td><td>" +
+          esc(driver) +
+          "</td><td>" +
+          esc(gps) +
+          '</td><td class="actions-cell">' +
+          '<button type="button" class="btn-sm a-profile" data-id="' +
+          a.id +
+          '">Details</button></td>';
+        tbody.appendChild(tr);
+      });
+      tbody.querySelectorAll(".a-profile").forEach(function (b) {
+        b.onclick = function () {
+          api("/api/admin/ambulances/" + b.getAttribute("data-id")).then(function (d) {
+            var panel = $("ambulance-profile");
+            var body = $("ambulance-profile-body");
+            if (!panel || !body || !d.ambulance) return;
+            var a = d.ambulance;
+            var gps =
+              a.latitude != null && a.longitude != null
+                ? a.latitude + ", " + a.longitude
+                : "Not shared";
+            body.innerHTML =
+              "<p><strong>" +
+              esc(a.call_sign) +
+              "</strong></p><p>Hospital: " +
+              esc(a.hospital_name || ("#" + a.hospital_id)) +
+              "<br>Status: " +
+              esc(a.status) +
+              "<br>Driver: " +
+              esc(a.driver_name || "—") +
+              "<br>Phone: " +
+              esc(a.driver_phone || "—") +
+              "<br>GPS: " +
+              esc(gps) +
+              "</p><p class=\"sac-hint\">Managed by the hospital — fleet records stay outside GurmadNet.</p><h4>History</h4>" +
+              historyHtml(d.history);
+            openFacilityProfile(panel);
+          });
+        };
+      });
+    });
+  }
+
+  function loadCallCentersRegistry() {
+    closeFacilityProfiles();
+    var q = ($("ccfac-search") && $("ccfac-search").value) || "";
+    var st = ($("ccfac-status-filter") && $("ccfac-status-filter").value) || "";
+    api(
+      "/api/admin/call-centers?q=" + encodeURIComponent(q) + "&status=" + encodeURIComponent(st)
+    ).then(function (data) {
+      var tbody = document.querySelector("#ccfac-table tbody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      var list = (data && data.call_centers) || [];
+      facilityCache.callCenters = list;
+      if (!list.length) {
+        tbody.innerHTML = "<tr><td colspan='6' class='sac-empty-cell'>No call centers in MySQL</td></tr>";
+        return;
+      }
+      list.forEach(function (c) {
+        var tr = document.createElement("tr");
+        tr.innerHTML =
+          "<td>" +
+          esc(c.id) +
+          "</td><td><strong>" +
+          esc(c.name) +
+          "</strong></td><td>" +
+          esc(c.city) +
+          "</td><td>" +
+          esc(c.phone) +
+          "</td><td>" +
+          esc(c.operating_status) +
+          '</td><td class="actions-cell">' +
+          '<button type="button" class="btn-sm c-profile" data-id="' +
+          c.id +
+          '">Profile</button> ' +
+          '<button type="button" class="btn-sm c-edit" data-id="' +
+          c.id +
+          '">Edit</button> ' +
+          '<button type="button" class="btn-sm c-toggle" data-id="' +
+          c.id +
+          '">' +
+          ((c.operating_status || "") === "closed" ? "Activate" : "Deactivate") +
+          "</button> " +
+          '<button type="button" class="btn-sm c-del" data-id="' +
+          c.id +
+          '">Delete</button></td>';
+        tbody.appendChild(tr);
+      });
+      tbody.querySelectorAll(".c-profile").forEach(function (b) {
+        b.onclick = function () {
+          api("/api/admin/call-centers/" + b.getAttribute("data-id")).then(function (d) {
+            var panel = $("ccfac-profile");
+            var body = $("ccfac-profile-body");
+            if (!panel || !body || !d.call_center) return;
+            var c = d.call_center;
+            body.innerHTML =
+              "<p><strong>" +
+              esc(c.name) +
+              "</strong></p><p>" +
+              esc(c.address || "") +
+              "<br>" +
+              esc(c.phone || "") +
+              "</p><h4>Operators</h4><p>" +
+              ((d.linked_users || [])
+                .map(function (u) {
+                  return esc(u.name);
+                })
+                .join(", ") || "—") +
+              "</p><h4>History</h4>" +
+              historyHtml(d.history);
+            openFacilityProfile(panel);
+          });
+        };
+      });
+      tbody.querySelectorAll(".c-edit").forEach(function (b) {
+        b.onclick = function () {
+          openCallCenterEditor(parseInt(b.getAttribute("data-id"), 10));
+        };
+      });
+      tbody.querySelectorAll(".c-toggle").forEach(function (b) {
+        b.onclick = function () {
+          api("/api/admin/call-centers/" + b.getAttribute("data-id") + "/toggle", {
+            method: "POST",
+            body: "{}",
+          }).then(loadCallCentersRegistry);
+        };
+      });
+      tbody.querySelectorAll(".c-del").forEach(function (b) {
+        b.onclick = function () {
+          if (!confirm("Delete this call center?")) return;
+          api("/api/admin/call-centers/" + b.getAttribute("data-id"), { method: "DELETE" }).then(
+            loadCallCentersRegistry
+          );
+        };
+      });
+    });
+  }
+
+  function openCallCenterEditor(cid) {
+    var existing = (facilityCache.callCenters || []).filter(function (c) {
+      return c.id === cid;
+    })[0];
+    openModal(cid ? "Edit call center" : "Add call center", facilityFormFields(existing || {}));
+    $("modal-save").onclick = function () {
+      var payload = readFacilityForm();
+      var req = cid
+        ? api("/api/admin/call-centers/" + cid, { method: "PUT", body: JSON.stringify(payload) })
+        : api("/api/admin/call-centers", { method: "POST", body: JSON.stringify(payload) });
+      req.then(function (r) {
+        if (r && r.success === false) {
+          alert(r.message || "Save failed");
+          return;
+        }
+        closeModal();
+        loadCallCentersRegistry();
+      });
+    };
+  }
+
+  function facilitySelectOptions(list, selectedId, labelFn) {
+    return (list || [])
+      .map(function (item) {
+        return (
+          '<option value="' +
+          item.id +
+          '"' +
+          (String(selectedId) === String(item.id) ? " selected" : "") +
+          ">" +
+          esc(labelFn ? labelFn(item) : item.name) +
+          "</option>"
+        );
+      })
+      .join("");
+  }
+
+  function openDispatchModal(em) {
+    Promise.all([
+      api("/api/admin/hospitals"),
+      api("/api/admin/stations"),
+      api("/api/admin/ambulances"),
+    ]).then(function (results) {
+      var hospitals = (results[0] && results[0].hospitals) || [];
+      var stations = (results[1] && results[1].stations) || [];
+      var ambulances = (results[2] && results[2].ambulances) || [];
+      openModal(
+        "Dispatch emergency #" + em.id,
+        '<label><span>Team</span><select id="dp-team"><option value="hospital">Hospital</option><option value="police">Police</option><option value="fire">Fire</option></select></label>' +
+          '<label><span>Hospital</span><select id="dp-hid"><option value="">—</option>' +
+          facilitySelectOptions(hospitals, em.assigned_hospital_id) +
+          "</select></label>" +
+          '<label><span>Station</span><select id="dp-sid"><option value="">—</option>' +
+          facilitySelectOptions(stations, em.assigned_station_id, function (s) {
+            return (s.kind || "") + ": " + s.name;
+          }) +
+          "</select></label>" +
+          '<label><span>Ambulance unit</span><select id="dp-amb"><option value="">—</option>' +
+          facilitySelectOptions(ambulances, em.assigned_ambulance_id, function (a) {
+            return a.call_sign + " (" + (a.hospital_name || "") + ")";
+          }) +
+          "</select></label>" +
+          '<label><span>Notes</span><input id="dp-notes" value=""></label>'
+      );
+      if ($("dp-team")) $("dp-team").value = em.assigned_to || "hospital";
+      $("modal-save").onclick = function () {
+        api("/api/admin/emergencies/dispatch", {
+          method: "POST",
+          body: JSON.stringify({
+            id: em.id,
+            assigned_to: ($("dp-team") && $("dp-team").value) || "hospital",
+            assigned_hospital_id: ($("dp-hid") && $("dp-hid").value) || "",
+            assigned_station_id: ($("dp-sid") && $("dp-sid").value) || "",
+            ambulance_unit_id: ($("dp-amb") && $("dp-amb").value) || "",
+            notes: ($("dp-notes") && $("dp-notes").value) || "",
+          }),
+        }).then(function (r) {
+          if (r && r.success === false) {
+            alert(r.message || "Dispatch failed");
+            return;
+          }
+          closeModal();
+          loadDispatchCenter();
+          loadEmergencies();
+          loadSosQueue();
+        });
+      };
+    });
+  }
+
+  function loadDispatchCenter() {
+    api("/api/admin/emergencies").then(function (data) {
+      var tbody = document.querySelector("#dispatch-table tbody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      var list = (data.emergencies || []).filter(function (em) {
+        return ACTIVE_EM[(em.status || "").toLowerCase()];
+      });
+      if (!list.length) {
+        tbody.innerHTML = "<tr><td colspan='7' class='sac-empty-cell'>No active incidents in queue</td></tr>";
+        return;
+      }
+      list.forEach(function (em) {
+        emergenciesCache[em.id] = em;
+        var facility =
+          em.assigned_hospital_name ||
+          (em.assigned_station_id ? "Station #" + em.assigned_station_id : em.assigned_to || "—");
+        var tr = document.createElement("tr");
+        tr.innerHTML =
+          "<td>" +
+          esc(em.id) +
+          "</td><td>" +
+          esc(em.type) +
+          "</td><td>" +
+          esc(em.caller_name) +
+          "</td><td>" +
+          esc(em.status) +
+          "</td><td>" +
+          esc(facility) +
+          "</td><td>" +
+          esc(em.response_deadline || "—") +
+          '</td><td class="actions-cell">' +
+          '<button type="button" class="btn-sm dp-go" data-id="' +
+          em.id +
+          '">Dispatch</button> ' +
+          '<button type="button" class="btn-sm dp-esc" data-id="' +
+          em.id +
+          '">Escalate</button></td>';
+        tbody.appendChild(tr);
+      });
+      tbody.querySelectorAll(".dp-go").forEach(function (b) {
+        b.onclick = function () {
+          openDispatchModal(emergenciesCache[b.getAttribute("data-id")]);
+        };
+      });
+      tbody.querySelectorAll(".dp-esc").forEach(function (b) {
+        b.onclick = function () {
+          api("/api/admin/emergencies/escalate", {
+            method: "POST",
+            body: JSON.stringify({ id: parseInt(b.getAttribute("data-id"), 10) }),
+          }).then(function (r) {
+            if (r && r.message) alert(r.message);
+            loadDispatchCenter();
+          });
+        };
+      });
+    });
+  }
+
+  function loadSosQueue() {
+    api("/api/admin/emergencies").then(function (data) {
+      var tbody = document.querySelector("#sos-table tbody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      var list = (data.emergencies || []).filter(function (em) {
+        var st = (em.status || "").toLowerCase();
+        if (!ACTIVE_EM[st]) return false;
+        var mode = (em.request_mode || "").toLowerCase();
+        var type = (em.type || "").toLowerCase();
+        return mode === "sos" || mode === "emergency" || type === "sos" || type === "medical" || !!em.user_id;
+      });
+      if (!list.length) {
+        tbody.innerHTML = "<tr><td colspan='6' class='sac-empty-cell'>No active SOS requests</td></tr>";
+        return;
+      }
+      list.forEach(function (em) {
+        emergenciesCache[em.id] = em;
+        var tr = document.createElement("tr");
+        tr.innerHTML =
+          "<td>" +
+          esc(em.id) +
+          "</td><td>" +
+          esc(em.type) +
+          "</td><td>" +
+          esc(em.caller_name) +
+          "</td><td>" +
+          esc(em.status) +
+          "</td><td>" +
+          esc(em.response_deadline || "—") +
+          '</td><td class="actions-cell">' +
+          '<button type="button" class="btn-sm sos-appr" data-id="' +
+          em.id +
+          '">Approve</button> ' +
+          '<button type="button" class="btn-sm sos-esc" data-id="' +
+          em.id +
+          '">Escalate</button> ' +
+          '<button type="button" class="btn-sm sos-ver" data-id="' +
+          em.id +
+          '">Verify</button></td>';
+        tbody.appendChild(tr);
+      });
+      tbody.querySelectorAll(".sos-appr").forEach(function (b) {
+        b.onclick = function () {
+          openDispatchModal(emergenciesCache[b.getAttribute("data-id")]);
+        };
+      });
+      tbody.querySelectorAll(".sos-esc").forEach(function (b) {
+        b.onclick = function () {
+          api("/api/admin/emergencies/escalate", {
+            method: "POST",
+            body: JSON.stringify({ id: parseInt(b.getAttribute("data-id"), 10) }),
+          }).then(loadSosQueue);
+        };
+      });
+      tbody.querySelectorAll(".sos-ver").forEach(function (b) {
+        b.onclick = function () {
+          var resolve = confirm("Mark as resolved after verify? OK=resolve, Cancel=verify only");
+          api("/api/admin/emergencies/verify", {
+            method: "POST",
+            body: JSON.stringify({
+              id: parseInt(b.getAttribute("data-id"), 10),
+              resolve: resolve,
+              notes: "Admin verification",
+            }),
+          }).then(loadSosQueue);
+        };
+      });
+    });
+  }
+
   function loadUsers() {
     var q = ($("user-search") && $("user-search").value) || "";
     var role = ($("user-role-filter") && $("user-role-filter").value) || "";
@@ -1680,6 +2607,8 @@
       })
       .then(function (data) {
         if (data.hospitals) hospitalsCache = data.hospitals;
+        if (data.stations) stationsCache = data.stations;
+        if (data.call_centers) callCentersCache = data.call_centers;
         var tbody = document.querySelector("#users-table tbody");
         if (!tbody) return;
         tbody.innerHTML = "";
@@ -1784,7 +2713,7 @@
         } else if (act === "edit" && u) {
           var lockRole = u.is_self || (u.is_privileged && !can("users_admins"));
           var canStatus = !u.is_self && (!u.is_privileged || can("users_admins"));
-          ensureHospitalsCache().then(function () {
+          ensureHospitalsCache(true).then(function () {
             openModal(
               u.is_privileged ? "Edit " + roleLabel(u.role) : "Edit user",
               '<label class="sac-field"><span>Full name</span><input id="eu-name" value="' +
@@ -2107,16 +3036,43 @@
   }
 
   function loadEmergencies() {
+    var view = ($("em-view-filter") && $("em-view-filter").value) || "active";
+    var q = (($("em-search") && $("em-search").value) || "").toLowerCase();
+    if ($("em-section-title")) {
+      $("em-section-title").textContent =
+        view === "history" ? "Emergency History" : view === "all" ? "All Emergencies" : "Active Emergencies";
+    }
     api("/api/admin/emergencies").then(function (data) {
       var tbody = document.querySelector("#emergencies-table tbody");
       if (!tbody) return;
       tbody.innerHTML = "";
-      if (!(data.emergencies || []).length) {
+      var list = (data.emergencies || []).filter(function (em) {
+        var st = (em.status || "").toLowerCase();
+        if (view === "active" && !ACTIVE_EM[st]) return false;
+        if (view === "history" && ACTIVE_EM[st]) return false;
+        if (q) {
+          var blob = [em.caller_name, em.phone, em.location, em.type, em.id].join(" ").toLowerCase();
+          if (blob.indexOf(q) < 0) return false;
+        }
+        return true;
+      });
+      if (!list.length) {
         tbody.innerHTML =
           "<tr><td colspan='9' class='sac-empty-cell'>No data available</td></tr>";
         return;
       }
-      (data.emergencies || []).forEach(function (em) {
+      var statuses = [
+        "pending",
+        "pending_hospital",
+        "accepted",
+        "dispatched",
+        "in_progress",
+        "completed",
+        "cancelled",
+        "resolved",
+        "no_hospital_available",
+      ];
+      list.forEach(function (em) {
         emergenciesCache[em.id] = em;
         var tr = document.createElement("tr");
         tr.innerHTML =
@@ -2136,7 +3092,7 @@
           '<td><select data-id="' +
           em.id +
           '" class="em-status">' +
-          ["pending", "dispatched", "in_progress", "completed", "cancelled", "resolved"]
+          statuses
             .map(function (s) {
               return '<option value="' + s + '"' + (em.status === s ? " selected" : "") + ">" + s + "</option>";
             })
@@ -2166,6 +3122,9 @@
           '<button class="btn-sm btn-em-map" data-id="' +
           em.id +
           '">Map</button> ' +
+          '<button class="btn-sm em-dispatch" data-id="' +
+          em.id +
+          '">Dispatch</button> ' +
           (can("emergencies_delete")
             ? '<button class="btn-sm em-del" data-id="' + em.id + '">Delete</button>'
             : "") +
@@ -2196,6 +3155,11 @@
         b.onclick = function () {
           var em = emergenciesCache[b.getAttribute("data-id")];
           if (em && window.EmergencyLocation) EmergencyLocation.showEmergencyOnMap(em);
+        };
+      });
+      tbody.querySelectorAll(".em-dispatch").forEach(function (b) {
+        b.onclick = function () {
+          openDispatchModal(emergenciesCache[b.getAttribute("data-id")]);
         };
       });
       tbody.querySelectorAll(".em-del").forEach(function (b) {
@@ -2831,6 +3795,60 @@
 
     if ($("user-search")) $("user-search").addEventListener("input", loadUsers);
     if ($("user-role-filter")) $("user-role-filter").addEventListener("change", loadUsers);
+    if ($("hospital-search")) $("hospital-search").addEventListener("input", loadHospitalsRegistry);
+    if ($("hospital-status-filter")) $("hospital-status-filter").addEventListener("change", loadHospitalsRegistry);
+    if ($("btn-refresh-hospitals")) $("btn-refresh-hospitals").onclick = loadHospitalsRegistry;
+    if ($("btn-add-hospital")) $("btn-add-hospital").onclick = function () {
+      openHospitalEditor(null);
+    };
+    if ($("ambulance-search")) $("ambulance-search").addEventListener("input", loadAmbulancesRegistry);
+    if ($("ambulance-status-filter"))
+      $("ambulance-status-filter").addEventListener("change", loadAmbulancesRegistry);
+    if ($("btn-refresh-ambulances")) $("btn-refresh-ambulances").onclick = loadAmbulancesRegistry;
+    if ($("police-search"))
+      $("police-search").addEventListener("input", function () {
+        loadStationsRegistry("police");
+      });
+    if ($("police-status-filter"))
+      $("police-status-filter").addEventListener("change", function () {
+        loadStationsRegistry("police");
+      });
+    if ($("btn-refresh-police"))
+      $("btn-refresh-police").onclick = function () {
+        loadStationsRegistry("police");
+      };
+    if ($("btn-add-police"))
+      $("btn-add-police").onclick = function () {
+        openStationEditor("police", null, []);
+      };
+    if ($("fire-search"))
+      $("fire-search").addEventListener("input", function () {
+        loadStationsRegistry("fire");
+      });
+    if ($("fire-status-filter"))
+      $("fire-status-filter").addEventListener("change", function () {
+        loadStationsRegistry("fire");
+      });
+    if ($("btn-refresh-fire"))
+      $("btn-refresh-fire").onclick = function () {
+        loadStationsRegistry("fire");
+      };
+    if ($("btn-add-fire"))
+      $("btn-add-fire").onclick = function () {
+        openStationEditor("fire", null, []);
+      };
+    if ($("ccfac-search")) $("ccfac-search").addEventListener("input", loadCallCentersRegistry);
+    if ($("ccfac-status-filter")) $("ccfac-status-filter").addEventListener("change", loadCallCentersRegistry);
+    if ($("btn-refresh-ccfac")) $("btn-refresh-ccfac").onclick = loadCallCentersRegistry;
+    if ($("btn-add-callcenter-fac"))
+      $("btn-add-callcenter-fac").onclick = function () {
+        openCallCenterEditor(null);
+      };
+    if ($("em-search")) $("em-search").addEventListener("input", loadEmergencies);
+    if ($("em-view-filter")) $("em-view-filter").addEventListener("change", loadEmergencies);
+    if ($("btn-refresh-emergencies")) $("btn-refresh-emergencies").onclick = loadEmergencies;
+    if ($("btn-refresh-dispatch")) $("btn-refresh-dispatch").onclick = loadDispatchCenter;
+    if ($("btn-refresh-sos")) $("btn-refresh-sos").onclick = loadSosQueue;
 
     if ($("btn-add-user")) {
       $("btn-add-user").onclick = function () {
@@ -2985,9 +4003,8 @@
           loadUsers();
           openCreateStaffModal("admin");
         } else if (action === "add-hospital") {
-          showSection("users");
-          if ($("user-role-filter")) $("user-role-filter").value = "hospital";
-          openCreateStaffModal("hospital");
+          showSection("hospitals");
+          loadHospitalsRegistry();
         } else if (action === "dispatch") {
           showSection("emergencies");
         } else if (action === "report") {

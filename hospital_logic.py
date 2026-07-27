@@ -93,17 +93,12 @@ def best_emergency_coords(em, fallback=None):
 
 
 def resolve_hospital_coords(hospital):
-    """Return verified Somalia coordinates for a hospital (known-directory fallback)."""
+    """Return Somalia coordinates from the hospital record only (MySQL row)."""
     if not hospital:
         return None
     lat, lng = hospital.get("latitude"), hospital.get("longitude")
     if lat is not None and lng is not None and is_in_somalia(lat, lng):
         return round(float(lat), 6), round(float(lng), 6)
-    name = (hospital.get("name") or "").strip().lower()
-    for known in KNOWN_SOMALIA_HOSPITALS:
-        names = {known["name"].lower()} | {a.lower() for a in known.get("aliases", ())}
-        if name in names or any(name in n or n in name for n in names):
-            return known["latitude"], known["longitude"]
     return None
 
 
@@ -213,6 +208,7 @@ def normalize_hospital_record(h):
     h.setdefault("contact_email", "")
     h.setdefault("owner_user_id", None)
     h.setdefault("location_verified", bool(h.get("latitude") and h.get("longitude")))
+    h.setdefault("logo_url", "")
     h.setdefault("created_at", _now())
     h.setdefault("updated_at", _now())
     return h
@@ -336,10 +332,49 @@ def update_hospital(hid, payload, read_fn, save_fn):
         if st not in VALID_OPERATING:
             raise ValueError("Invalid operating status.")
         hospital["operating_status"] = st
+    if "logo_url" in payload:
+        logo = str(payload.get("logo_url") or "").strip()
+        if logo and not (
+            logo.startswith("/static/uploads/hospitals/")
+            or logo.startswith("data:image/")
+        ):
+            raise ValueError("Invalid hospital logo.")
+        if logo.startswith("data:image/") and len(logo) > 400000:
+            raise ValueError("Logo too large.")
+        hospital["logo_url"] = logo
     hospital["updated_at"] = _now()
     normalize_hospital_record(hospital)
     save_hospitals(data, save_fn)
     return hospital
+
+
+def delete_hospital(hid, read_fn, save_fn, emergencies=None, users_data=None):
+    """Remove hospital when no active emergencies are assigned. Unlinks users."""
+    data = load_hospitals(read_fn, save_fn)
+    hospital = get_hospital_by_id(data, hid)
+    if not hospital:
+        raise ValueError("Hospital not found.")
+    try:
+        hid = int(hid)
+    except (TypeError, ValueError):
+        raise ValueError("Hospital not found.")
+    active = {
+        "pending", "dispatched", "in_progress", "pending_hospital", "accepted",
+    }
+    if emergencies:
+        for em in emergencies.get("emergencies") or []:
+            if em.get("assigned_hospital_id") == hid and (em.get("status") or "").lower() in active:
+                raise ValueError("Cannot delete: hospital has active emergencies assigned")
+    data["hospitals"] = [h for h in data["hospitals"] if h.get("id") != hid]
+    save_hospitals(data, save_fn)
+    users_changed = False
+    if users_data:
+        for u in users_data.get("users") or []:
+            if u.get("hospital_id") == hid:
+                u["hospital_id"] = None
+                users_changed = True
+    return users_changed
+
 
 def load_hospitals(read_fn, save_fn):
     return read_fn(HOSPITALS_STORE, {"hospitals": [], "next_id": 1})
@@ -350,70 +385,8 @@ def save_hospitals(data, save_fn):
 
 
 def seed_hospitals_if_empty(read_fn, save_fn):
-    """Load hospitals. Demo seed only when GURMADNET_SEED_DEMO=1 (or under pytest)."""
-    data = load_hospitals(read_fn, save_fn)
-    if data["hospitals"]:
-        return data
-    seed_flag = (os.environ.get("GURMADNET_SEED_DEMO") or "").strip().lower()
-    under_pytest = bool(os.environ.get("PYTEST_CURRENT_TEST")) or (
-        (os.environ.get("TESTING") or "").strip() in ("1", "true", "yes")
-    )
-    if seed_flag not in ("1", "true", "yes") and not under_pytest:
-        return data
-    samples = [
-        ("Aamin Ambulance Hospital", "Mogadishu", "Banadir", "Hodan", "Hodan District, Afgooye Road, Mogadishu",
-         2.0469, 45.3182, "+252 61 500 1001", ["+252 61 500 1001", "+252 61 999 0001"],
-         ["Emergency", "Trauma", "Ambulance"], True, 20, 4.8, None),
-        ("Medina Hospital", "Mogadishu", "Banadir", "Hamar Weyne", "Medina Street, Hamar Weyne, Mogadishu",
-         2.0400, 45.3400, "+252 61 500 2002", ["+252 61 500 2002"],
-         ["General", "Surgery", "ICU"], True, 15, 4.6, None),
-        ("Banadir Hospital", "Mogadishu", "Banadir", "Wadajir", "Wadajir District, Mogadishu",
-         2.0520, 45.3250, "+252 61 500 3003", ["+252 61 500 3003"],
-         ["Emergency", "Maternity", "Pediatrics"], True, 18, 4.5, None),
-        ("Digfer Hospital", "Mogadishu", "Banadir", "Warta Nabada", "Digfer Area, Mogadishu",
-         2.0380, 45.3350, "+252 61 500 4004", ["+252 61 500 4004"],
-         ["Emergency", "General"], False, 12, 4.3, None),
-        ("Hargeisa Group Hospital", "Hargeisa", "Maroodi Jeex", "Hargeisa Central", "Central Hargeisa",
-         9.5632, 44.0670, "+252 63 400 1001", ["+252 63 400 1001"],
-         ["Emergency", "General", "Surgery"], True, 14, 4.4, None),
-        ("Bosaso General Hospital", "Bosaso", "Bari", "Bosaso", "Bosaso City Center",
-         11.2842, 49.1816, "+252 90 500 1001", ["+252 90 500 1001"],
-         ["Emergency", "General"], True, 10, 4.2, None),
-        ("Kismayo General Hospital", "Kismayo", "Lower Juba", "Kismayo", "Kismayo Port Road",
-         -0.3582, 42.5454, "+252 69 500 1001", ["+252 69 500 1001"],
-         ["Emergency", "Maternity"], True, 8, 4.1, None),
-        ("Baidoa Regional Hospital", "Baidoa", "Bay", "Baidoa", "Baidoa Main Street",
-         3.1167, 43.6500, "+252 61 600 1001", ["+252 61 600 1001"],
-         ["Emergency", "General"], False, 8, 4.0, None),
-    ]
-    for row in samples:
-        (name, city, region, district, address, lat, lng, phone, econtacts,
-         services, ambulance, capacity, rating, email) = row
-        hid = data["next_id"]
-        data["next_id"] += 1
-        data["hospitals"].append(normalize_hospital_record({
-            "id": hid,
-            "name": name,
-            "city": city,
-            "region": region,
-            "district": district,
-            "address": address,
-            "latitude": lat,
-            "longitude": lng,
-            "phone": phone,
-            "emergency_contacts": econtacts,
-            "services": services,
-            "specialties": services,
-            "ambulance_available": ambulance,
-            "ambulance_count": 3 if ambulance else 0,
-            "emergency_capacity": capacity,
-            "rating": rating,
-            "operating_status": "open",
-            "contact_email": email or "",
-            "location_verified": True,
-        }))
-    save_hospitals(data, save_fn)
-    return data
+    """Load hospitals from storage only — never inserts demo/sample facilities."""
+    return load_hospitals(read_fn, save_fn)
 
 
 def filter_hospitals(hospitals, city="", region="", specialty="", q=""):

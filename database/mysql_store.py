@@ -18,8 +18,8 @@ EMERGENCY_COLUMNS = {
     "id", "user_id", "type", "status", "location", "district",
     "latitude", "longitude", "notes", "caller_name", "phone",
     "assigned_to", "assigned_team_label", "assigned_hospital_id",
-    "assigned_hospital_name", "hospital_distance_km", "tracking_active",
-    "last_location_update", "accepted_at", "timestamp",
+    "assigned_hospital_name", "assigned_station_id", "hospital_distance_km",
+    "tracking_active", "last_location_update", "accepted_at", "timestamp",
 }
 
 _migration_conn = None
@@ -104,6 +104,7 @@ def _delete_stale_ids(cur, table, existing_ids, keep_ids):
     allowed = {
         "users", "hospitals", "emergencies", "notifications", "messages",
         "announcements", "audit_logs", "call_center_calls",
+        "response_stations", "ambulance_units", "call_centers",
         "ai_analysis", "ai_recommendation", "ai_dispatch_log", "ai_memory",
     }
     if table not in allowed:
@@ -287,6 +288,9 @@ def read_store(entity, default):
         "users": lambda: load_users(),
         "emergencies": lambda: load_emergencies(),
         "hospitals": lambda: load_hospitals(),
+        "response_stations": lambda: load_response_stations(),
+        "ambulance_units": lambda: load_ambulance_units(),
+        "call_centers": lambda: load_call_centers_facilities(),
         "notifications": lambda: load_notifications(),
         "messages": lambda: load_messages(),
         "announcements": lambda: load_announcements(),
@@ -311,6 +315,9 @@ def save_store(entity, data):
         "users": save_users,
         "emergencies": save_emergencies,
         "hospitals": save_hospitals,
+        "response_stations": save_response_stations,
+        "ambulance_units": save_ambulance_units,
+        "call_centers": save_call_centers_facilities,
         "notifications": save_notifications,
         "messages": save_messages,
         "announcements": save_announcements,
@@ -342,6 +349,9 @@ def export_all():
         "users": load_users(),
         "emergencies": load_emergencies(),
         "hospitals": load_hospitals(),
+        "response_stations": load_response_stations(),
+        "ambulance_units": load_ambulance_units(),
+        "call_centers": load_call_centers_facilities(),
         "notifications": load_notifications(),
         "messages": load_messages(),
         "announcements": load_announcements(),
@@ -413,6 +423,7 @@ def save_users(data):
                 "gender", "first_name", "middle_name", "last_name",
                 "national_id_last4", "national_id_hash", "national_id_encrypted",
                 "blood_type", "medical_notes", "allergies", "saved_locations", "hospital_id",
+                "station_id", "call_center_id",
                 "reset_token", "reset_expires",
                 "email_verified", "email_verify_token", "email_verify_expires",
                 "notify_email_on_sos", "notify_email_on_dispatch",
@@ -478,7 +489,8 @@ def save_hospitals(data):
                 "latitude", "longitude", "phone", "emergency_contacts", "services",
                 "specialties", "ambulance_available", "ambulance_count",
                 "emergency_capacity", "rating", "operating_status", "contact_email",
-                "owner_user_id", "location_verified", "created_at", "updated_at",
+                "owner_user_id", "location_verified", "logo_url",
+                "created_at", "updated_at",
             ]
             keep_ids.add(row["id"])
             if row["id"] in existing:
@@ -494,6 +506,135 @@ def save_hospitals(data):
                     [row.get(c) for c in cols],
                 )
         _delete_stale_ids(cur, "hospitals", existing, keep_ids)
+
+
+def load_response_stations():
+    with _db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM response_stations ORDER BY id")
+            rows = cur.fetchall()
+        stations = []
+        for r in rows:
+            s = dict(r)
+            s["created_at"] = _dt_str(s.get("created_at"))
+            s["updated_at"] = _dt_str(s.get("updated_at"))
+            stations.append(s)
+        max_id = max((s["id"] for s in stations), default=0)
+        return {"stations": stations, "next_id": max_id + 1}
+
+
+def save_response_stations(data):
+    with _write_tx("response_stations") as cur:
+        cur.execute("SELECT id FROM response_stations")
+        existing = {r["id"] for r in cur.fetchall()}
+        keep_ids = set()
+        cols = [
+            "id", "kind", "name", "city", "region", "district", "address",
+            "latitude", "longitude", "phone", "operating_status", "owner_user_id",
+            "created_at", "updated_at",
+        ]
+        for s in data.get("stations", []):
+            row = dict(s)
+            keep_ids.add(row["id"])
+            if row["id"] in existing:
+                sets = ", ".join(f"{c}=%s" for c in cols if c != "id")
+                cur.execute(
+                    f"UPDATE response_stations SET {sets} WHERE id=%s",
+                    [row.get(c) for c in cols if c != "id"] + [row["id"]],
+                )
+            else:
+                ph = ", ".join(["%s"] * len(cols))
+                cur.execute(
+                    f"INSERT INTO response_stations ({', '.join(cols)}) VALUES ({ph})",
+                    [row.get(c) for c in cols],
+                )
+        _delete_stale_ids(cur, "response_stations", existing, keep_ids)
+
+
+def load_ambulance_units():
+    with _db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM ambulance_units ORDER BY id")
+            rows = cur.fetchall()
+        ambulances = []
+        for r in rows:
+            a = dict(r)
+            a["created_at"] = _dt_str(a.get("created_at"))
+            a["updated_at"] = _dt_str(a.get("updated_at"))
+            ambulances.append(a)
+        max_id = max((a["id"] for a in ambulances), default=0)
+        return {"ambulances": ambulances, "next_id": max_id + 1}
+
+
+def save_ambulance_units(data):
+    with _write_tx("ambulance_units") as cur:
+        cur.execute("SELECT id FROM ambulance_units")
+        existing = {r["id"] for r in cur.fetchall()}
+        keep_ids = set()
+        cols = [
+            "id", "hospital_id", "call_sign", "plate_number", "status",
+            "latitude", "longitude", "driver_name", "driver_phone",
+            "driver_photo_url", "vehicle_photo_url", "gps_share_token", "notes", "created_at", "updated_at",
+        ]
+        for a in data.get("ambulances", []):
+            row = dict(a)
+            keep_ids.add(row["id"])
+            if row["id"] in existing:
+                sets = ", ".join(f"{c}=%s" for c in cols if c != "id")
+                cur.execute(
+                    f"UPDATE ambulance_units SET {sets} WHERE id=%s",
+                    [row.get(c) for c in cols if c != "id"] + [row["id"]],
+                )
+            else:
+                ph = ", ".join(["%s"] * len(cols))
+                cur.execute(
+                    f"INSERT INTO ambulance_units ({', '.join(cols)}) VALUES ({ph})",
+                    [row.get(c) for c in cols],
+                )
+        _delete_stale_ids(cur, "ambulance_units", existing, keep_ids)
+
+
+def load_call_centers_facilities():
+    with _db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM call_centers ORDER BY id")
+            rows = cur.fetchall()
+        centers = []
+        for r in rows:
+            c = dict(r)
+            c["created_at"] = _dt_str(c.get("created_at"))
+            c["updated_at"] = _dt_str(c.get("updated_at"))
+            centers.append(c)
+        max_id = max((c["id"] for c in centers), default=0)
+        return {"call_centers": centers, "next_id": max_id + 1}
+
+
+def save_call_centers_facilities(data):
+    with _write_tx("call_centers") as cur:
+        cur.execute("SELECT id FROM call_centers")
+        existing = {r["id"] for r in cur.fetchall()}
+        keep_ids = set()
+        cols = [
+            "id", "name", "city", "region", "district", "address",
+            "latitude", "longitude", "phone", "operating_status", "owner_user_id",
+            "created_at", "updated_at",
+        ]
+        for c in data.get("call_centers", []):
+            row = dict(c)
+            keep_ids.add(row["id"])
+            if row["id"] in existing:
+                sets = ", ".join(f"{c}=%s" for c in cols if c != "id")
+                cur.execute(
+                    f"UPDATE call_centers SET {sets} WHERE id=%s",
+                    [row.get(c) for c in cols if c != "id"] + [row["id"]],
+                )
+            else:
+                ph = ", ".join(["%s"] * len(cols))
+                cur.execute(
+                    f"INSERT INTO call_centers ({', '.join(cols)}) VALUES ({ph})",
+                    [row.get(c) for c in cols],
+                )
+        _delete_stale_ids(cur, "call_centers", existing, keep_ids)
 
 
 def load_emergencies():
@@ -538,6 +679,7 @@ def save_emergencies(data):
                 "assigned_team_label": em.get("assigned_team_label", ""),
                 "assigned_hospital_id": em.get("assigned_hospital_id"),
                 "assigned_hospital_name": em.get("assigned_hospital_name", ""),
+                "assigned_station_id": em.get("assigned_station_id"),
                 "hospital_distance_km": em.get("hospital_distance_km"),
                 "tracking_active": 1 if em.get("tracking_active") else 0,
                 "last_location_update": em.get("last_location_update"),
@@ -792,38 +934,49 @@ def load_audit_log():
 
 
 def save_audit_log(data):
-    with _db() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT id FROM audit_logs")
-            existing = {r["id"] for r in cur.fetchall()}
-            keep_ids = set()
-            # Cap growth: keep newest 5000 in DB when document is trimmed
-            entries = data.get("entries", [])[:5000]
-            for e in entries:
-                row = {
-                    "id": e["id"],
-                    "action": e["action"],
-                    "entity_type": e["entity_type"],
-                    "entity_id": e.get("entity_id"),
-                    "user_id": e.get("user_id"),
-                    "details": _json_dump(e.get("details", {})),
-                    "timestamp": e.get("timestamp"),
-                }
-                cols = list(row.keys())
-                keep_ids.add(row["id"])
-                if row["id"] in existing:
+    with _write_tx("audit_logs") as cur:
+        cur.execute("SELECT id FROM audit_logs")
+        existing = {r["id"] for r in cur.fetchall()}
+        keep_ids = set()
+        # Cap growth: keep newest 5000 in DB when document is trimmed
+        entries = data.get("entries", [])[:5000]
+        for e in entries:
+            try:
+                eid = int(e["id"])
+            except (TypeError, ValueError, KeyError):
+                continue
+            row = {
+                "id": eid,
+                "action": e["action"],
+                "entity_type": e["entity_type"],
+                "entity_id": e.get("entity_id"),
+                "user_id": e.get("user_id"),
+                "details": _json_dump(e.get("details", {})),
+                "timestamp": e.get("timestamp"),
+            }
+            cols = list(row.keys())
+            keep_ids.add(row["id"])
+            if row["id"] in existing:
+                sets = ", ".join(f"{c}=%s" for c in cols if c != "id")
+                cur.execute(
+                    f"UPDATE audit_logs SET {sets} WHERE id=%s",
+                    [row[c] for c in cols if c != "id"] + [row["id"]],
+                )
+            else:
+                # Avoid duplicate-key races: INSERT IGNORE then update if needed
+                ph = ", ".join(["%s"] * len(cols))
+                try:
+                    cur.execute(
+                        f"INSERT INTO audit_logs ({', '.join(cols)}) VALUES ({ph})",
+                        [row[c] for c in cols],
+                    )
+                except Exception:
                     sets = ", ".join(f"{c}=%s" for c in cols if c != "id")
                     cur.execute(
                         f"UPDATE audit_logs SET {sets} WHERE id=%s",
                         [row[c] for c in cols if c != "id"] + [row["id"]],
                     )
-                else:
-                    ph = ", ".join(["%s"] * len(cols))
-                    cur.execute(
-                        f"INSERT INTO audit_logs ({', '.join(cols)}) VALUES ({ph})",
-                        [row[c] for c in cols],
-                    )
-            _delete_stale_ids(cur, "audit_logs", existing, keep_ids)
+        _delete_stale_ids(cur, "audit_logs", existing, keep_ids)
 
 
 CALL_CENTER_COLUMNS = {
@@ -852,8 +1005,11 @@ def load_call_center_calls():
             c["emergency_ids"] = _json_load(c.pop("emergency_ids", None), [])
             c["nearest"] = _json_load(c.pop("nearest", None), {})
             c["device_info"] = _json_load(c.pop("device_info", None), {})
-            for k in ("start_time", "answered_at", "dispatched_at", "end_time"):
-                c[k] = _dt_str(c.get(k))
+            for k in ("start_time", "answered_at", "dispatched_at", "end_time", "media_connected_at"):
+                if k in c:
+                    c[k] = _dt_str(c.get(k))
+            if "voice_mode" in c:
+                c["voice_mode"] = bool(c.get("voice_mode"))
             calls.append(c)
         max_id = max((c["id"] for c in calls), default=0)
         return {"calls": calls, "next_id": max_id + 1}
@@ -864,6 +1020,8 @@ def save_call_center_calls(data):
         with _write_tx("call_center_calls") as cur:
             cur.execute("SELECT id FROM call_center_calls")
             existing = {r["id"] for r in cur.fetchall()}
+            cur.execute("SHOW COLUMNS FROM call_center_calls")
+            have = {r["Field"] for r in cur.fetchall()}
             keep_ids = set()
             for c in data.get("calls", []):
                 row = {
@@ -893,7 +1051,11 @@ def save_call_center_calls(data):
                     "duration_sec": c.get("duration_sec", 0),
                     "final_status": c.get("final_status", ""),
                     "source": c.get("source", "call_center"),
+                    "voice_mode": 1 if c.get("voice_mode") else 0,
+                    "ended_by": c.get("ended_by") or "",
+                    "media_connected_at": c.get("media_connected_at"),
                 }
+                row = {k: v for k, v in row.items() if k in have}
                 cols = list(row.keys())
                 keep_ids.add(row["id"])
                 if row["id"] in existing:
@@ -973,6 +1135,9 @@ def ensure_call_center_schema():
                   duration_sec INT DEFAULT 0,
                   final_status VARCHAR(40) DEFAULT '',
                   source VARCHAR(40) DEFAULT 'call_center',
+                  voice_mode TINYINT(1) DEFAULT 0,
+                  ended_by VARCHAR(40) DEFAULT '',
+                  media_connected_at DATETIME NULL,
                   INDEX idx_cc_status (status),
                   INDEX idx_cc_operator (operator_id),
                   INDEX idx_cc_user (user_id),
@@ -981,6 +1146,25 @@ def ensure_call_center_schema():
                 """
             )
             changes.append("call_center_calls")
+            # Idempotent voice columns for older DBs
+            cur.execute("SHOW COLUMNS FROM call_center_calls")
+            cols = {r["Field"] for r in cur.fetchall()}
+            alters = []
+            if "voice_mode" not in cols:
+                alters.append(
+                    "ALTER TABLE call_center_calls ADD COLUMN voice_mode TINYINT(1) DEFAULT 0"
+                )
+            if "ended_by" not in cols:
+                alters.append(
+                    "ALTER TABLE call_center_calls ADD COLUMN ended_by VARCHAR(40) DEFAULT ''"
+                )
+            if "media_connected_at" not in cols:
+                alters.append(
+                    "ALTER TABLE call_center_calls ADD COLUMN media_connected_at DATETIME NULL"
+                )
+            for sql in alters:
+                cur.execute(sql)
+                changes.append(sql.split("ADD COLUMN ", 1)[-1].split()[0])
     return {"ok": True, "changes": changes}
 
 
@@ -1037,6 +1221,23 @@ def save_ai_list_store(table, data):
             try:
                 cur.execute(f"SELECT id FROM {table}")
                 existing = {r["id"] for r in cur.fetchall()}
+                # operator_id FK → users.id; stale IDs must become NULL or upsert fails.
+                valid_user_ids = None
+                if table in ("ai_recommendation", "ai_dispatch_log"):
+                    cur.execute("SELECT id FROM users")
+                    valid_user_ids = {int(r["id"]) for r in cur.fetchall() if r.get("id") is not None}
+
+                def _safe_operator_id(raw):
+                    if raw in (None, ""):
+                        return None
+                    try:
+                        oid = int(raw)
+                    except (TypeError, ValueError):
+                        return None
+                    if valid_user_ids is not None and oid not in valid_user_ids:
+                        return None
+                    return oid
+
                 keep_ids = set()
                 for item in items:
                     payload = dict(item)
@@ -1100,6 +1301,9 @@ def save_ai_list_store(table, data):
                             ),
                         )
                     elif table == "ai_recommendation":
+                        op_id = _safe_operator_id(payload.get("operator_id"))
+                        if payload.get("operator_id") not in (None, "") and op_id is None:
+                            payload["operator_id"] = None
                         cur.execute(
                             f"""
                             INSERT INTO {table}
@@ -1126,13 +1330,16 @@ def save_ai_list_store(table, data):
                                 payload.get("estimated_arrival_minutes"),
                                 payload.get("provider"),
                                 payload.get("human_decision") or "",
-                                payload.get("operator_id"),
+                                op_id,
                                 _json_dump(payload),
                                 _dt_str(payload.get("created_at")) or _dt_str(datetime.now()),
                                 _dt_str(payload.get("updated_at")),
                             ),
                         )
                     else:  # ai_dispatch_log
+                        op_id = _safe_operator_id(payload.get("operator_id"))
+                        if payload.get("operator_id") not in (None, "") and op_id is None:
+                            payload["operator_id"] = None
                         cur.execute(
                             f"""
                             INSERT INTO {table}
@@ -1153,7 +1360,7 @@ def save_ai_list_store(table, data):
                                 payload.get("recommendation_id"),
                                 payload.get("analysis_id"),
                                 payload.get("human_decision") or "",
-                                payload.get("operator_id"),
+                                op_id,
                                 _json_dump(payload),
                                 _dt_str(payload.get("created_at")) or _dt_str(datetime.now()),
                             ),
@@ -1219,6 +1426,54 @@ def ensure_citizen_profile_schema():
                 if not cur.fetchone():
                     cur.execute(f"ALTER TABLE users ADD COLUMN {col} {ddl}")
                     changes.append(f"users.{col}")
+    return {"ok": True, "changes": changes}
+
+
+def ensure_hospital_logo_schema():
+    """Idempotent logo_url column on hospitals."""
+    if not available():
+        return {"ok": False, "reason": "pymysql unavailable"}
+    changes = []
+    with _db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SHOW COLUMNS FROM hospitals LIKE 'logo_url'")
+            if not cur.fetchone():
+                cur.execute(
+                    "ALTER TABLE hospitals ADD COLUMN logo_url VARCHAR(255) DEFAULT '' "
+                    "AFTER location_verified"
+                )
+                changes.append("hospitals.logo_url")
+    return {"ok": True, "changes": changes}
+
+
+def ensure_ambulance_gps_share_schema():
+    """Idempotent gps_share_token + vehicle_photo_url on ambulance_units."""
+    if not available():
+        return {"ok": False, "reason": "pymysql unavailable"}
+    changes = []
+    with _db() as conn:
+        with conn.cursor() as cur:
+            for col, ddl in (
+                ("gps_share_token", "VARCHAR(64) DEFAULT ''"),
+                ("vehicle_photo_url", "VARCHAR(255) DEFAULT ''"),
+            ):
+                cur.execute(f"SHOW COLUMNS FROM ambulance_units LIKE '{col}'")
+                if not cur.fetchone():
+                    cur.execute(f"ALTER TABLE ambulance_units ADD COLUMN {col} {ddl}")
+                    changes.append(f"ambulance_units.{col}")
+            try:
+                cur.execute(
+                    "SELECT 1 FROM information_schema.STATISTICS "
+                    "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ambulance_units' "
+                    "AND INDEX_NAME = 'idx_amb_gps_token'"
+                )
+                if not cur.fetchone():
+                    cur.execute(
+                        "CREATE INDEX idx_amb_gps_token ON ambulance_units (gps_share_token)"
+                    )
+                    changes.append("index:idx_amb_gps_token")
+            except Exception:
+                pass
     return {"ok": True, "changes": changes}
 
 
@@ -1353,14 +1608,20 @@ def verify_schema():
     expected_tables = {
         "hospitals", "users", "emergencies", "notifications", "messages",
         "announcements", "settings", "system_content", "audit_logs",
-        "call_center_calls",
+        "call_center_calls", "response_stations", "ambulance_units", "call_centers",
         "ai_analysis", "ai_recommendation", "ai_dispatch_log", "ai_memory",
     }
     expected_fks = {
         ("users", "fk_users_hospital"),
+        ("users", "fk_users_station"),
+        ("users", "fk_users_call_center"),
         ("emergencies", "fk_emergencies_user"),
         ("emergencies", "fk_emergencies_hospital"),
+        ("emergencies", "fk_emergencies_station"),
         ("hospitals", "fk_hospitals_owner"),
+        ("response_stations", "fk_stations_owner"),
+        ("ambulance_units", "fk_amb_hospital"),
+        ("call_centers", "fk_cc_fac_owner"),
         ("notifications", "fk_notif_request"),
         ("messages", "fk_messages_request"),
         ("messages", "fk_messages_sender"),
@@ -1379,6 +1640,9 @@ def verify_schema():
         ("users", "notify_email_on_dispatch"),
         ("users", "email_verified"),
         ("users", "last_seen_call_center"),
+        ("users", "station_id"),
+        ("users", "call_center_id"),
+        ("emergencies", "assigned_station_id"),
     }
     with _db() as conn:
         with conn.cursor() as cur:
@@ -1491,6 +1755,8 @@ def ensure_production_integrity():
             for col, ddl in (
                 ("notify_email_on_sos", "TINYINT(1) NOT NULL DEFAULT 1"),
                 ("notify_email_on_dispatch", "TINYINT(1) NOT NULL DEFAULT 1"),
+                ("station_id", "INT NULL"),
+                ("call_center_id", "INT NULL"),
             ):
                 try:
                     cur.execute(f"SHOW COLUMNS FROM users LIKE '{col}'")
@@ -1499,6 +1765,162 @@ def ensure_production_integrity():
                         changes.append(f"users.{col}")
                 except Exception:
                     pass
+
+            # Facility registry tables
+            table_ddls = {
+                "response_stations": """
+                    CREATE TABLE IF NOT EXISTS response_stations (
+                      id INT AUTO_INCREMENT PRIMARY KEY,
+                      kind ENUM('police','fire') NOT NULL,
+                      name VARCHAR(180) NOT NULL,
+                      city VARCHAR(80) DEFAULT '',
+                      region VARCHAR(80) DEFAULT '',
+                      district VARCHAR(80) DEFAULT '',
+                      address VARCHAR(255) DEFAULT '',
+                      latitude DOUBLE NULL,
+                      longitude DOUBLE NULL,
+                      phone VARCHAR(40) DEFAULT '',
+                      operating_status ENUM('open','limited','closed') NOT NULL DEFAULT 'open',
+                      owner_user_id INT NULL,
+                      created_at DATETIME NOT NULL,
+                      updated_at DATETIME NOT NULL,
+                      INDEX idx_stations_kind (kind),
+                      INDEX idx_stations_status (operating_status),
+                      INDEX idx_stations_city (city),
+                      INDEX idx_stations_owner (owner_user_id)
+                    )
+                """,
+                "ambulance_units": """
+                    CREATE TABLE IF NOT EXISTS ambulance_units (
+                      id INT AUTO_INCREMENT PRIMARY KEY,
+                      hospital_id INT NOT NULL,
+                      call_sign VARCHAR(80) NOT NULL,
+                      plate_number VARCHAR(40) DEFAULT '',
+                      status ENUM('available','busy','maintenance','offline') NOT NULL DEFAULT 'available',
+                      latitude DOUBLE NULL,
+                      longitude DOUBLE NULL,
+                      driver_name VARCHAR(120) DEFAULT '',
+                      driver_phone VARCHAR(40) DEFAULT '',
+                      driver_photo_url VARCHAR(255) DEFAULT '',
+                      vehicle_photo_url VARCHAR(255) DEFAULT '',
+                      gps_share_token VARCHAR(64) DEFAULT '',
+                      notes TEXT,
+                      created_at DATETIME NOT NULL,
+                      updated_at DATETIME NOT NULL,
+                      INDEX idx_amb_hospital (hospital_id),
+                      INDEX idx_amb_status (status),
+                      INDEX idx_amb_gps_token (gps_share_token)
+                    )
+                """,
+                "call_centers": """
+                    CREATE TABLE IF NOT EXISTS call_centers (
+                      id INT AUTO_INCREMENT PRIMARY KEY,
+                      name VARCHAR(180) NOT NULL,
+                      city VARCHAR(80) DEFAULT '',
+                      region VARCHAR(80) DEFAULT '',
+                      district VARCHAR(80) DEFAULT '',
+                      address VARCHAR(255) DEFAULT '',
+                      latitude DOUBLE NULL,
+                      longitude DOUBLE NULL,
+                      phone VARCHAR(40) DEFAULT '',
+                      operating_status ENUM('open','limited','closed') NOT NULL DEFAULT 'open',
+                      owner_user_id INT NULL,
+                      created_at DATETIME NOT NULL,
+                      updated_at DATETIME NOT NULL,
+                      INDEX idx_cc_fac_status (operating_status),
+                      INDEX idx_cc_fac_city (city),
+                      INDEX idx_cc_fac_owner (owner_user_id)
+                    )
+                """,
+            }
+            for tname, ddl in table_ddls.items():
+                try:
+                    cur.execute(
+                        "SELECT 1 FROM information_schema.TABLES "
+                        "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s",
+                        (tname,),
+                    )
+                    if not cur.fetchone():
+                        cur.execute(ddl)
+                        changes.append(f"table:{tname}")
+                except Exception:
+                    pass
+
+            try:
+                cur.execute("SHOW COLUMNS FROM emergencies LIKE 'assigned_station_id'")
+                if not cur.fetchone():
+                    cur.execute("ALTER TABLE emergencies ADD COLUMN assigned_station_id INT NULL")
+                    changes.append("emergencies.assigned_station_id")
+            except Exception:
+                pass
+
+            # Ambulance dispatch essentials (hospital-owned units)
+            for col, ddl in (
+                ("driver_name", "VARCHAR(120) DEFAULT ''"),
+                ("driver_phone", "VARCHAR(40) DEFAULT ''"),
+                ("driver_photo_url", "VARCHAR(255) DEFAULT ''"),
+                ("vehicle_photo_url", "VARCHAR(255) DEFAULT ''"),
+                ("gps_share_token", "VARCHAR(64) DEFAULT ''"),
+            ):
+                try:
+                    cur.execute(f"SHOW COLUMNS FROM ambulance_units LIKE '{col}'")
+                    if not cur.fetchone():
+                        cur.execute(f"ALTER TABLE ambulance_units ADD COLUMN {col} {ddl}")
+                        changes.append(f"ambulance_units.{col}")
+                except Exception:
+                    pass
+            try:
+                cur.execute(
+                    "SELECT 1 FROM information_schema.STATISTICS "
+                    "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ambulance_units' "
+                    "AND INDEX_NAME = 'idx_amb_gps_token'"
+                )
+                if not cur.fetchone():
+                    cur.execute(
+                        "CREATE INDEX idx_amb_gps_token ON ambulance_units (gps_share_token)"
+                    )
+                    changes.append("index:idx_amb_gps_token")
+            except Exception:
+                pass
+
+            # Migrate settings.response_stations → response_stations (once, if empty)
+            try:
+                cur.execute("SELECT COUNT(*) AS c FROM response_stations")
+                if (cur.fetchone() or {}).get("c", 0) == 0:
+                    cur.execute("SELECT payload FROM settings WHERE id = 1")
+                    srow = cur.fetchone()
+                    payload = _json_load((srow or {}).get("payload"), {})
+                    rs = payload.get("response_stations") if isinstance(payload, dict) else None
+                    if isinstance(rs, dict):
+                        now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+                        for kind in ("police", "fire"):
+                            blob = rs.get(kind)
+                            if not isinstance(blob, dict):
+                                continue
+                            name = (blob.get("name") or f"{kind.title()} Station").strip()
+                            cur.execute(
+                                """
+                                INSERT INTO response_stations
+                                (kind, name, city, region, district, address, latitude, longitude,
+                                 phone, operating_status, owner_user_id, created_at, updated_at)
+                                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,'open',NULL,%s,%s)
+                                """,
+                                [
+                                    kind, name,
+                                    blob.get("city") or "",
+                                    blob.get("region") or "",
+                                    blob.get("district") or "",
+                                    blob.get("address") or "",
+                                    blob.get("latitude"),
+                                    blob.get("longitude"),
+                                    blob.get("phone") or "",
+                                    now, now,
+                                ],
+                            )
+                        if cur.rowcount is not None:
+                            changes.append("migrate:response_stations_from_settings")
+            except Exception:
+                pass
 
             # messages.sender_id must be nullable for ON DELETE SET NULL
             try:
@@ -1681,6 +2103,42 @@ def ensure_production_integrity():
                     "fk_hospitals_owner",
                     "ALTER TABLE hospitals ADD CONSTRAINT fk_hospitals_owner "
                     "FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE SET NULL",
+                ),
+                (
+                    "response_stations",
+                    "fk_stations_owner",
+                    "ALTER TABLE response_stations ADD CONSTRAINT fk_stations_owner "
+                    "FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE SET NULL",
+                ),
+                (
+                    "ambulance_units",
+                    "fk_amb_hospital",
+                    "ALTER TABLE ambulance_units ADD CONSTRAINT fk_amb_hospital "
+                    "FOREIGN KEY (hospital_id) REFERENCES hospitals(id) ON DELETE CASCADE",
+                ),
+                (
+                    "call_centers",
+                    "fk_cc_fac_owner",
+                    "ALTER TABLE call_centers ADD CONSTRAINT fk_cc_fac_owner "
+                    "FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE SET NULL",
+                ),
+                (
+                    "users",
+                    "fk_users_station",
+                    "ALTER TABLE users ADD CONSTRAINT fk_users_station "
+                    "FOREIGN KEY (station_id) REFERENCES response_stations(id) ON DELETE SET NULL",
+                ),
+                (
+                    "users",
+                    "fk_users_call_center",
+                    "ALTER TABLE users ADD CONSTRAINT fk_users_call_center "
+                    "FOREIGN KEY (call_center_id) REFERENCES call_centers(id) ON DELETE SET NULL",
+                ),
+                (
+                    "emergencies",
+                    "fk_emergencies_station",
+                    "ALTER TABLE emergencies ADD CONSTRAINT fk_emergencies_station "
+                    "FOREIGN KEY (assigned_station_id) REFERENCES response_stations(id) ON DELETE SET NULL",
                 ),
                 (
                     "notifications",

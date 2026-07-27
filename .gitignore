@@ -26,6 +26,9 @@ ENV/
 .env.*
 !.env.example
 database/db_config.env
+# Stale local JSON mirrors — production uses MySQL only
+database/*.json
+!database/backups/
 *.pem
 *.key
 secrets/
@@ -58,6 +61,10 @@ logs/
 # Local runtime data (optional overrides)
 data/*
 !data/.gitkeep
+
+# Local tooling binaries (cloudflared etc.)
+tools/*.exe
+tools/*.zip
 
 # Test / coverage artifacts
 .coverage.*

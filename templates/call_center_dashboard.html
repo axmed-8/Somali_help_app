@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <title>{{ content.call_center_dashboard_title }}</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/gurmadnet.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/call_center.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/call_center.css') }}?v=cc-voice1">
   {% include "_google_maps.html" %}
 </head>
 <body class="dashboard-admin gn-call-center">
@@ -18,20 +19,20 @@
         <span>Emergency Dispatch</span>
       </div>
       <nav class="admin-nav">
-        <a href="#" class="active" data-panel="live">📞 Live Calls</a>
-        <a href="#" data-panel="active">🎙 In Progress</a>
-        <a href="{{ url_for('call_center_history_page') }}">📋 Call History</a>
+        <a href="#" class="active" data-panel="live">Live Calls</a>
+        <a href="#" data-panel="active">Active Session</a>
+        <a href="{{ url_for('call_center_history_page') }}">Call History</a>
       </nav>
       <div class="dashboard-links">
-        <span>{{ user.name }} (operator)</span>
+        <span>{{ user.name }}</span>
         <a href="{{ url_for('logout') }}" class="btn-logout" style="display:inline-block;margin-top:8px;">Logout</a>
       </div>
     </aside>
 
     <div class="main-content">
       <header class="top-bar">
-        <button type="button" class="sidebar-toggle" id="sidebar-toggle">☰</button>
-        <h1>{{ content.call_center_dashboard_title }}</h1>
+        <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="Menu">☰</button>
+        <h1>Emergency Call Center</h1>
         <div class="top-bar-actions">
           <span class="status-badge online" id="op-online">Operators: 0</span>
           <span class="user-badge">{{ user.name }}</span>
@@ -39,38 +40,75 @@
       </header>
 
       <div class="content-area">
-        <div class="stats" id="cc-stats">
-          <div class="stat-card"><div class="stat-value" id="st-online">0</div><div class="stat-label">Operators Online</div></div>
-          <div class="stat-card"><div class="stat-value" id="st-incoming">0</div><div class="stat-label">Incoming Calls</div></div>
-          <div class="stat-card"><div class="stat-value" id="st-waiting">0</div><div class="stat-label">Calls Waiting</div></div>
-          <div class="stat-card"><div class="stat-value" id="st-progress">0</div><div class="stat-label">In Progress</div></div>
-          <div class="stat-card"><div class="stat-value" id="st-resolved">0</div><div class="stat-label">Resolved Today</div></div>
-          <div class="stat-card"><div class="stat-value" id="st-avg">0</div><div class="stat-label">Avg Response (min)</div></div>
+        <div class="stats cc-stats" id="cc-stats">
+          <div class="stat-card"><div class="stat-value" id="st-online">0</div><div class="stat-label">Online</div></div>
+          <div class="stat-card"><div class="stat-value" id="st-incoming">0</div><div class="stat-label">Incoming</div></div>
+          <div class="stat-card"><div class="stat-value" id="st-waiting">0</div><div class="stat-label">Waiting</div></div>
+          <div class="stat-card"><div class="stat-value" id="st-progress">0</div><div class="stat-label">In progress</div></div>
+          <div class="stat-card"><div class="stat-value" id="st-resolved">0</div><div class="stat-label">Resolved today</div></div>
+          <div class="stat-card"><div class="stat-value" id="st-avg">0</div><div class="stat-label">Avg min</div></div>
         </div>
 
         <p class="cc-operator-hint">Ask only: <strong>“What happened?”</strong> — GPS and address are already available. Never ask “Where are you?”</p>
 
         <div id="panel-live">
-          <h2 class="section-title">Incoming / Live Calls <span class="refresh-indicator" id="refresh-time">Updating…</span></h2>
+          <h2 class="section-title">Live queue <span class="refresh-indicator" id="refresh-time">Updating…</span></h2>
           <div id="incoming-list" class="cc-call-grid"></div>
         </div>
 
         <div id="panel-active" class="hidden-panel">
-          <h2 class="section-title">Active Session</h2>
           <div id="active-session" class="cc-session empty">
-            <p>Select an incoming call and press <strong>Answer</strong> to open the dispatch workspace.</p>
+            <p>Open a call from <strong>Live queue</strong> and press <strong>Answer</strong>.</p>
           </div>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- Incoming voice call console -->
+  <div id="cc-incoming-modal" class="cc-incoming-modal" aria-hidden="true">
+    <div class="cc-incoming-card">
+      <p class="cc-incoming-kicker">Emergency Call Console</p>
+      <h2>Incoming Call</h2>
+      <p id="cc-in-status" class="cc-incoming-status">Incoming voice call</p>
+      <dl class="cc-incoming-meta">
+        <div><dt>Citizen</dt><dd id="cc-in-name">—</dd></div>
+        <div><dt>Citizen ID</dt><dd id="cc-in-id">—</dd></div>
+        <div><dt>Phone / account</dt><dd id="cc-in-phone">—</dd></div>
+        <div><dt>GPS / location</dt><dd id="cc-in-loc">—</dd></div>
+        <div><dt>Emergency / case</dt><dd id="cc-in-case">—</dd></div>
+      </dl>
+      <div class="cc-incoming-actions">
+        <button type="button" class="cc-btn-accept" id="cc-in-accept">Accept</button>
+        <button type="button" class="cc-btn-reject" id="cc-in-reject">Reject</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="cc-voice-console" class="cc-voice-console">
+    <div class="cc-voice-console-inner">
+      <div>
+        <p class="cc-voice-kicker">Live voice</p>
+        <h3 id="cc-vc-name">Citizen</h3>
+        <p id="cc-vc-meta" class="cc-voice-meta">—</p>
+        <p id="cc-vc-status" class="cc-voice-status">Connecting...</p>
+        <p id="cc-vc-timer" class="cc-voice-timer">00:00</p>
+      </div>
+      <div class="cc-voice-actions">
+        <button type="button" class="btn-action" id="cc-vc-mute">Mute</button>
+        <button type="button" class="cc-btn-end" id="cc-vc-end">End Call</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
   <script src="{{ url_for('static', filename='js/location.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/webrtc_call.js') }}?v=voice2"></script>
   <script>
     window.CC_TYPE_OPTIONS = {{ type_options|tojson }};
     window.CC_PHONE = {{ call_center_phone|tojson }};
   </script>
-  <script src="{{ url_for('static', filename='js/call_center.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/call_center.js') }}?v=cc-voice2"></script>
 </body>
 </html>

@@ -43,6 +43,36 @@ def app_client():
     ers_app.ANNOUNCEMENTS_FILE = os.path.join(db, "announcements.json")
 
     ers_app.seed_defaults()
+    import hospital_logic as hl
+    hdata = hl.load_hospitals(ers_app.read_json, ers_app.save_json)
+    if not hdata.get("hospitals"):
+        hdata["hospitals"] = [{
+            "id": 1,
+            "name": "Banadir Hospital",
+            "city": "Mogadishu",
+            "region": "Banadir",
+            "district": "Wadajir",
+            "address": "Wadajir",
+            "latitude": 2.0520,
+            "longitude": 45.3250,
+            "phone": "0622222222",
+            "emergency_contacts": [],
+            "services": ["Emergency"],
+            "specialties": ["Emergency"],
+            "ambulance_available": True,
+            "ambulance_count": 2,
+            "emergency_capacity": 20,
+            "rating": 4.5,
+            "operating_status": "open",
+            "contact_email": "amina@hospital.com",
+            "owner_user_id": None,
+            "location_verified": True,
+            "created_at": ers_app.now_str(),
+            "updated_at": ers_app.now_str(),
+        }]
+        hdata["next_id"] = 2
+        hl.save_hospitals(hdata, ers_app.save_json)
+
     udata = ers_app.load_users()
     test_users = [
         ("Ahmed Ali", "ahmed@example.com", "123456", "citizen", "0611111111"),

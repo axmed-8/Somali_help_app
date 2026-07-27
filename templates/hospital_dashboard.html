@@ -3,459 +3,488 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ hospital.name }} — Hospital Dashboard</title>
+  <title>{{ hospital.name }} — Emergency Command</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/hospital_command.css') }}?v=hcc-cc1">
   {% include "_google_maps.html" %}
 </head>
-<body class="dashboard-hospital">
-  <div class="dashboard-container">
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-brand">
-        <h2>{{ hospital.name }}</h2>
-        <span>{{ hospital.district }}, {{ hospital.city }}</span>
+<body class="hcc-body">
+  <div class="hcc-shell">
+    <aside class="hcc-sidebar" id="sidebar">
+      <div class="hcc-brand">
+        <div class="hcc-brand-mark{% if hospital.logo_url %} has-logo{% endif %}" id="hcc-brand-mark"{% if hospital.logo_url %} style="background-image:url('{{ hospital.logo_url }}');"{% endif %}>
+          {% if not hospital.logo_url %}{{ (hospital.name or 'H')[:1]|upper }}{% endif %}
+        </div>
+        <div>
+          <strong id="hcc-brand-name">{{ hospital.name }}</strong>
+          <span>Emergency Command Center</span>
+        </div>
       </div>
-      <nav>
-        <a href="#" class="active" data-panel="live">Live Dispatch</a>
-        <a href="#" data-panel="history">History</a>
+      <nav class="hcc-nav">
+        <a href="#" class="active" data-panel="live">Dashboard</a>
+        <a href="#" data-panel="queue">Emergency Queue <span class="hcc-nav-badge" id="nav-queue-badge" hidden>0</span></a>
+        <a href="#" data-panel="chat">Case Chat <span class="hcc-nav-badge hcc-nav-badge-blue" id="nav-chat-badge" hidden>0</span></a>
+        <a href="#" data-panel="ambulances">Ambulances</a>
         <a href="#" data-panel="profile">Hospital Profile</a>
+        <a href="#" data-panel="history">History</a>
+        <a href="#" data-panel="notifications">Notifications <span class="hcc-nav-badge hcc-nav-badge-blue" id="nav-notif-badge" hidden>0</span></a>
       </nav>
-      <div class="dashboard-links">
-        <span>Logged in as <strong>{{ user.name }}</strong> (hospital)</span>
+      <div class="hcc-sidebar-foot">
+        <button type="button" class="hcc-sos-btn" id="btn-sos-refresh" title="Refresh live desk">SOS Refresh</button>
+        <div class="hcc-sys-card">
+          <span class="hcc-sys-ok"></span>
+          <div>
+            <strong>System Status</strong>
+            <em>All systems operational</em>
+          </div>
+        </div>
+        <p class="hcc-user-line">{{ user.name }}</p>
+        <a href="{{ url_for('logout') }}" class="hcc-logout">Logout</a>
+        <p class="hcc-foot-brand">GurmadNet AI · Hospital Desk</p>
       </div>
     </aside>
 
-    <div class="main-content">
-      <header class="top-bar">
-        <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="Menu">☰</button>
-        <h1>{{ hospital.name }}</h1>
-        <div class="top-bar-actions">
-          <span class="notif-badge" id="notif-badge" title="Notifications">🔔 <span id="notif-count">0</span></span>
-          <span class="user-badge">{{ user.name }}</span>
-          <span class="status-badge online">Online</span>
-          <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
+    <div class="hcc-main">
+      <header class="hcc-top">
+        <button type="button" class="hcc-menu" id="sidebar-toggle" aria-label="Menu">☰</button>
+        <div class="hcc-top-title">
+          <h1 id="hcc-page-title">{{ hospital.name }}</h1>
+          <p class="hcc-sub" id="hcc-status-line">
+            <span class="hcc-online-dot"></span>
+            <strong id="hcc-op-status">{{ hospital.operating_status|capitalize }}</strong>
+            · {{ hospital.city or hospital.district }}, Somalia
+          </p>
+        </div>
+        <div class="hcc-top-actions">
+          <time class="hcc-clock" id="hcc-clock">—</time>
+          <span class="hcc-live-dot" id="refresh-time">Live</span>
+          <button type="button" class="hcc-icon-btn" id="btn-open-notifs" title="Notifications">
+            🔔 <span id="notif-count">0</span>
+          </button>
+          <div class="hcc-user-chip">
+            <span class="hcc-avatar">{{ user.name[:1]|upper }}</span>
+            <span>
+              <strong>{{ user.name }}</strong>
+              <em>Hospital Operator</em>
+            </span>
+          </div>
         </div>
       </header>
 
-      <div class="content-area">
-        <div id="panel-live">
-          <div class="stats">
-            <div class="stat-card">
-              <div class="stat-value" id="stat-total">0</div>
-              <div class="stat-label">Total requests today</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value" id="stat-avg">No data available</div>
-              <div class="stat-label">Average response time</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value" id="stat-ambulance">{{ hospital.ambulance_count or 0 }}</div>
-              <div class="stat-label">Available ambulances</div>
-            </div>
+      <div class="hcc-content">
+        <!-- LIVE COMMAND DESK — mockup 3-column + bottom strip -->
+        <section id="panel-live" class="hcc-panel">
+          <div class="hcc-kpis">
+            <article class="hcc-kpi hcc-kpi-red">
+              <span class="hcc-kpi-label">Active Emergencies</span>
+              <strong id="kpi-active">0</strong>
+              <em id="kpi-active-sub">In queue</em>
+            </article>
+            <article class="hcc-kpi hcc-kpi-green">
+              <span class="hcc-kpi-label">Available Ambulances</span>
+              <strong id="kpi-amb-avail">0</strong>
+              <em>Ready to dispatch</em>
+            </article>
+            <article class="hcc-kpi hcc-kpi-amber">
+              <span class="hcc-kpi-label">Busy Ambulances</span>
+              <strong id="kpi-amb-busy">0</strong>
+              <em>On active missions</em>
+            </article>
+            <article class="hcc-kpi hcc-kpi-blue">
+              <span class="hcc-kpi-label">Avg. Response Time</span>
+              <strong id="kpi-avg">—</strong>
+              <em>Today</em>
+            </article>
+            <article class="hcc-kpi hcc-kpi-violet">
+              <span class="hcc-kpi-label">Completed Today</span>
+              <strong id="kpi-done">0</strong>
+              <em>Resolved / completed</em>
+            </article>
+            <article class="hcc-kpi hcc-kpi-teal">
+              <span class="hcc-kpi-label">Units Online</span>
+              <strong id="kpi-units">0</strong>
+              <em>Available + busy</em>
+            </article>
           </div>
 
-          <p class="hospital-status-line">
-            Status: <strong>{{ hospital.operating_status|upper }}</strong>
-            · {{ hospital.address }}
-            · GPS: {{ hospital.latitude }}, {{ hospital.longitude }}
-          </p>
+          <div class="hcc-card hcc-cc-inbox" id="hcc-cc-inbox">
+            <div class="hcc-card-head">
+              <h2>From Call Center</h2>
+              <span class="hcc-pill-blue" id="cc-inbox-pill">0</span>
+            </div>
+            <p class="hcc-cc-inbox-hint">Cases the Call Center operator sent to your hospital (Alert / Dispatch).</p>
+            <div id="cc-inbox-list" class="hcc-queue"></div>
+          </div>
 
-          <h2 class="section-title">
-            Live emergency requests
-            <span class="refresh-indicator" id="refresh-time">Updating...</span>
-          </h2>
-          <div class="alerts-grid" id="alerts-container"></div>
+          <div class="hcc-desk-3">
+            <div class="hcc-card hcc-queue-pane">
+              <div class="hcc-card-head">
+                <h2>Emergency Queue</h2>
+                <span class="hcc-pill-red" id="queue-high-pill">0 High Priority</span>
+              </div>
+              <div id="queue-list" class="hcc-queue"></div>
+            </div>
 
-          <h2 class="section-title">Live emergencies map</h2>
-          <div id="hospital-overview-map" class="leaflet-map-container dashboard-map"></div>
-        </div>
+            <div class="hcc-card hcc-map-pane">
+              <div class="hcc-card-head">
+                <h2>Live Emergency Map</h2>
+              </div>
+              <div class="hcc-map-filters" role="group" aria-label="Filter map pins">
+                <button type="button" class="hcc-map-key is-active" data-hcc-map-filter="all">All</button>
+                <button type="button" class="hcc-map-key hcc-map-key-sos" data-hcc-map-filter="emergency">SOS</button>
+                <button type="button" class="hcc-map-key hcc-map-key-amb" data-hcc-map-filter="ambulance">Ambulance</button>
+                <button type="button" class="hcc-map-key hcc-map-key-hosp" data-hcc-map-filter="hospital">Hospital</button>
+              </div>
+              <div class="hcc-map-wrap">
+                <div id="hospital-overview-map" class="hcc-map" role="application" aria-label="Live emergency map"></div>
+                <div class="hcc-map-empty" id="hcc-map-empty" hidden>
+                  <strong>Nothing on the map for this filter</strong>
+                  <p>Tap All, or wait for live GPS / active cases.</p>
+                </div>
+                <div class="hcc-amb-motion-banner" id="hcc-amb-motion-banner" hidden>
+                  <span class="hcc-amb-motion-phase" id="hcc-amb-motion-phase">—</span>
+                  <span class="hcc-amb-motion-meta" id="hcc-amb-motion-meta"></span>
+                </div>
+              </div>
+              <div class="hcc-map-toolbar">
+                <button type="button" class="hcc-map-btn" id="btn-hcc-locate" title="Show my location">My location</button>
+                <button type="button" class="hcc-map-btn" id="btn-hcc-fit" title="Fit all pins">Fit all</button>
+                <button type="button" class="hcc-map-btn hcc-map-btn-primary" id="btn-hcc-map-refresh">Refresh</button>
+                <span class="hcc-map-hint" id="hcc-map-status">Scroll or pinch to zoom · drag to move</span>
+              </div>
+              <p class="hcc-map-eta" id="map-eta-line">Select a case to see route / ETA</p>
+            </div>
 
-        <div id="panel-history" class="hidden-panel panel-section">
-          <h2 class="section-title">Request history</h2>
-          <p style="color: #757575;">Resolved medical emergencies from the last 24 hours appear here.</p>
-          <div class="alerts-grid" id="history-container" style="margin-top: 16px;"></div>
-        </div>
+            <aside class="hcc-rail-stack">
+              <div class="hcc-card">
+                <div class="hcc-card-head"><h2>Notifications</h2></div>
+                <div id="notif-rail" class="hcc-notif-list"></div>
+              </div>
+              <div class="hcc-card hcc-suggest">
+                <div class="hcc-card-head">
+                  <h2>AI Recommendation</h2>
+                  <span class="hcc-pill-violet">Best match</span>
+                </div>
+                <div id="suggest-body" class="hcc-suggest-body">
+                  <p class="hcc-muted">Select an emergency to get the nearest available ambulance.</p>
+                </div>
+              </div>
+            </aside>
+          </div>
 
-        <div id="panel-profile" class="hidden-panel panel-section">
-          <h2 class="section-title">Manage hospital profile</h2>
-          <form id="hospital-profile-form" class="hospital-form">
-            <div class="form-row-2">
-              <div class="form-group">
-                <label for="pf-name">Hospital name</label>
-                <input type="text" id="pf-name" required>
+          <div class="hcc-desk-bottom">
+            <div class="hcc-card hcc-amb-pane">
+              <div class="hcc-card-head">
+                <h2>Ambulance Status</h2>
+                <button type="button" class="hcc-btn hcc-btn-ghost" id="btn-refresh-amb-strip">Refresh</button>
               </div>
-              <div class="form-group">
-                <label for="pf-phone">Phone</label>
-                <input type="tel" id="pf-phone" required>
+              <div id="amb-strip" class="hcc-amb-strip"></div>
+            </div>
+            <div class="hcc-card hcc-timeline-pane">
+              <div class="hcc-card-head"><h2>Activity Timeline</h2></div>
+              <ol id="timeline-list" class="hcc-timeline">
+                <li class="hcc-muted">No case selected</li>
+              </ol>
+            </div>
+          </div>
+        </section>
+
+        <!-- QUEUE ONLY (same list, focused) -->
+        <section id="panel-queue" class="hcc-panel hidden-panel">
+          <div class="hcc-card">
+            <div class="hcc-card-head"><h2>Emergency Queue</h2></div>
+            <div id="queue-list-full" class="hcc-queue"></div>
+          </div>
+        </section>
+
+        <!-- CASE CHAT (WhatsApp-style inbox) -->
+        <section id="panel-chat" class="hcc-panel hidden-panel">
+          <div class="hcc-chat-shell">
+            <aside class="hcc-card hcc-chat-cases">
+              <div class="hcc-wa-head">
+                <div class="hcc-wa-head-row">
+                  <h2>Chats</h2>
+                  <span class="hcc-muted" id="hcc-chat-case-count">0</span>
+                </div>
+                <label class="hcc-wa-search">
+                  <span class="sr-only">Search chats</span>
+                  <input type="search" id="hcc-chat-search" placeholder="Search name, phone, or case #" autocomplete="off">
+                </label>
+                <div class="hcc-wa-filters" role="tablist">
+                  <button type="button" class="hcc-wa-filter is-active" data-chat-filter="all">All</button>
+                  <button type="button" class="hcc-wa-filter" data-chat-filter="unread">Unread</button>
+                  <button type="button" class="hcc-wa-filter" data-chat-filter="active">Active</button>
+                </div>
+              </div>
+              <div id="hcc-chat-case-list" class="hcc-chat-case-list" role="list"></div>
+            </aside>
+            <div class="hcc-card hcc-chat-thread">
+              <div class="hcc-chat-thread-head" id="hcc-chat-thread-head">
+                <div class="hcc-wa-thread-who">
+                  <div class="hcc-wa-avatar" id="hcc-chat-avatar" aria-hidden="true">?</div>
+                  <div class="hcc-wa-thread-meta">
+                    <h2 id="hcc-chat-title">Case Chat</h2>
+                    <p class="hcc-muted" id="hcc-chat-sub">Dooro qof liiska ka mid ah · Select a person</p>
+                    <label class="hcc-wa-case-switch" id="hcc-chat-case-switch-wrap" hidden>
+                      <span>Case</span>
+                      <select id="hcc-chat-case-switch" aria-label="Select emergency case for this person"></select>
+                    </label>
+                  </div>
+                </div>
+                <button type="button" class="hcc-btn hcc-btn-ghost hcc-btn-sm" id="hcc-chat-refresh" hidden>Refresh</button>
+              </div>
+              <div id="hcc-chat-messages" class="hcc-chat-messages" aria-live="polite">
+                <div class="hcc-chat-empty">
+                  <strong>Dooro chat</strong>
+                  <p>Liiska bidix — qof dooro, fariinta ayaad u furaysaa sida WhatsApp.</p>
+                </div>
+              </div>
+              <div class="hcc-chat-quick" id="hcc-chat-quick" hidden>
+                <button type="button" class="hcc-chat-chip" data-chat-text="Ambulance is on the way. Please stay on the line. / Ambalaas ayaa soo socota — line-ka ha jarin.">On the way</button>
+                <button type="button" class="hcc-chat-chip" data-chat-text="We have arrived at your location. / Waan soo gaarnay meeshaada.">Arrived</button>
+                <button type="button" class="hcc-chat-chip" data-chat-text="Please confirm landmarks near you for the driver. / Fadlan sheeg calaamado u dhow.">Landmarks?</button>
+                <button type="button" class="hcc-chat-chip" data-chat-text="Is a family member with you? Please share an emergency contact. / Qof qoyska ah ma kula jiraa? Fadlan sheeg number-ka xiriirka degdegga.">Family / contact</button>
+                <button type="button" class="hcc-chat-chip" data-chat-text="You are being transported to the hospital now. / Hadda ayaad u socotaa isbitaalka.">To hospital</button>
+              </div>
+              <form id="hcc-chat-form" class="hcc-chat-composer" hidden>
+                <input type="text" id="hcc-chat-input" placeholder="Qor fariin / Type a message…" maxlength="1000" autocomplete="off">
+                <button type="submit" class="hcc-btn hcc-btn-primary" id="hcc-chat-send">Send</button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- AMBULANCES MANAGEMENT -->
+        <section id="panel-ambulances" class="hcc-panel hidden-panel">
+          <div class="hcc-card">
+            <div class="hcc-card-head">
+              <div>
+                <h2>Your ambulances</h2>
+                <p class="hcc-muted">Share availability, GPS, and driver contact for dispatch only.</p>
+              </div>
+              <div class="hcc-row-actions">
+                <button type="button" class="hcc-btn hcc-btn-primary" id="btn-add-hospital-amb">+ Add ambulance</button>
+                <button type="button" class="hcc-btn hcc-btn-ghost" id="btn-refresh-hospital-amb">Refresh</button>
               </div>
             </div>
-            <div class="form-row-2">
-              <div class="form-group">
-                <label for="pf-region">Region</label>
-                <input type="text" id="pf-region" required>
-              </div>
-              <div class="form-group">
-                <label for="pf-district">District</label>
-                <input type="text" id="pf-district" required>
-              </div>
+            <div class="hcc-table-wrap">
+              <table class="hcc-table" id="hospital-amb-table">
+                <thead>
+                  <tr>
+                    <th>Photos</th><th>Unit</th><th>Status</th><th>Driver</th><th>Phone</th><th>GPS</th><th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
             </div>
-            <div class="form-group">
-              <label for="pf-city">City</label>
-              <input type="text" id="pf-city" required>
+          </div>
+        </section>
+
+        <!-- HISTORY -->
+        <section id="panel-history" class="hcc-panel hidden-panel">
+          <div class="hcc-card">
+            <div class="hcc-card-head"><h2>Request history</h2></div>
+            <div id="history-container" class="hcc-queue"></div>
+          </div>
+        </section>
+
+        <!-- NOTIFICATIONS FULL -->
+        <section id="panel-notifications" class="hcc-panel hidden-panel">
+          <div class="hcc-card">
+            <div class="hcc-card-head">
+              <h2>Notifications</h2>
+              <button type="button" class="hcc-btn hcc-btn-ghost" id="btn-mark-all-read">Mark all read</button>
             </div>
-            <div class="form-group">
-              <label for="pf-address">Full address</label>
-              <textarea id="pf-address" rows="2" required></textarea>
-            </div>
-            <div class="form-group">
-              <label for="pf-emergency">Emergency contacts</label>
-              <textarea id="pf-emergency" rows="2"></textarea>
-            </div>
-            <div class="form-group">
-              <label>Services</label>
-              <div class="checkbox-grid">
-                {% for svc in ['Emergency','Trauma','General','Surgery','ICU','Maternity','Pediatrics','Ambulance','Laboratory','Radiology','Pharmacy'] %}
-                <label class="checkbox-label"><input type="checkbox" name="pf-services" value="{{ svc }}"> {{ svc }}</label>
-                {% endfor %}
+            <div id="notif-full" class="hcc-notif-list"></div>
+          </div>
+        </section>
+
+        <!-- PROFILE -->
+        <section id="panel-profile" class="hcc-panel hidden-panel">
+          <div class="hcc-card">
+            <div class="hcc-card-head"><h2>Hospital profile</h2></div>
+            <form id="hospital-profile-form" class="hcc-form">
+              <div class="hcc-logo-block">
+                <div class="hcc-logo-preview{% if hospital.logo_url %} has-logo{% endif %}" id="pf-logo-preview"{% if hospital.logo_url %} style="background-image:url('{{ hospital.logo_url }}');"{% endif %}>
+                  {% if not hospital.logo_url %}<span id="pf-logo-initial">{{ (hospital.name or 'H')[:1]|upper }}</span>{% endif %}
+                </div>
+                <div class="hcc-logo-actions">
+                  <strong>Hospital logo</strong>
+                  <p class="hcc-muted">Upload a square logo (PNG/JPG/WebP, max 5 MB). It appears in the sidebar.</p>
+                  <div class="hcc-row-actions">
+                    <label class="hcc-btn hcc-btn-primary hcc-btn-sm hcc-file-btn">
+                      Upload logo
+                      <input type="file" id="pf-logo-input" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+                    </label>
+                    <button type="button" class="hcc-btn hcc-btn-ghost hcc-btn-sm" id="pf-logo-remove"{% if not hospital.logo_url %} hidden{% endif %}>Remove</button>
+                  </div>
+                  <p class="hcc-muted" id="pf-logo-msg" hidden></p>
+                </div>
               </div>
-            </div>
-            <div class="form-row-2">
-              <div class="form-group">
-                <label for="pf-capacity">Emergency capacity</label>
-                <input type="number" id="pf-capacity" min="0">
+              <div class="hcc-form-row">
+                <label>Hospital name<input type="text" id="pf-name" required></label>
+                <label>Phone<input type="tel" id="pf-phone" required></label>
               </div>
-              <div class="form-group">
-                <label for="pf-status">Operating status</label>
-                <select id="pf-status">
-                  <option value="open">Open</option>
-                  <option value="limited">Limited</option>
-                  <option value="closed">Closed</option>
-                </select>
+              <div class="hcc-form-row">
+                <label>Region<input type="text" id="pf-region" required></label>
+                <label>District<input type="text" id="pf-district" required></label>
               </div>
-            </div>
-            <div class="form-row-2">
-              <label class="checkbox-label"><input type="checkbox" id="pf-ambulance"> Ambulance available</label>
-              <div class="form-group">
-                <label for="pf-amb-count">Ambulance count</label>
-                <input type="number" id="pf-amb-count" min="0">
+              <label>City<input type="text" id="pf-city" required></label>
+              <label>Full address<textarea id="pf-address" rows="2" required></textarea></label>
+              <label>Emergency contacts<textarea id="pf-emergency" rows="2"></textarea></label>
+              <div class="hcc-services">
+                <span>Services</span>
+                <div class="hcc-check-grid">
+                  {% for svc in ['Emergency','Trauma','General','Surgery','ICU','Maternity','Pediatrics','Ambulance','Laboratory','Radiology','Pharmacy'] %}
+                  <label><input type="checkbox" name="pf-services" value="{{ svc }}"> {{ svc }}</label>
+                  {% endfor %}
+                </div>
               </div>
-            </div>
-            <p class="field-hint">Drag pin to update exact hospital location on map.</p>
-            <div id="profile-map" class="leaflet-map-container dashboard-map"></div>
-            <div class="form-row-2">
-              <div class="form-group">
-                <label for="pf-lat">Latitude</label>
-                <input type="text" id="pf-lat" readonly>
+              <div class="hcc-form-row">
+                <label>Emergency capacity<input type="number" id="pf-capacity" min="0"></label>
+                <label>Operating status
+                  <select id="pf-status">
+                    <option value="open">Open</option>
+                    <option value="limited">Limited</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                </label>
               </div>
-              <div class="form-group">
-                <label for="pf-lng">Longitude</label>
-                <input type="text" id="pf-lng" readonly>
+              <label>Ambulances available for dispatch
+                <input type="text" id="pf-amb-ready" readonly value="{{ hospital.ambulance_count or 0 }} available (from your units)">
+              </label>
+              <p class="hcc-muted">Drag pin to update hospital location.</p>
+              <div id="profile-map" class="hcc-map hcc-map-sm"></div>
+              <div class="hcc-form-row">
+                <label>Latitude<input type="text" id="pf-lat" readonly></label>
+                <label>Longitude<input type="text" id="pf-lng" readonly></label>
               </div>
-            </div>
-            <button type="submit" class="btn-primary" style="max-width:280px;margin-top:12px;">Save profile</button>
-          </form>
-        </div>
+              <button type="submit" class="hcc-btn hcc-btn-primary">Save profile</button>
+            </form>
+          </div>
+        </section>
       </div>
     </div>
   </div>
 
+  <!-- Accept / assign ambulance modal -->
+  <div id="hcc-modal" class="hcc-modal hidden" role="dialog" aria-modal="true">
+    <div class="hcc-modal-box">
+      <h3 id="hcc-modal-title">Assign ambulance</h3>
+      <div id="hcc-modal-body"></div>
+      <div class="hcc-modal-actions">
+        <button type="button" class="hcc-btn hcc-btn-ghost" id="hcc-modal-cancel">Cancel</button>
+        <button type="button" class="hcc-btn hcc-btn-primary" id="hcc-modal-save">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add / edit ambulance form -->
+  <div id="amb-form-modal" class="hcc-modal hidden" role="dialog" aria-modal="true" aria-labelledby="amb-form-title">
+    <div class="hcc-modal-box hcc-modal-box-wide">
+      <h3 id="amb-form-title">Add ambulance</h3>
+      <p class="hcc-muted" style="margin:-4px 0 12px;">Fill unit, driver contact, status, and GPS for dispatch.</p>
+      <form id="amb-editor-form" class="hcc-form">
+        <input type="hidden" id="amb-edit-id" value="">
+        <div class="hcc-form-row">
+          <label>Unit label / call sign *
+            <input type="text" id="amb-call-sign" name="call_sign" required placeholder="e.g. AMB-1" maxlength="40" autocomplete="off">
+          </label>
+          <label>Status *
+            <select id="amb-status" name="status" required>
+              <option value="available">Available</option>
+              <option value="busy">Busy</option>
+              <option value="offline">Offline</option>
+            </select>
+          </label>
+        </div>
+        <div class="hcc-form-row">
+          <label>Driver name
+            <input type="text" id="amb-driver-name" name="driver_name" placeholder="Driver full name" maxlength="120" autocomplete="name">
+          </label>
+          <label>Driver phone *
+            <input type="tel" id="amb-driver-phone" name="driver_phone" placeholder="061xxxxxxx" maxlength="40" autocomplete="tel">
+          </label>
+        </div>
+        <div class="hcc-amb-photo-block">
+          <div class="hcc-amb-photo-preview" id="amb-photo-preview" aria-hidden="true"></div>
+          <div class="hcc-amb-photo-actions">
+            <strong>Driver photo (profile / sawirka qofka)</strong>
+            <p class="hcc-muted">Card-ka kore — profile circular. PNG/JPG/WebP, max 5 MB.</p>
+            <div class="hcc-row-actions">
+              <button type="button" class="hcc-btn hcc-btn-primary hcc-btn-sm" id="amb-photo-pick">Upload driver</button>
+              <button type="button" class="hcc-btn hcc-btn-ghost hcc-btn-sm" id="amb-photo-remove" hidden>Remove</button>
+              <input type="file" id="amb-photo-input" class="hcc-file-input" accept="image/png,image/jpeg,image/webp,image/gif">
+            </div>
+            <p class="hcc-muted" id="amb-photo-status" hidden></p>
+            <input type="hidden" id="amb-photo-url" value="">
+          </div>
+        </div>
+        <div class="hcc-amb-photo-block">
+          <div class="hcc-amb-photo-preview hcc-amb-vehicle-preview" id="amb-vehicle-preview" aria-hidden="true"></div>
+          <div class="hcc-amb-photo-actions">
+            <strong>Vehicle photo (sawirka gaariga)</strong>
+            <p class="hcc-muted">Card-ka sawirka weyn — ambulance/car. PNG/JPG/WebP, max 5 MB.</p>
+            <div class="hcc-row-actions">
+              <button type="button" class="hcc-btn hcc-btn-primary hcc-btn-sm" id="amb-vehicle-pick">Upload car</button>
+              <button type="button" class="hcc-btn hcc-btn-ghost hcc-btn-sm" id="amb-vehicle-remove" hidden>Remove</button>
+              <input type="file" id="amb-vehicle-input" class="hcc-file-input" accept="image/png,image/jpeg,image/webp,image/gif">
+            </div>
+            <p class="hcc-muted" id="amb-vehicle-status" hidden></p>
+            <input type="hidden" id="amb-vehicle-url" value="">
+          </div>
+        </div>
+        <div class="hcc-form-row">
+          <label>Latitude <span class="hcc-muted">(optional — live GPS updates map)</span>
+            <input type="text" id="amb-lat" name="latitude" placeholder="Auto from Live GPS" inputmode="decimal">
+          </label>
+          <label>Longitude <span class="hcc-muted">(optional)</span>
+            <input type="text" id="amb-lng" name="longitude" placeholder="Auto from Live GPS" inputmode="decimal">
+          </label>
+        </div>
+        <div class="hcc-row-actions">
+          <button type="button" class="hcc-btn hcc-btn-ghost hcc-btn-sm" id="amb-use-gps">Seed once from my GPS</button>
+        </div>
+        <p class="hcc-muted" id="amb-form-hint">Map follows the vehicle when you tap <strong>Live GPS</strong> on the Dashboard ambulance card — you do not need to type coordinates while driving.</p>
+        <p class="hcc-form-error" id="amb-form-error" hidden></p>
+        <div class="hcc-modal-actions">
+          <button type="button" class="hcc-btn hcc-btn-ghost" id="amb-form-cancel">Cancel</button>
+          <button type="submit" class="hcc-btn hcc-btn-primary" id="amb-form-save">Save ambulance</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Driver GPS share link modal -->
+  <div id="gps-link-modal" class="hcc-modal hidden" role="dialog" aria-modal="true" aria-labelledby="gps-link-title">
+    <div class="hcc-modal-box">
+      <h3 id="gps-link-title">Driver GPS link</h3>
+      <p class="hcc-muted" id="gps-link-unit">Send this link to the driver's phone. No hospital login needed.</p>
+      <label class="hcc-wa-search" style="display:block;margin:12px 0;">
+        <span class="sr-only">GPS share URL</span>
+        <input type="text" id="gps-link-url" readonly>
+      </label>
+      <p class="hcc-muted" id="gps-link-hint">Driver opens the link → Start sharing → hospital map follows live.</p>
+      <p class="hcc-form-error" id="gps-link-error" hidden></p>
+      <div class="hcc-modal-actions" style="flex-wrap:wrap;">
+        <button type="button" class="hcc-btn hcc-btn-primary" id="gps-link-copy">Copy link</button>
+        <a class="hcc-btn hcc-btn-success" id="gps-link-whatsapp" target="_blank" rel="noopener">WhatsApp</a>
+        <button type="button" class="hcc-btn hcc-btn-ghost" id="gps-link-rotate">New link</button>
+        <button type="button" class="hcc-btn hcc-btn-danger" id="gps-link-revoke">Revoke</button>
+        <button type="button" class="hcc-btn hcc-btn-ghost" id="gps-link-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/csrf.js') }}"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="{{ url_for('static', filename='js/location.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/ambulance_motion.js') }}"></script>
   <script src="{{ url_for('static', filename='js/hospital.js') }}"></script>
   <script>
     var HOSPITAL_DATA = {{ hospital|tojson }};
+    var HCC_REFRESH_MS = {{ (settings.refresh_interval|default(5)) * 1000 }};
   </script>
-  <script>
-    (function () {
-      const API_TYPE = "medical";
-      let REFRESH_MS = {{ settings.refresh_interval * 1000 }};
-
-      function formatTime(iso) {
-        try {
-          return new Date(iso).toLocaleString("en-GB", {
-            hour: "2-digit",
-            minute: "2-digit",
-            day: "numeric",
-            month: "short"
-          });
-        } catch (e) {
-          return iso;
-        }
-      }
-
-      function formatType(type) {
-        return (type || "medical").replace(/_/g, " ").toUpperCase();
-      }
-
-      function renderCard(em) {
-        const card = document.createElement("div");
-        card.className = "alert-card";
-        card.innerHTML =
-          '<div class="alert-type">' +
-          formatType(em.type) +
-          (em.source === "call_center" ? ' · 📞 CALL CENTER' : "") +
-          "</div>" +
-          '<div class="alert-location">' +
-          escapeHtml(em.location) +
-          "</div>" +
-          '<div class="alert-meta">Caller: ' +
-          escapeHtml(em.caller_name || "Unknown") +
-          " · " +
-          escapeHtml(em.phone || "N/A") +
-          "</div>" +
-          '<div class="alert-meta">GPS: ' +
-          (em.latitude != null ? em.latitude.toFixed(5) + ", " + em.longitude.toFixed(5) : "N/A") +
-          (em.tracking_active ? " · <strong style='color:#c62828'>LIVE</strong>" : "") +
-          "</div>" +
-          '<div class="alert-meta">Mode: ' +
-          escapeHtml(em.request_mode || "emergency") +
-          (em.notes ? " · " + escapeHtml(em.notes) : "") +
-          "</div>" +
-          '<div class="alert-meta">Time: ' +
-          formatTime(em.timestamp) +
-          "</div>" +
-          '<span class="alert-status ' +
-          em.status +
-          '">' +
-          em.status.replace(/_/g, " ") +
-          "</span>" +
-          '<div class="alert-actions">' +
-          (em.status === "pending_hospital" || em.status === "pending"
-            ? '<button type="button" class="btn-action btn-accept" data-id="' + em.id + '">Accept</button>' +
-              '<button type="button" class="btn-action btn-reject" data-id="' + em.id + '">Reject</button>'
-            : "") +
-          '<button type="button" class="btn-action btn-call" data-phone="' +
-          escapeHtml(em.phone || "") +
-          '">Call</button>' +
-          '<button type="button" class="btn-action btn-view" data-emergency="' +
-          escapeAttr(JSON.stringify(em)) +
-          '">View on Map</button>' +
-          '<button type="button" class="btn-action btn-view" data-route-id="' + em.id + '">Route</button>' +
-          '<button type="button" class="btn-action btn-arrived" data-id="' + em.id + '">Arrived</button>' +
-          '<button type="button" class="btn-action btn-reached" data-id="' + em.id + '">Reached</button>' +
-          "</div>";
-        return card;
-      }
-
-      function escapeHtml(str) {
-        const d = document.createElement("div");
-        d.textContent = str || "";
-        return d.innerHTML;
-      }
-
-      function escapeAttr(str) {
-        return String(str || "")
-          .replace(/&/g, "&amp;")
-          .replace(/"/g, "&quot;")
-          .replace(/</g, "&lt;");
-      }
-
-      function loadEmergencies() {
-        fetch("/api/get_emergencies?type=" + API_TYPE, { credentials: "same-origin" })
-          .then(function (res) {
-            return res.json();
-          })
-          .then(function (data) {
-            if (data.refresh_interval) REFRESH_MS = data.refresh_interval * 1000;
-            const list = data.emergencies || [];
-            const container = document.getElementById("alerts-container");
-            container.innerHTML = "";
-
-            if (list.length === 0) {
-              container.innerHTML =
-                '<div class="empty-alerts">No data available</div>';
-            } else {
-              list.forEach(function (em) {
-                container.appendChild(renderCard(em));
-              });
-            }
-
-            const today = list.filter(function (e) {
-              const d = new Date(e.timestamp);
-              const now = new Date();
-              return d.toDateString() === now.toDateString();
-            });
-            document.getElementById("stat-total").textContent = today.length;
-            var avgEl = document.getElementById("stat-avg");
-            if (avgEl) {
-              avgEl.textContent =
-                data.avg_response_time != null
-                  ? data.avg_response_time + " min"
-                  : "No data available";
-            }
-
-            document.getElementById("refresh-time").textContent =
-              "Last updated " + new Date().toLocaleTimeString();
-
-            bindActions();
-            if (window.EmergencyLocation && EmergencyLocation.initLiveDispatchMap) {
-              Promise.all(list.map(function (em) {
-                return fetch("/api/emergencies/" + em.id + "/tracking", { credentials: "same-origin" })
-                  .then(function (r) { return r.json(); })
-                  .then(function (d) {
-                    if (d.success && d.trail) {
-                      em.location_history = d.trail;
-                      em.tracking_active = d.tracking_active;
-                      if (d.latitude) { em.latitude = d.latitude; em.longitude = d.longitude; }
-                    }
-                    return em;
-                  })
-                  .catch(function () { return em; });
-              })).then(function (enriched) {
-                EmergencyLocation.initLiveDispatchMap("hospital-overview-map", enriched);
-              });
-            }
-          })
-          .catch(function () {
-            document.getElementById("alerts-container").innerHTML =
-              '<div class="empty-alerts">Could not load alerts. Retrying...</div>';
-          });
-      }
-
-      function loadNotifications() {
-        fetch("/api/notifications", { credentials: "same-origin" })
-          .then(function (r) { return r.json(); })
-          .then(function (d) {
-            var n = (d.notifications || []).length;
-            document.getElementById("notif-count").textContent = n;
-          });
-      }
-
-      function bindActions() {
-        document.querySelectorAll(".btn-accept").forEach(function (btn) {
-          btn.onclick = function () {
-            const id = parseInt(btn.getAttribute("data-id"), 10);
-            fetch("/api/hospital/request/" + id + "/accept", {
-              method: "POST",
-              credentials: "same-origin",
-              headers: { "Content-Type": "application/json" }
-            }).then(function () {
-              loadEmergencies();
-              loadNotifications();
-            });
-          };
-        });
-
-        document.querySelectorAll(".btn-reject").forEach(function (btn) {
-          btn.onclick = function () {
-            if (!confirm("Reject and forward to next nearest hospital?")) return;
-            const id = parseInt(btn.getAttribute("data-id"), 10);
-            fetch("/api/hospital/request/" + id + "/reject", {
-              method: "POST",
-              credentials: "same-origin",
-              headers: { "Content-Type": "application/json" }
-            }).then(function () {
-              loadEmergencies();
-              loadNotifications();
-            });
-          };
-        });
-
-        document.querySelectorAll(".btn-call").forEach(function (btn) {
-          btn.onclick = function () {
-            const phone = btn.getAttribute("data-phone");
-            if (phone && phone !== "Not provided") {
-              window.location.href = "tel:" + phone.replace(/\s/g, "");
-            } else {
-              alert("No phone number provided for this caller.");
-            }
-          };
-        });
-
-        document.querySelectorAll(".btn-view[data-emergency]").forEach(function (btn) {
-          btn.onclick = function () {
-            try {
-              var em = JSON.parse(btn.getAttribute("data-emergency"));
-              EmergencyLocation.showEmergencyOnMap(em);
-            } catch (e) {
-              alert("Could not open map.");
-            }
-          };
-        });
-        document.querySelectorAll("[data-route-id]").forEach(function (btn) {
-          btn.onclick = function () {
-            var id = btn.getAttribute("data-route-id");
-            fetch("/api/emergencies/" + id + "/route", { credentials: "same-origin" })
-              .then(function (r) { return r.json(); })
-              .then(function (d) {
-                if (d.success) {
-                  var text = d.instructions.map(function (s) { return s.step + ". " + s.text; }).join("\n");
-                  alert("Navigation to " + d.victim.label + ":\n\n" + text);
-                  EmergencyLocation.showMapModal(d.victim.lat, d.victim.lng, "Route to emergency #" + id, d.victim.label);
-                }
-              });
-          };
-        });
-        document.querySelectorAll(".btn-arrived, .btn-reached").forEach(function (btn) {
-          btn.onclick = function () {
-            var id = parseInt(btn.getAttribute("data-id"), 10);
-            var action = btn.classList.contains("btn-arrived") ? "arrived_at_scene" : "reached_victim";
-            fetch("/api/emergencies/" + id + "/responder", {
-              method: "POST",
-              credentials: "same-origin",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ action: action })
-            }).then(function () { loadEmergencies(); });
-          };
-        });
-      }
-
-      document.querySelectorAll(".sidebar nav a").forEach(function (link) {
-        link.addEventListener("click", function (e) {
-          e.preventDefault();
-          document.querySelectorAll(".sidebar nav a").forEach(function (a) {
-            a.classList.remove("active");
-          });
-          link.classList.add("active");
-          const panel = link.getAttribute("data-panel");
-          document.getElementById("panel-live").style.display =
-            panel === "live" ? "block" : "none";
-          document.getElementById("panel-history").classList.toggle(
-            "hidden-panel",
-            panel !== "history"
-          );
-          document.getElementById("panel-profile").classList.toggle(
-            "hidden-panel",
-            panel !== "profile"
-          );
-          if (panel === "history") {
-            loadHistory();
-          }
-          if (panel === "profile" && window.HospitalApp) {
-            HospitalApp.initProfileForm(HOSPITAL_DATA);
-          }
-        });
-      });
-
-      function loadHistory() {
-        fetch("/api/get_emergencies?type=" + API_TYPE + "&status=completed,resolved")
-          .then(function (res) {
-            return res.json();
-          })
-          .then(function (data) {
-            const container = document.getElementById("history-container");
-            container.innerHTML = "";
-            const list = data.emergencies || [];
-            if (list.length === 0) {
-              container.innerHTML =
-                '<div class="empty-alerts">No data available</div>';
-            } else {
-              list.forEach(function (em) {
-                container.appendChild(renderCard(em));
-              });
-            }
-          });
-      }
-
-      document.getElementById("sidebar-toggle").addEventListener("click", function () {
-        document.getElementById("sidebar").classList.toggle("open");
-      });
-
-      loadEmergencies();
-      loadNotifications();
-      setInterval(loadEmergencies, REFRESH_MS);
-      setInterval(loadNotifications, REFRESH_MS);
-    })();
-  </script>
+  <script src="{{ url_for('static', filename='js/hospital_command.js') }}?v=hcc-cc1"></script>
 </body>
 </html>
