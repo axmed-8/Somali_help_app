@@ -1,24 +1,8 @@
-# GurmadNet on Render — web service + private MySQL (no local db_config.env).
-# MySQL private services require a paid disk plan on Render.
-# After first deploy, wait until MySQL is live before the web service can connect.
+# GurmadNet on Render — uses Railway MySQL (public TCP proxy).
+# Set MYSQL_PASSWORD in the Render dashboard from Railway → MySQL → Variables.
+# Do not use localhost / Axmed MySQL80.
 
 services:
-  # --- Private MySQL 8 ---
-  - type: pserv
-    name: gurmadnet-mysql
-    runtime: docker
-    plan: starter
-    region: oregon
-    dockerfilePath: ./database/Dockerfile.mysql
-    dockerContext: ./database
-    disk:
-      name: gurmadnet-mysql-data
-      mountPath: /var/lib/mysql
-      sizeGB: 10
-    envVars:
-      - fromGroup: gurmadnet-mysql
-
-  # --- Web application ---
   - type: web
     name: gurmadnet-ai
     runtime: python
@@ -40,18 +24,20 @@ services:
         value: "1"
       - key: WTF_CSRF_ENABLED
         value: "true"
-      # Email optional at boot — set real SMTP in dashboard for verification emails
       - key: EMAIL_PROVIDER
         value: memory
-      - fromGroup: gurmadnet-mysql
+      # Railway MySQL (service "MySQL" in project talented-consideration)
       - key: MYSQL_HOST
-        fromService:
-          name: gurmadnet-mysql
-          type: pserv
-          property: host
+        value: sakura.proxy.rlwy.net
       - key: MYSQL_PORT
-        value: "3306"
-      # Optional SMTP (override EMAIL_PROVIDER=smtp when set)
+        value: "33388"
+      - key: MYSQL_USER
+        value: root
+      - key: MYSQL_DATABASE
+        value: railway
+      # Paste the Railway MYSQL_PASSWORD in Render dashboard (do not commit secrets)
+      - key: MYSQL_PASSWORD
+        sync: false
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT
@@ -64,7 +50,6 @@ services:
         sync: false
       - key: SMTP_USE_TLS
         value: "true"
-      # Optional WebRTC TURN
       - key: WEBRTC_STUN_URL
         value: "stun:stun.l.google.com:19302"
       - key: WEBRTC_TURN_URL
@@ -75,15 +60,3 @@ services:
         sync: false
       - key: GOOGLE_MAPS_API_KEY
         sync: false
-
-envVarGroups:
-  - name: gurmadnet-mysql
-    envVars:
-      - key: MYSQL_DATABASE
-        value: gurmad
-      - key: MYSQL_USER
-        value: gurmad
-      - key: MYSQL_PASSWORD
-        generateValue: true
-      - key: MYSQL_ROOT_PASSWORD
-        generateValue: true
