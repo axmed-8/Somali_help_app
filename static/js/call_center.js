@@ -212,11 +212,15 @@
       voiceMediaTimer = null;
     }
     voiceMediaStartedAt = null;
-    if (voiceCall) {
-      voiceCall.destroy();
-      voiceCall = null;
-    }
+    var ending = voiceCall;
+    voiceCall = null;
     voiceActiveId = null;
+    if (ending) {
+      try { ending.hangup(false); } catch (e) {}
+      // Keep shared ops socket alive — destroy() would only disconnect if it owns the socket.
+      ending.socket = null;
+      try { ending.destroy(); } catch (e2) {}
+    }
     setTimeout(function () {
       if (panel) panel.classList.remove("is-open");
     }, finalStatus ? 900 : 0);
@@ -234,6 +238,18 @@
 
   function acceptVoiceCall(callId, meta) {
     callId = Number(callId);
+    if (
+      window.GurmadVoiceCall &&
+      typeof GurmadVoiceCall.isSecureContext === "function" &&
+      !GurmadVoiceCall.isSecureContext()
+    ) {
+      var httpsMsg = GurmadVoiceCall.HTTPS_REQUIRED_MSG || "Voice calls require HTTPS or localhost.";
+      try {
+        console.error("[CallCenterVoice] Accept blocked — insecure HTTP", location.href);
+      } catch (e) {}
+      alert(httpsMsg);
+      return;
+    }
     if (voiceActiveId && Number(voiceActiveId) !== callId) {
       alert("You are already on another call.");
       return;
@@ -246,9 +262,12 @@
     var call = (meta && meta.call) || { id: callId };
     setVoiceConsole(call, "Accepting...");
     voiceActiveId = callId;
+    var webrtcAccepted = false;
 
     if (voiceCall) {
-      voiceCall.destroy();
+      try { voiceCall.hangup(false); } catch (e) {}
+      voiceCall.socket = null;
+      try { voiceCall.destroy(); } catch (e2) {}
       voiceCall = null;
     }
 
@@ -257,37 +276,50 @@
       .then(function (sock) {
         voiceCall = new GurmadVoiceCall({ role: "operator", socket: sock });
         voiceCall.setCallId(callId, (meta && meta.ice_servers) || []);
+        // Accept is a user gesture — unlock remote audio playback now.
+        voiceCall.unlockAudio();
 
         voiceCall.on("connected", function () {
+          if (Number(voiceActiveId) !== callId) return;
           setVoiceConsole(call, "Connected");
           startVoiceMediaTimer();
           api("/api/call-center/calls/" + callId).then(function (d) {
-            if (d.success) openSession(d.call, d);
-          });
+            if (d.success) {
+              try { openSession(d.call, d); } catch (e) { console.warn(e); }
+            }
+          }).catch(function () {});
         });
         voiceCall.on("media", function (p) {
+          if (Number(voiceActiveId) !== callId) return;
           if (p && p.state === "connected" && !voiceMediaStartedAt) {
             setVoiceConsole(call, "Connected");
             startVoiceMediaTimer();
           }
         });
         voiceCall.on("reconnecting", function () {
+          if (Number(voiceActiveId) !== callId) return;
           var el = document.getElementById("cc-vc-status");
           if (el) el.textContent = "Reconnecting...";
         });
         voiceCall.on("ended", function () {
+          if (Number(voiceActiveId) !== callId && voiceActiveId != null) return;
           clearVoiceConsole("Call Ended");
           loadLive();
         });
         voiceCall.on("rejected", function () {
+          if (Number(voiceActiveId) !== callId && voiceActiveId != null) return;
           clearVoiceConsole("Rejected");
           loadLive();
         });
         voiceCall.on("failed", function (p) {
-          clearVoiceConsole((p && p.message) || "Connection Failed");
+          if (Number(voiceActiveId) !== callId && voiceActiveId != null) return;
+          var msg = (p && p.message) || "Connection Failed";
+          if (p && p.hint) msg += " — " + p.hint;
+          clearVoiceConsole(msg);
           loadLive();
         });
         voiceCall.on("busy", function (p) {
+          if (Number(voiceActiveId) !== callId && voiceActiveId != null) return;
           clearVoiceConsole((p && p.message) || "Call taken");
           loadLive();
         });
@@ -300,24 +332,45 @@
         return voiceCall.join();
       })
       .then(function () {
+        // WebRTC accept first — conversation must not depend on REST/AI UI.
         voiceCall.accept();
+        webrtcAccepted = true;
         setVoiceConsole(call, "Connecting audio...");
-        return api("/api/call-center/calls/" + callId + "/answer", { method: "POST", body: {} });
-      })
-      .then(function (d) {
-        if (d && d.success) openSession(d.call, d);
-        loadLive();
+        // Session/AI UI is best-effort and must NEVER reject/hang up the live call.
+        return api("/api/call-center/calls/" + callId + "/answer", { method: "POST", body: {} })
+          .then(function (d) {
+            if (d && d.success) {
+              try { openSession(d.call, d); } catch (e) { console.warn("openSession", e); }
+            }
+            loadLive();
+          })
+          .catch(function (err) {
+            console.warn("Call session UI update failed (voice call still active)", err);
+            loadLive();
+          });
       })
       .catch(function (err) {
-        var msg = (err && err.message) || "Microphone Permission Required";
-        if (/NotAllowed|Permission|denied/i.test(String(msg))) msg = "Microphone Permission Required";
+        // Only setup failures (mic/join) before WebRTC accept should reject the call.
+        if (webrtcAccepted) {
+          console.warn("Post-accept setup warning (call kept alive)", err);
+          return;
+        }
+        try {
+          console.error("[CallCenterVoice] accept setup failed", err && err.name, err && err.message, err);
+        } catch (e) {}
+        var msg =
+          (window.GurmadVoiceCall && GurmadVoiceCall.describeMicError
+            ? GurmadVoiceCall.describeMicError(err)
+            : null) ||
+          (err && err.message) ||
+          "Voice call failed";
         alert(msg);
         clearVoiceConsole(msg);
         try {
           ensureOpsSocket().then(function (sock) {
             sock.emit("call:reject", { call_id: callId });
           });
-        } catch (e) {}
+        } catch (e2) {}
       });
   }
 
@@ -386,7 +439,13 @@
       if (!payload) return;
       hideIncomingModal(payload.call_id);
       delete pendingIncoming[payload.call_id];
-      if (voiceActiveId === payload.call_id) clearVoiceConsole("Call Ended");
+      // GurmadVoiceCall also handles call:end → ended → clearVoiceConsole.
+      // Only clear here if voice helper is already gone (avoid double destroy races).
+      if (Number(voiceActiveId) === Number(payload.call_id) && !voiceCall) {
+        clearVoiceConsole("Call Ended");
+      } else if (Number(voiceActiveId) === Number(payload.call_id) && voiceCall) {
+        // Let voice helper emit ended; still refresh queue.
+      }
       loadLive();
     });
   }
@@ -412,8 +471,12 @@
     }
     if (endBtn) {
       endBtn.onclick = function () {
-        if (voiceCall) voiceCall.end();
-        clearVoiceConsole("Call Ended");
+        var ending = voiceCall;
+        if (ending) {
+          try { ending.end(); } catch (e) {}
+        } else {
+          clearVoiceConsole("Call Ended");
+        }
         loadLive();
       };
     }

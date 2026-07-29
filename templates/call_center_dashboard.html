@@ -104,11 +104,11 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
   <script src="{{ url_for('static', filename='js/location.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/webrtc_call.js') }}?v=voice2"></script>
+  <script src="{{ url_for('static', filename='js/webrtc_call.js') }}?v=voice5"></script>
   <script>
     window.CC_TYPE_OPTIONS = {{ type_options|tojson }};
     window.CC_PHONE = {{ call_center_phone|tojson }};
   </script>
-  <script src="{{ url_for('static', filename='js/call_center.js') }}?v=cc-voice2"></script>
+  <script src="{{ url_for('static', filename='js/call_center.js') }}?v=cc-voice5"></script>
 </body>
 </html>

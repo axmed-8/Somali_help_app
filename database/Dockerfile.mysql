@@ -1,0 +1,6 @@
+# Official MySQL 8 for Render private service (persistent disk at /var/lib/mysql).
+FROM mysql:8.0
+
+# Defaults are overridden by Render env vars:
+# MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD, MYSQL_ROOT_PASSWORD
+ENV MYSQL_DATABASE=gurmad

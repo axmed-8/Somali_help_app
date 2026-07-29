@@ -1,15 +1,30 @@
-# Render Blueprint — MySQL is required (single source of truth).
-# Set DB_* (or database/db_config.env equivalent) in the Render dashboard secrets.
+# GurmadNet on Render — web service + private MySQL (no local db_config.env).
+# MySQL private services require a paid disk plan on Render.
+# After first deploy, wait until MySQL is live before the web service can connect.
 
 services:
+  # --- Private MySQL 8 ---
+  - type: pserv
+    name: gurmadnet-mysql
+    runtime: docker
+    plan: starter
+    region: oregon
+    dockerfilePath: ./database/Dockerfile.mysql
+    dockerContext: ./database
+    disk:
+      name: gurmadnet-mysql-data
+      mountPath: /var/lib/mysql
+      sizeGB: 10
+    envVars:
+      - fromGroup: gurmadnet-mysql
+
+  # --- Web application ---
   - type: web
     name: gurmadnet-ai
     runtime: python
     plan: free
     region: oregon
     buildCommand: pip install -r requirements.txt
-    # Threading async_mode — matches Flask-SocketIO default (no eventlet).
-    # Single worker + many threads keeps Socket.IO rooms in one process.
     startCommand: gunicorn --worker-class gthread --threads 25 -w 1 --bind 0.0.0.0:$PORT --timeout 120 app:app
     healthCheckPath: /login
     envVars:
@@ -19,13 +34,56 @@ services:
         value: mysql
       - key: SECRET_KEY
         generateValue: true
-      - key: DB_HOST
-        sync: false
-      - key: DB_PORT
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+      - key: TRUST_PROXY
+        value: "1"
+      - key: WTF_CSRF_ENABLED
+        value: "true"
+      # Email optional at boot — set real SMTP in dashboard for verification emails
+      - key: EMAIL_PROVIDER
+        value: memory
+      - fromGroup: gurmadnet-mysql
+      - key: MYSQL_HOST
+        fromService:
+          name: gurmadnet-mysql
+          type: pserv
+          property: host
+      - key: MYSQL_PORT
         value: "3306"
-      - key: DB_NAME
+      # Optional SMTP (override EMAIL_PROVIDER=smtp when set)
+      - key: SMTP_HOST
         sync: false
-      - key: DB_USER
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
         sync: false
-      - key: DB_PASSWORD
+      - key: SMTP_PASSWORD
         sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: SMTP_USE_TLS
+        value: "true"
+      # Optional WebRTC TURN
+      - key: WEBRTC_STUN_URL
+        value: "stun:stun.l.google.com:19302"
+      - key: WEBRTC_TURN_URL
+        sync: false
+      - key: WEBRTC_TURN_USERNAME
+        sync: false
+      - key: WEBRTC_TURN_CREDENTIAL
+        sync: false
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+
+envVarGroups:
+  - name: gurmadnet-mysql
+    envVars:
+      - key: MYSQL_DATABASE
+        value: gurmad
+      - key: MYSQL_USER
+        value: gurmad
+      - key: MYSQL_PASSWORD
+        generateValue: true
+      - key: MYSQL_ROOT_PASSWORD
+        generateValue: true

@@ -674,20 +674,32 @@
       alert("Voice calling is unavailable. Please refresh the page.");
       return;
     }
+    if (typeof GurmadVoiceCall.isSecureContext === "function" && !GurmadVoiceCall.isSecureContext()) {
+      var httpsMsg = GurmadVoiceCall.HTTPS_REQUIRED_MSG || "Voice calls require HTTPS or localhost.";
+      try {
+        console.error("[CitizenVoice] WebRTC not started — insecure HTTP", location.href);
+      } catch (e) {}
+      setVoiceUi(httpsMsg, { connection: httpsMsg, showTimer: false });
+      closeVoiceUi(5000);
+      return;
+    }
     teardownVoice(false);
     bindVoiceControls();
     setVoiceUi("Calling...", { connection: "Connecting...", showTimer: false });
 
     voiceCall = new GurmadVoiceCall({ role: "citizen" });
     voiceCall.setCallId(initiateData.call_id, initiateData.ice_servers || []);
+    voiceCall.unlockAudio();
 
     voiceCall.on("ringing", function () {
       setVoiceUi("Calling...", { connection: "Ringing Call Center...", showTimer: false });
     });
     voiceCall.on("accepted", function () {
+      voiceCall.unlockAudio();
       setVoiceUi("Connecting...", { connection: "Operator answered — connecting audio...", showTimer: false });
     });
     voiceCall.on("connected", function () {
+      voiceCall.unlockAudio();
       startVoiceTimer();
       setVoiceUi("Connected", { connection: "Connected", showTimer: true, timerText: "00:00" });
     });
@@ -710,12 +722,14 @@
       closeVoiceUi(1200);
     });
     voiceCall.on("failed", function (p) {
+      var msg = (p && p.message) || "Connection Failed";
+      if (p && p.hint) msg += " — " + p.hint;
       setVoiceUi("Connection Failed", {
-        connection: (p && p.message) || "Connection Failed",
+        connection: msg,
         showTimer: false
       });
       teardownVoice(false);
-      closeVoiceUi(2000);
+      closeVoiceUi(2500);
     });
     voiceCall.on("busy", function (p) {
       setVoiceUi("Call Ended", {
@@ -737,13 +751,18 @@
         setVoiceUi("Calling...", { connection: "Calling Call Center...", showTimer: false });
       })
       .catch(function (err) {
-        var msg = (err && err.message) || "Microphone Permission Required";
-        if (/NotAllowed|Permission|denied/i.test(String(msg))) {
-          msg = "Microphone Permission Required";
-        }
+        try {
+          console.error("[CitizenVoice] call setup failed", err && err.name, err && err.message, err);
+        } catch (e) {}
+        var msg =
+          (window.GurmadVoiceCall && GurmadVoiceCall.describeMicError
+            ? GurmadVoiceCall.describeMicError(err)
+            : null) ||
+          (err && err.message) ||
+          "Voice call failed";
         setVoiceUi(msg, { connection: msg, showTimer: false });
         teardownVoice(true);
-        closeVoiceUi(2200);
+        closeVoiceUi(msg.length > 80 ? 8000 : 4000);
       });
   }
 
@@ -756,6 +775,24 @@
   function initiateCallCenter() {
     var callCenterBtn = document.getElementById("btn-call-center");
     var statusEl = document.getElementById("call-center-status");
+    if (
+      window.GurmadVoiceCall &&
+      typeof GurmadVoiceCall.isSecureContext === "function" &&
+      !GurmadVoiceCall.isSecureContext()
+    ) {
+      var httpsMsg = GurmadVoiceCall.HTTPS_REQUIRED_MSG || "Voice calls require HTTPS or localhost.";
+      try {
+        console.error("[CitizenVoice] Call blocked — insecure HTTP", location.href);
+      } catch (e) {}
+      if (statusEl) {
+        statusEl.classList.remove("hidden");
+        statusEl.textContent = httpsMsg;
+      }
+      setVoiceUi(httpsMsg, { connection: httpsMsg, showTimer: false });
+      closeVoiceUi(5000);
+      if (callCenterBtn) callCenterBtn.disabled = false;
+      return;
+    }
     if (callCenterBtn) callCenterBtn.disabled = true;
     if (statusEl) {
       statusEl.classList.remove("hidden");

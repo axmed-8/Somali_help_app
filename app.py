@@ -56,6 +56,75 @@ def _apply_email_env_from_dotenv(*, force=False):
             os.environ[key] = val
 
 
+_WEBRTC_ENV_KEYS = (
+    "WEBRTC_STUN_URL",
+    "WEBRTC_STUN_URLS",
+    "WEBRTC_TURN_URL",
+    "WEBRTC_TURN_URLS",
+    "WEBRTC_TURN_USERNAME",
+    "WEBRTC_TURN_CREDENTIAL",
+    "TURN_URLS",
+    "TURN_USERNAME",
+    "TURN_CREDENTIAL",
+)
+
+_MYSQL_ENV_KEYS = (
+    "SECRET_KEY",
+    "MYSQL_HOST",
+    "MYSQL_PORT",
+    "MYSQL_USER",
+    "MYSQL_PASSWORD",
+    "MYSQL_DATABASE",
+    "DB_HOST",
+    "DB_PORT",
+    "DB_USER",
+    "DB_PASSWORD",
+    "DB_NAME",
+    "DATABASE_URL",
+    "MYSQL_URL",
+    "MYSQL_DSN",
+    "GURMADNET_DB",
+)
+
+
+def _apply_webrtc_env_from_dotenv(*, force=False):
+    """Load WebRTC STUN/TURN settings from .env without printing secrets."""
+    env_path = os.path.join(BASE_DIR, ".env")
+    try:
+        from dotenv import dotenv_values
+    except ImportError:
+        return
+    vals = dotenv_values(env_path) or {}
+    for key in _WEBRTC_ENV_KEYS:
+        raw = vals.get(key)
+        if raw is None:
+            continue
+        val = str(raw).strip()
+        if not val:
+            continue
+        if force or not str(os.environ.get(key) or "").strip():
+            os.environ[key] = val
+
+
+def _apply_mysql_env_from_dotenv(*, force=False):
+    """Load SECRET_KEY + MySQL settings from project .env for local development."""
+    env_path = os.path.join(BASE_DIR, ".env")
+    try:
+        from dotenv import dotenv_values
+    except ImportError:
+        return
+    vals = dotenv_values(env_path) or {}
+    for key in _MYSQL_ENV_KEYS:
+        raw = vals.get(key)
+        if raw is None:
+            continue
+        val = str(raw).strip()
+        if not val:
+            continue
+        if force or not str(os.environ.get(key) or "").strip():
+            os.environ[key] = val
+
+
 try:
     from dotenv import load_dotenv
 
@@ -68,6 +137,8 @@ except ImportError:
 _testing_flag = (os.environ.get("TESTING") or "").strip().lower() in ("1", "true", "yes")
 if "pytest" not in sys.modules and not _testing_flag:
     _apply_email_env_from_dotenv(force=True)
+    _apply_webrtc_env_from_dotenv(force=True)
+    _apply_mysql_env_from_dotenv(force=True)
 from flask import (
     Flask,
     Response,
@@ -167,13 +238,29 @@ def _path_lock(path):
 
 app = Flask(__name__)
 _secret = (os.environ.get("SECRET_KEY") or "").strip()
+_on_render = (os.environ.get("RENDER") or "").strip().lower() in ("1", "true", "yes", "on")
+_require_secret = _on_render or (os.environ.get("REQUIRE_SECRET_KEY") or "").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
 if not _secret:
+    if _require_secret:
+        raise RuntimeError(
+            "SECRET_KEY is required on Render/production. "
+            "Set SECRET_KEY in the Render Environment dashboard (or .env locally)."
+        )
     _secret = secrets.token_hex(32)
     _logger.warning(
         "SECRET_KEY is not set — using an ephemeral key. "
         "Set a strong SECRET_KEY in .env for production."
     )
-elif _secret in {"change-me-in-production", "changeme", "secret"}:
+elif _secret in {"change-me-in-production", "changeme", "secret", "generate-a-long-random-value-here"}:
+    if _require_secret:
+        raise RuntimeError(
+            "SECRET_KEY is insecure. Set a long random SECRET_KEY in the Render dashboard."
+        )
     _logger.warning(
         "SECRET_KEY is insecure (%r). Replace it with a long random value before production.",
         _secret,
@@ -433,6 +520,7 @@ def _json_store_allowed():
 def _resolve_use_mysql():
     """
     MySQL is the only production store.
+    Credentials come from environment variables (Render) or local .env / optional db_config.env.
     JSON is permitted solely when GURMADNET_DB=json AND tests (pytest/TESTING=1).
     """
     mode = (os.environ.get("GURMADNET_DB") or "").strip().lower()
@@ -441,27 +529,49 @@ def _resolve_use_mysql():
             return False
         raise RuntimeError(
             "GURMADNET_DB=json is blocked outside tests. "
-            "Remove it and configure database/db_config.env for MySQL."
+            "Remove it and set MYSQL_HOST / MYSQL_USER / MYSQL_PASSWORD / MYSQL_DATABASE."
         )
 
-    cfg_path = os.path.join(DATABASE_DIR, "db_config.env")
-    if not os.path.exists(cfg_path) and mode != "mysql":
+    from database.connection import (
+        config_source_hint,
+        load_config,
+        mysql_credentials_present,
+        reset_config,
+    )
+    from database import mysql_store
+
+    reset_config()
+    on_render = (os.environ.get("RENDER") or "").strip().lower() in ("1", "true", "yes", "on")
+
+    if not mysql_credentials_present() and mode not in ("mysql",):
         if _json_store_allowed():
             return False
         raise RuntimeError(
-            "MySQL is required. Create database/db_config.env "
-            "(copy from db_config.env.example) with live credentials."
+            "MySQL is required. Set environment variables "
+            "MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE "
+            "(DB_* aliases also work). On Render, add them in Environment. "
+            "Locally you may use .env or optional database/db_config.env."
         )
-    try:
-        from database.connection import load_config
-        from database import mysql_store
 
+    try:
         if not mysql_store.available():
             raise RuntimeError("PyMySQL is not installed. Run: pip install PyMySQL")
         cfg = load_config()
-        if cfg.get("password") in ("", "YOUR_PASSWORD", "CHANGE_ME_STRONG_PASSWORD"):
+        pw = (cfg.get("password") or "").strip()
+        placeholders = {
+            "YOUR_PASSWORD",
+            "CHANGE_ME_STRONG_PASSWORD",
+            "your_password_here",
+        }
+        if pw in placeholders:
             raise RuntimeError(
-                "Set a real DB_PASSWORD in database/db_config.env before starting the app."
+                "Set a real MYSQL_PASSWORD / DB_PASSWORD before starting the app "
+                f"(config source: {config_source_hint()})."
+            )
+        if on_render and not pw:
+            raise RuntimeError(
+                "MYSQL_PASSWORD (or DB_PASSWORD) is required on Render. "
+                "Set it in the Environment dashboard."
             )
         conn = mysql_store.connect()
         conn.close()
@@ -476,7 +586,7 @@ def _resolve_use_mysql():
             )
             return False
         raise RuntimeError(
-            f"Cannot connect to MySQL ({exc}). Fix database/db_config.env — "
+            f"Cannot connect to MySQL ({exc}). Check {config_source_hint()} — "
             "the app will not fall back to JSON files."
         ) from exc
 
@@ -863,7 +973,7 @@ def read_store(entity, default):
     if not _json_store_allowed():
         raise RuntimeError(
             f"Refusing JSON read for '{entity}' — MySQL is required. "
-            "Check database/db_config.env and restart the server."
+            "Check MYSQL_* / DB_* environment variables (or local .env) and restart the server."
         )
     path = _json_file_path(entity)
     ensure_database_dir()
@@ -887,7 +997,7 @@ def save_store(entity, data):
     if not _json_store_allowed():
         raise RuntimeError(
             f"Refusing JSON write for '{entity}' — MySQL is required. "
-            "Check database/db_config.env and restart the server."
+            "Check MYSQL_* / DB_* environment variables (or local .env) and restart the server."
         )
     path = _json_file_path(entity)
     ensure_database_dir()
@@ -898,6 +1008,7 @@ def save_store(entity, data):
                 json.dump(data, f, indent=2, ensure_ascii=False)
             os.replace(tmp_path, path)
         except Exception:
+            
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
             raise
@@ -9523,8 +9634,9 @@ if __name__ == "__main__":
 
     if not USE_MYSQL:
         raise SystemExit(
-            "GurmadNet requires MySQL. Set database/db_config.env and ensure the "
-            "server is running. (GURMADNET_DB=json is for automated tests only.)"
+            "GurmadNet requires MySQL. Set MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, "
+            "MYSQL_DATABASE (or DB_* aliases / .env) and ensure the server is running. "
+            "(GURMADNET_DB=json is for automated tests only.)"
         )
     status = _storage_status()
     if not status.get("live"):
@@ -9566,6 +9678,29 @@ if __name__ == "__main__":
         mode = getattr(socketio, "async_mode", "?")
         print(f"[OK] Socket.IO initialized (async_mode={mode})", flush=True)
         print("[OK] WebRTC signaling ready", flush=True)
+        try:
+            from voice_signaling import ice_config_summary
+
+            ice = ice_config_summary()
+            stun_n = len(ice.get("stun_urls") or [])
+            turn_n = len(ice.get("turn_urls") or [])
+            if ice.get("turn_auth"):
+                print(
+                    f"[OK] WebRTC ICE: STUN={stun_n} TURN={turn_n} (credentials loaded from env)",
+                    flush=True,
+                )
+            elif ice.get("turn"):
+                print(
+                    "[WARN] WebRTC TURN URLs set but username/credential missing — relay may fail",
+                    flush=True,
+                )
+            else:
+                print(
+                    "[WARN] WebRTC ICE: STUN only — cross-network calls may fail without TURN",
+                    flush=True,
+                )
+        except Exception:
+            pass
 
     # Fail fast with a clear message if something else already owns the port.
     import socket as _socket

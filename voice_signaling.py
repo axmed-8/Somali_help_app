@@ -25,24 +25,106 @@ _user_sids: dict = {}
 
 
 def ice_servers():
-    servers = [
-        {"urls": "stun:stun.l.google.com:19302"},
-        {"urls": "stun:stun1.l.google.com:19302"},
-    ]
-    # Optional TURN (set TURN_URLS / TURN_USERNAME / TURN_CREDENTIAL in env)
-    turn_urls = (os.environ.get("TURN_URLS") or "").strip()
+    """
+    Build RTCPeerConnection iceServers from env.
+    STUN alone is not enough for many mobile↔laptop NAT paths — configure TURN for
+    reliable internet calls:
+
+      TURN_URLS / WEBRTC_TURN_URL
+      TURN_USERNAME / WEBRTC_TURN_USERNAME
+      TURN_CREDENTIAL / WEBRTC_TURN_CREDENTIAL
+      WEBRTC_STUN_URLS (optional comma-separated)
+
+    Credentials are read from environment / .env only — never hardcode secrets here.
+    """
+    stun_env = (os.environ.get("WEBRTC_STUN_URLS") or os.environ.get("WEBRTC_STUN_URL") or "").strip()
+    if stun_env:
+        servers = [{"urls": u.strip()} for u in stun_env.split(",") if u.strip()]
+    else:
+        servers = [
+            {"urls": "stun:stun.l.google.com:19302"},
+            {"urls": "stun:stun1.l.google.com:19302"},
+        ]
+    # Always keep at least one Google STUN if env STUN was empty somehow
+    if not servers:
+        servers = [{"urls": "stun:stun.l.google.com:19302"}]
+
+    def _has_stun(entries):
+        for s in entries:
+            raw = s.get("urls")
+            urls = raw if isinstance(raw, (list, tuple)) else [raw]
+            for u in urls:
+                if str(u or "").lower().startswith("stun:"):
+                    return True
+        return False
+
+    # Ensure STUN remains present even when TURN is configured.
+    if not _has_stun(servers):
+        servers.insert(0, {"urls": "stun:stun.l.google.com:19302"})
+
+    turn_urls = (
+        os.environ.get("TURN_URLS")
+        or os.environ.get("WEBRTC_TURN_URL")
+        or os.environ.get("WEBRTC_TURN_URLS")
+        or ""
+    ).strip()
     if turn_urls:
-        entry = {
-            "urls": [u.strip() for u in turn_urls.split(",") if u.strip()],
-        }
-        user = (os.environ.get("TURN_USERNAME") or "").strip()
-        cred = (os.environ.get("TURN_CREDENTIAL") or "").strip()
+        urls = [u.strip() for u in turn_urls.split(",") if u.strip()]
+        entry = {"urls": urls if len(urls) > 1 else urls[0]}
+        user = (
+            os.environ.get("TURN_USERNAME")
+            or os.environ.get("WEBRTC_TURN_USERNAME")
+            or ""
+        ).strip()
+        cred = (
+            os.environ.get("TURN_CREDENTIAL")
+            or os.environ.get("WEBRTC_TURN_CREDENTIAL")
+            or ""
+        ).strip()
         if user:
             entry["username"] = user
         if cred:
             entry["credential"] = cred
+        if not cred or not user:
+            logger.warning(
+                "TURN URL configured but username/credential missing — relay candidates may not form"
+            )
         servers.append(entry)
     return servers
+
+
+def ice_config_summary():
+    """
+    Safe status for logs/startup — never includes TURN password.
+    """
+    servers = ice_servers()
+    stun_urls = []
+    turn_urls = []
+    turn_user_set = False
+    turn_cred_set = False
+    for s in servers:
+        raw = s.get("urls")
+        urls = raw if isinstance(raw, (list, tuple)) else [raw]
+        for u in urls:
+            u = (u or "").strip()
+            low = u.lower()
+            if low.startswith("stun:"):
+                stun_urls.append(u)
+            elif low.startswith("turn:") or low.startswith("turns:"):
+                turn_urls.append(u)
+        if s.get("username"):
+            turn_user_set = True
+        if s.get("credential"):
+            turn_cred_set = True
+    return {
+        "stun": bool(stun_urls),
+        "turn": bool(turn_urls),
+        "turn_auth": bool(turn_urls) and turn_user_set and turn_cred_set,
+        "stun_urls": stun_urls,
+        "turn_urls": turn_urls,
+        "turn_username_set": turn_user_set,
+        "server_count": len(servers),
+    }
 
 
 def init_socketio(app, *, read_json, save_json, get_user_by_id, now_str):
@@ -170,7 +252,7 @@ def init_socketio(app, *, read_json, save_json, get_user_by_id, now_str):
         # Grace period: dual sockets / brief reconnects must not kill the call.
         def _cleanup():
             try:
-                socketio.sleep(4)
+                socketio.sleep(8)
             except Exception:
                 pass
             if _user_still_online(uid):

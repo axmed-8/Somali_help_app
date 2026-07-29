@@ -67,19 +67,29 @@ def main():
     )
 
     db_mode = (os.environ.get("GURMADNET_DB") or "").lower()
-    ok("GURMADNET_DB=mysql", db_mode == "mysql", f"got {db_mode!r}")
+    ok("GURMADNET_DB=mysql", db_mode in ("mysql", ""), f"got {db_mode!r}")
 
-    cfg_path = ROOT / "database" / "db_config.env"
-    ok("MySQL db_config.env exists", cfg_path.exists())
+    from database.connection import load_config, mysql_credentials_present, reset_config
+
+    reset_config()
+    ok(
+        "MySQL credentials present (env / .env / optional db_config.env)",
+        mysql_credentials_present(),
+        "Set MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE",
+    )
 
     mysql_ok = False
     try:
-        from database.connection import load_config, reset_config
         from database import mysql_store
 
         reset_config()
         cfg = load_config()
-        ok("MySQL password configured", bool(cfg.get("password")) and cfg.get("password") not in ("", "YOUR_PASSWORD", "your_password_here"))
+        ok(
+            "MySQL password configured",
+            bool(cfg.get("password"))
+            and cfg.get("password")
+            not in ("", "YOUR_PASSWORD", "your_password_here", "CHANGE_ME_STRONG_PASSWORD"),
+        )
         conn = mysql_store.connect()
         conn.close()
         mysql_ok = True
