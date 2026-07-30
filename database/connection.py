@@ -13,10 +13,15 @@ Supported variable names:
   MYSQL_PASSWORD / DB_PASSWORD
   MYSQL_DATABASE / DB_NAME
   DATABASE_URL / MYSQL_URL / MYSQL_DSN
+
+Stability (Render → Railway public TCP proxy):
+  MYSQL_CONNECT_TIMEOUT / MYSQL_READ_TIMEOUT / MYSQL_WRITE_TIMEOUT
+  MYSQL_SSL=auto|true|false  (auto enables TLS for non-localhost hosts)
 """
 from __future__ import annotations
 
 import os
+import ssl
 from urllib.parse import unquote, urlparse
 
 _CONFIG = None
@@ -184,8 +189,8 @@ def load_config():
     if _on_render() and host in ("", "127.0.0.1", "localhost"):
         raise RuntimeError(
             "MYSQL_HOST is missing or points to localhost on Render. "
-            "Set MYSQL_HOST to your Render MySQL private service host "
-            "(or set DATABASE_URL=mysql://user:pass@host:3306/dbname)."
+            "Set MYSQL_HOST to your Railway MySQL public proxy "
+            "(e.g. sakura.proxy.rlwy.net) or DATABASE_URL."
         )
     if _on_render() and (not user or not database):
         raise RuntimeError(
@@ -201,8 +206,73 @@ def load_config():
         "database": database,
         "charset": "utf8mb4",
         "autocommit": True,
+        # Cross-cloud (Render ↔ Railway proxy) needs generous timeouts.
+        "connect_timeout": _int_env(
+            "MYSQL_CONNECT_TIMEOUT", "DB_CONNECT_TIMEOUT", default=30, minimum=5, maximum=120
+        ),
+        "read_timeout": _int_env(
+            "MYSQL_READ_TIMEOUT", "DB_READ_TIMEOUT", default=60, minimum=10, maximum=300
+        ),
+        "write_timeout": _int_env(
+            "MYSQL_WRITE_TIMEOUT", "DB_WRITE_TIMEOUT", default=60, minimum=10, maximum=300
+        ),
+        # Avoid 2013 on larger JSON / BLOB-ish payloads over the proxy.
+        "max_allowed_packet": 64 * 1024 * 1024,
     }
+    ssl_opt = _ssl_connect_arg(host)
+    if ssl_opt is not None:
+        _CONFIG["ssl"] = ssl_opt
     return _CONFIG.copy()
+
+
+def _int_env(*keys, default, minimum=None, maximum=None):
+    raw = ""
+    for key in keys:
+        raw = str(os.environ.get(key) or "").strip()
+        if raw:
+            break
+    try:
+        value = int(raw) if raw else int(default)
+    except (TypeError, ValueError):
+        value = int(default)
+    if minimum is not None:
+        value = max(minimum, value)
+    if maximum is not None:
+        value = min(maximum, value)
+    return value
+
+
+def _is_local_mysql_host(host):
+    h = (host or "").strip().lower()
+    return h in ("", "127.0.0.1", "localhost", "::1")
+
+
+def _ssl_connect_arg(host):
+    """
+    TLS for remote MySQL (Railway public proxy).
+
+    MYSQL_SSL=auto (default): TLS on for non-localhost, off for local MySQL80.
+    MYSQL_SSL=true|require|1|on: always TLS
+    MYSQL_SSL=false|0|off|disable: never TLS
+
+    Railway's proxy typically presents a cert that is not easy to pin, so we
+    enable encryption without hostname/CA verification (still encrypted in transit).
+    """
+    mode = (os.environ.get("MYSQL_SSL") or os.environ.get("DB_SSL") or "auto").strip().lower()
+    if mode in ("0", "false", "off", "no", "disable", "disabled"):
+        return None
+    if mode in ("auto", ""):
+        if _is_local_mysql_host(host):
+            return None
+    elif mode not in ("1", "true", "yes", "on", "require", "required", "force"):
+        # Unknown value — treat like auto
+        if _is_local_mysql_host(host):
+            return None
+
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    return ctx
 
 
 def config_source_hint():

@@ -1,6 +1,7 @@
 """MySQL storage backend for GurmadNet AI."""
 import json
 import os
+import time
 from contextlib import contextmanager
 from datetime import datetime
 
@@ -24,6 +25,9 @@ EMERGENCY_COLUMNS = {
 
 _migration_conn = None
 
+# Transient network / proxy drops (common on Render → Railway TCP proxy).
+_TRANSIENT_MYSQL_ERRNOS = frozenset({2003, 2006, 2013, 2014, 2045})
+
 
 def begin_migration():
     """Use one connection with FK checks disabled for bulk JSON import."""
@@ -43,30 +47,67 @@ def end_migration():
         _migration_conn = None
 
 
+def _is_transient_mysql_error(exc):
+    if pymysql is None:
+        return False
+    if not isinstance(exc, pymysql.err.OperationalError):
+        return False
+    code = exc.args[0] if exc.args else None
+    return code in _TRANSIENT_MYSQL_ERRNOS
+
+
 @contextmanager
 def _db():
     if _migration_conn is not None:
         yield _migration_conn
-    else:
-        conn = connect()
+        return
+
+    conn = connect()
+    try:
+        yield conn
+    finally:
         try:
-            yield conn
-        finally:
             conn.close()
+        except Exception:
+            pass
 
 
 def available():
     return pymysql is not None
 
 
-def connect(database=None):
+def connect(database=None, retries=None):
+    """
+    Open a PyMySQL connection with Render/Railway-friendly timeouts + TLS
+    (from load_config) and retry on transient proxy drops.
+    """
     if not available():
         raise RuntimeError("PyMySQL not installed. Run: pip install PyMySQL")
+    if retries is None:
+        try:
+            retries = max(1, int(os.environ.get("MYSQL_CONNECT_RETRIES") or "3"))
+        except ValueError:
+            retries = 3
+
     cfg = load_config()
     if database is not None:
         cfg = {**cfg, "database": database}
     cfg["cursorclass"] = DictCursor
-    return pymysql.connect(**cfg)
+
+    last_exc = None
+    for attempt in range(retries):
+        try:
+            conn = pymysql.connect(**cfg)
+            # Confirm the socket is alive (Railway proxy can accept then drop).
+            conn.ping(reconnect=True)
+            return conn
+        except Exception as exc:
+            last_exc = exc
+            transient = _is_transient_mysql_error(exc)
+            if attempt >= retries - 1 or not transient:
+                break
+            time.sleep(min(4.0, 0.4 * (2 ** attempt)))
+    raise last_exc
 
 
 def _json_load(val, default=None):
