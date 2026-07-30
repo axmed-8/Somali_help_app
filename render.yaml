@@ -38,6 +38,13 @@ services:
       # Paste the Railway MYSQL_PASSWORD in Render dashboard (do not commit secrets)
       - key: MYSQL_PASSWORD
         sync: false
+      # Railway public TCP proxy is plain MySQL (TLS causes WRONG_VERSION_NUMBER / 2013)
+      - key: MYSQL_SSL
+        value: "false"
+      - key: MYSQL_CONNECT_TIMEOUT
+        value: "20"
+      - key: MYSQL_CONNECT_RETRIES
+        value: "2"
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT

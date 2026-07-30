@@ -206,9 +206,10 @@ def load_config():
         "database": database,
         "charset": "utf8mb4",
         "autocommit": True,
-        # Cross-cloud (Render ↔ Railway proxy) needs generous timeouts.
+        # Cross-cloud (Render ↔ Railway proxy) needs generous timeouts,
+        # but keep connect_timeout short enough that retries finish before gunicorn.
         "connect_timeout": _int_env(
-            "MYSQL_CONNECT_TIMEOUT", "DB_CONNECT_TIMEOUT", default=30, minimum=5, maximum=120
+            "MYSQL_CONNECT_TIMEOUT", "DB_CONNECT_TIMEOUT", default=20, minimum=5, maximum=120
         ),
         "read_timeout": _int_env(
             "MYSQL_READ_TIMEOUT", "DB_READ_TIMEOUT", default=60, minimum=10, maximum=300
@@ -247,26 +248,32 @@ def _is_local_mysql_host(host):
     return h in ("", "127.0.0.1", "localhost", "::1")
 
 
+def _is_railway_tcp_proxy(host):
+    """Railway public TCP proxy speaks plain MySQL — client TLS causes WRONG_VERSION_NUMBER."""
+    h = (host or "").strip().lower()
+    return h.endswith(".proxy.rlwy.net") or h.endswith(".rlwy.net")
+
+
 def _ssl_connect_arg(host):
     """
-    TLS for remote MySQL (Railway public proxy).
+    TLS for remote MySQL.
 
-    MYSQL_SSL=auto (default): TLS on for non-localhost, off for local MySQL80.
+    MYSQL_SSL=auto (default):
+      - off for localhost
+      - off for Railway public TCP proxy (*.proxy.rlwy.net) — proxy is not TLS
+      - on for other remote hosts
     MYSQL_SSL=true|require|1|on: always TLS
     MYSQL_SSL=false|0|off|disable: never TLS
 
-    Railway's proxy typically presents a cert that is not easy to pin, so we
-    enable encryption without hostname/CA verification (still encrypted in transit).
+    When TLS is enabled without a pinned CA, use CERT_NONE (encrypted, unverified).
     """
     mode = (os.environ.get("MYSQL_SSL") or os.environ.get("DB_SSL") or "auto").strip().lower()
     if mode in ("0", "false", "off", "no", "disable", "disabled"):
         return None
-    if mode in ("auto", ""):
-        if _is_local_mysql_host(host):
-            return None
-    elif mode not in ("1", "true", "yes", "on", "require", "required", "force"):
-        # Unknown value — treat like auto
-        if _is_local_mysql_host(host):
+    force = mode in ("1", "true", "yes", "on", "require", "required", "force")
+    if not force:
+        # auto / unknown → skip local and Railway public proxy
+        if _is_local_mysql_host(host) or _is_railway_tcp_proxy(host):
             return None
 
     ctx = ssl.create_default_context()
@@ -290,6 +297,31 @@ def config_source_hint():
     if os.path.exists(cfg_path):
         return "database/db_config.env"
     return "MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE (or DATABASE_URL)"
+
+
+def safe_config_summary(cfg=None):
+    """Return a log-safe dict of connection settings (never includes the password)."""
+    if cfg is None:
+        try:
+            cfg = load_config()
+        except Exception as exc:
+            return {"error": str(exc), "source": config_source_hint()}
+    password = cfg.get("password") or ""
+    ssl_val = cfg.get("ssl")
+    return {
+        "host": cfg.get("host"),
+        "port": cfg.get("port"),
+        "user": cfg.get("user"),
+        "database": cfg.get("database"),
+        "password_set": bool(str(password).strip()),
+        "password_len": len(str(password)),
+        "ssl": bool(ssl_val),
+        "autocommit": cfg.get("autocommit"),
+        "connect_timeout": cfg.get("connect_timeout"),
+        "read_timeout": cfg.get("read_timeout"),
+        "write_timeout": cfg.get("write_timeout"),
+        "source": config_source_hint(),
+    }
 
 
 def reset_config():

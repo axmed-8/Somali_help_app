@@ -1,11 +1,13 @@
 """MySQL storage backend for GurmadNet AI."""
 import json
+import logging
 import os
+import threading
 import time
 from contextlib import contextmanager
 from datetime import datetime
 
-from database.connection import load_config
+from database.connection import load_config, safe_config_summary
 
 try:
     import pymysql
@@ -14,6 +16,8 @@ except ImportError:
     pymysql = None
     DictCursor = None
 
+
+logger = logging.getLogger(__name__)
 
 EMERGENCY_COLUMNS = {
     "id", "user_id", "type", "status", "location", "district",
@@ -24,6 +28,9 @@ EMERGENCY_COLUMNS = {
 }
 
 _migration_conn = None
+
+# Request-scoped reuse only (never a cross-request pool). Closed on Flask teardown.
+_local = threading.local()
 
 # Transient network / proxy drops (common on Render → Railway TCP proxy).
 _TRANSIENT_MYSQL_ERRNOS = frozenset({2003, 2006, 2013, 2014, 2045})
@@ -41,10 +48,12 @@ def end_migration():
     """Re-enable FK checks and close the migration connection."""
     global _migration_conn
     if _migration_conn:
-        with _migration_conn.cursor() as cur:
-            cur.execute("SET FOREIGN_KEY_CHECKS=1")
-        _migration_conn.close()
-        _migration_conn = None
+        try:
+            with _migration_conn.cursor() as cur:
+                cur.execute("SET FOREIGN_KEY_CHECKS=1")
+        finally:
+            _safe_close(_migration_conn)
+            _migration_conn = None
 
 
 def _is_transient_mysql_error(exc):
@@ -56,20 +65,83 @@ def _is_transient_mysql_error(exc):
     return code in _TRANSIENT_MYSQL_ERRNOS
 
 
+def _safe_close(conn):
+    if conn is None:
+        return
+    try:
+        conn.close()
+    except Exception:
+        pass
+
+
+def enable_request_scoped_connections():
+    """Reuse one MySQL connection for the current request/thread; close via teardown."""
+    _local.scoped = True
+
+
+def close_request_connection():
+    """Close any request-scoped connection for this thread (no persistent pool)."""
+    conn = getattr(_local, "conn", None)
+    if conn is not None:
+        _safe_close(conn)
+    _local.conn = None
+    _local.scoped = False
+
+
+def _get_scoped_connection():
+    """Return a live request-scoped connection, or None if scoping is off / stale."""
+    if not getattr(_local, "scoped", False):
+        return None
+    conn = getattr(_local, "conn", None)
+    if conn is None:
+        return None
+    try:
+        conn.ping(reconnect=False)
+        return conn
+    except Exception as exc:
+        logger.warning(
+            "Dropping stale request-scoped MySQL connection: %s | %s",
+            exc,
+            safe_config_summary(),
+        )
+        _safe_close(conn)
+        _local.conn = None
+        return None
+
+
 @contextmanager
 def _db():
+    """
+    Borrow a MySQL connection.
+
+    - Migration mode: shared migration connection
+    - Flask request (scoped): one connection per request, closed on teardown
+    - Scripts/tests: open → use → always close (no pooling)
+    """
     if _migration_conn is not None:
         yield _migration_conn
+        return
+
+    scoped = getattr(_local, "scoped", False)
+    if scoped:
+        conn = _get_scoped_connection()
+        if conn is None:
+            conn = connect()
+            _local.conn = conn
+        try:
+            yield conn
+        except Exception as exc:
+            if _is_transient_mysql_error(exc):
+                _safe_close(conn)
+                _local.conn = None
+            raise
         return
 
     conn = connect()
     try:
         yield conn
     finally:
-        try:
-            conn.close()
-        except Exception:
-            pass
+        _safe_close(conn)
 
 
 def available():
@@ -80,33 +152,70 @@ def connect(database=None, retries=None):
     """
     Open a PyMySQL connection with Render/Railway-friendly timeouts + TLS
     (from load_config) and retry on transient proxy drops.
+
+    Always closes partially-opened sockets on failure. Does not keep a pool.
     """
     if not available():
         raise RuntimeError("PyMySQL not installed. Run: pip install PyMySQL")
     if retries is None:
         try:
-            retries = max(1, int(os.environ.get("MYSQL_CONNECT_RETRIES") or "3"))
+            retries = max(1, int(os.environ.get("MYSQL_CONNECT_RETRIES") or "2"))
         except ValueError:
-            retries = 3
+            retries = 2
 
     cfg = load_config()
     if database is not None:
         cfg = {**cfg, "database": database}
     cfg["cursorclass"] = DictCursor
 
+    host = (cfg.get("host") or "").strip()
+    user = (cfg.get("user") or "").strip()
+    database_name = (cfg.get("database") or "").strip()
+    if not host or not user or not database_name:
+        summary = safe_config_summary(cfg)
+        logger.error("MySQL config incomplete (refusing connect): %s", summary)
+        raise RuntimeError(
+            "MySQL host/user/database missing. "
+            f"Loaded: host={summary.get('host')!r} user={summary.get('user')!r} "
+            f"database={summary.get('database')!r} source={summary.get('source')}"
+        )
+    if cfg.get("password") is None:
+        cfg["password"] = ""
+
+    summary = safe_config_summary(cfg)
     last_exc = None
     for attempt in range(retries):
+        conn = None
         try:
             conn = pymysql.connect(**cfg)
             # Confirm the socket is alive (Railway proxy can accept then drop).
             conn.ping(reconnect=True)
+            if attempt > 0:
+                logger.info(
+                    "MySQL connect recovered on attempt %s/%s | %s",
+                    attempt + 1,
+                    retries,
+                    summary,
+                )
             return conn
         except Exception as exc:
             last_exc = exc
+            _safe_close(conn)
+            errno = exc.args[0] if getattr(exc, "args", None) else None
             transient = _is_transient_mysql_error(exc)
+            logger.error(
+                "MySQL connect failed attempt=%s/%s errno=%s transient=%s "
+                "error=%s | config=%s",
+                attempt + 1,
+                retries,
+                errno,
+                transient,
+                exc,
+                summary,
+            )
             if attempt >= retries - 1 or not transient:
                 break
-            time.sleep(min(4.0, 0.4 * (2 ** attempt)))
+            time.sleep(min(1.5, 0.35 * (2 ** attempt)))
     raise last_exc
 
 

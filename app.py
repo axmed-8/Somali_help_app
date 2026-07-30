@@ -2285,6 +2285,8 @@ def _storage_status():
         "user": None,
         "host": None,
         "port": None,
+        "ssl": None,
+        "password_set": None,
         "table_counts": {},
         "error": None,
     }
@@ -2292,14 +2294,17 @@ def _storage_status():
         info["error"] = "Running on JSON test store — not production MySQL"
         return info
     try:
-        from database.connection import load_config
+        from database.connection import load_config, safe_config_summary
         from database import mysql_store as _ms
 
         cfg = load_config()
-        info["database"] = cfg.get("database")
-        info["user"] = cfg.get("user")
-        info["host"] = cfg.get("host")
-        info["port"] = cfg.get("port")
+        summary = safe_config_summary(cfg)
+        info["database"] = summary.get("database")
+        info["user"] = summary.get("user")
+        info["host"] = summary.get("host")
+        info["port"] = summary.get("port")
+        info["ssl"] = summary.get("ssl")
+        info["password_set"] = summary.get("password_set")
         with _ms._db() as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT DATABASE() AS db, USER() AS u")
@@ -2309,6 +2314,9 @@ def _storage_status():
         info["table_counts"] = _ms.table_counts()
         info["live"] = True
     except Exception as exc:
+        logging.getLogger(__name__).error(
+            "MySQL storage status check failed: %s", exc, exc_info=True
+        )
         info["error"] = str(exc)
         info["live"] = False
     return info
@@ -2831,6 +2839,33 @@ def ensure_mysql_boot():
 @app.before_request
 def _mysql_boot_before_request():
     ensure_mysql_boot()
+
+
+@app.before_request
+def _mysql_request_scope_begin():
+    """One MySQL connection per request (closed on teardown) — avoids TLS handshake storms."""
+    if not USE_MYSQL:
+        return None
+    if (request.path or "").startswith("/static/"):
+        return None
+    try:
+        from database import mysql_store as _ms
+
+        _ms.enable_request_scoped_connections()
+    except Exception:
+        logging.getLogger(__name__).exception("MySQL request scope begin failed")
+    return None
+
+
+@app.teardown_appcontext
+def _mysql_request_scope_end(exc=None):
+    """Always close request-scoped MySQL sockets — no cross-request pooling."""
+    try:
+        from database import mysql_store as _ms
+
+        _ms.close_request_connection()
+    except Exception:
+        pass
 
 
 @app.before_request
