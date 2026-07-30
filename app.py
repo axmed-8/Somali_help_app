@@ -597,25 +597,8 @@ logging.getLogger(__name__).info(
     "MySQL (live)" if USE_MYSQL else "JSON (test only)",
 )
 
-# Ensure Call Center + AI + email verification MySQL schema before seeding
-if USE_MYSQL:
-    try:
-        from database import mysql_store as _ms_boot
-
-        _ms_boot.ensure_call_center_schema()
-        _ms_boot.ensure_ai_schema()
-        _ms_boot.ensure_email_verification_schema()
-        _ms_boot.ensure_citizen_profile_schema()
-        _ms_boot.ensure_admin_profile_schema()
-        _ms_boot.ensure_hospital_logo_schema()
-        _ms_boot.ensure_ambulance_gps_share_schema()
-    except Exception as _cc_schema_exc:
-        import logging as _logging
-
-        _logging.getLogger(__name__).warning(
-            "Call Center/AI/email MySQL schema ensure skipped: %s", _cc_schema_exc
-        )
-
+# Schema ensure runs once via ensure_mysql_boot() (request-scoped), not at import —
+# import-time ALTER/SHOW over Railway public proxy was blocking gunicorn workers.
 
 DEFAULT_CONTENT = {
     "app_name": "GurmadNet AI",
@@ -2665,7 +2648,7 @@ def _register_failed_login(user, udata):
             "%Y-%m-%d %H:%M:%S"
         )
         user["failed_logins"] = 0
-    save_users(udata)
+    persist_user(user, udata)
 
 
 def _clear_failed_logins(user):
@@ -2731,11 +2714,17 @@ def seed_defaults():
             _ms.ensure_hospital_logo_schema()
             _ms.ensure_ambulance_gps_share_schema()
             _ms.ensure_ai_schema()
-            integrity = _ms.ensure_production_integrity()
-            if integrity.get("changes"):
-                logging.getLogger(__name__).info(
-                    "MySQL integrity changes: %s", integrity.get("changes")
-                )
+            # Heavy ALTER/FK sweep — opt-in only (already-migrated Railway DBs don't need it
+            # on every Render cold start; it was a common Worker Timeout cause).
+            full_boot = (os.environ.get("MYSQL_FULL_BOOT") or "").strip().lower() in (
+                "1", "true", "yes", "on",
+            )
+            if full_boot:
+                integrity = _ms.ensure_production_integrity()
+                if integrity.get("changes"):
+                    logging.getLogger(__name__).info(
+                        "MySQL integrity changes: %s", integrity.get("changes")
+                    )
         except Exception:
             logging.getLogger(__name__).exception("MySQL schema ensure failed")
 
@@ -2819,6 +2808,7 @@ def seed_defaults():
 
 # Gunicorn / import path: ensure MySQL schema + settings seed (not only __main__)
 _BOOT_SEEDED = False
+_BOOT_LOCK = threading.Lock()
 
 
 def ensure_mysql_boot():
@@ -2829,21 +2819,32 @@ def ensure_mysql_boot():
     if not USE_MYSQL:
         _BOOT_SEEDED = True
         return
-    try:
-        seed_defaults()
-    except Exception:
-        logging.getLogger(__name__).exception("MySQL boot seed_defaults failed")
-    _BOOT_SEEDED = True
+    from database import mysql_store as _ms
 
-
-@app.before_request
-def _mysql_boot_before_request():
-    ensure_mysql_boot()
+    with _BOOT_LOCK:
+        if _BOOT_SEEDED:
+            return
+        # One connection for the whole boot (schema + seed), then close if we own the scope.
+        owned_scope = not getattr(_ms._local, "scoped", False)
+        if owned_scope:
+            _ms.enable_request_scoped_connections()
+        t0 = time.time()
+        try:
+            seed_defaults()
+            logging.getLogger(__name__).info(
+                "MySQL boot finished in %.1fs", time.time() - t0
+            )
+        except Exception:
+            logging.getLogger(__name__).exception("MySQL boot seed_defaults failed")
+        finally:
+            _BOOT_SEEDED = True
+            if owned_scope:
+                _ms.close_request_connection()
 
 
 @app.before_request
 def _mysql_request_scope_begin():
-    """One MySQL connection per request (closed on teardown) — avoids TLS handshake storms."""
+    """Enable request-scoped MySQL BEFORE boot/session so all work shares one socket."""
     if not USE_MYSQL:
         return None
     if (request.path or "").startswith("/static/"):
@@ -2854,6 +2855,18 @@ def _mysql_request_scope_begin():
         _ms.enable_request_scoped_connections()
     except Exception:
         logging.getLogger(__name__).exception("MySQL request scope begin failed")
+    return None
+
+
+@app.before_request
+def _mysql_boot_before_request():
+    # Do not block Render health checks / public auth pages behind schema boot.
+    if _BOOT_SEEDED:
+        return None
+    path = (request.path or "").rstrip("/") or "/"
+    if request.method == "GET" and path in ("/login", "/signup", "/"):
+        return None
+    ensure_mysql_boot()
     return None
 
 
@@ -2896,6 +2909,13 @@ def _ensure_valid_session():
 
 
 def get_user_by_login(login):
+    ms = _mysql_backend()
+    if ms:
+        user = ms.find_user_by_login(login)
+        if user:
+            user = normalize_user_record(user)
+            return user, {"users": [user], "next_id": int(user.get("id") or 0) + 1}
+        return None, {"users": [], "next_id": 1}
     key = (login or "").strip().lower()
     udata = load_users()
     for user in udata["users"]:
@@ -2907,6 +2927,13 @@ def get_user_by_login(login):
 
 
 def get_user_by_id(uid):
+    ms = _mysql_backend()
+    if ms:
+        user = ms.find_user_by_id(uid)
+        if user:
+            user = normalize_user_record(user)
+            return user, {"users": [user], "next_id": int(user.get("id") or 0) + 1}
+        return None, {"users": [], "next_id": 1}
     udata = load_users()
     try:
         uid_int = int(uid)
@@ -2916,6 +2943,30 @@ def get_user_by_id(uid):
         if user.get("id") == uid or (uid_int is not None and user.get("id") == uid_int):
             return user, udata
     return None, udata
+
+
+def persist_user(user, udata=None):
+    """Persist one user. On MySQL uses single-row upsert (never rewrites all users)."""
+    user = normalize_user_record(user)
+    ms = _mysql_backend()
+    if ms:
+        ms.upsert_user(user)
+        return
+    if udata is None:
+        udata = load_users()
+    replaced = False
+    for i, existing in enumerate(udata.get("users") or []):
+        if existing.get("id") == user.get("id"):
+            udata["users"][i] = user
+            replaced = True
+            break
+    if not replaced:
+        udata.setdefault("users", []).append(user)
+        try:
+            udata["next_id"] = max(int(udata.get("next_id") or 1), int(user.get("id") or 0) + 1)
+        except (TypeError, ValueError):
+            pass
+    save_users(udata)
 
 
 def log_activity(user, action):
@@ -3258,7 +3309,7 @@ def login():
             _clear_failed_logins(user)
             user["last_login"] = now_str()
             log_activity(user, "Logged in")
-            save_users(udata)
+            persist_user(user, udata)
             login_user(user)
             flash("Welcome back, " + user_name(user) + "!", "success")
             nxt = request.args.get("next")
@@ -3471,14 +3522,27 @@ def signup():
             elif password != confirm:
                 flash("Passwords do not match.", "error")
             else:
-                udata = load_users()
-                if any(u["email"].lower() == email for u in udata["users"]):
+                ms = _mysql_backend()
+                if ms:
+                    email_taken = ms.user_email_taken(email)
+                    nid_taken = bool(nid_hash) and ms.user_national_id_taken(nid_hash)
+                else:
+                    udata = load_users()
+                    email_taken = any(u["email"].lower() == email for u in udata["users"])
+                    nid_taken = bool(nid_hash) and any(
+                        u.get("national_id_hash") == nid_hash for u in udata["users"]
+                    )
+                if email_taken:
                     flash("Email already registered.", "error")
-                elif nid_hash and any(u.get("national_id_hash") == nid_hash for u in udata["users"]):
+                elif nid_taken:
                     flash("This National ID is already registered.", "error")
                 else:
-                    uid = udata["next_id"]
-                    udata["next_id"] += 1
+                    if ms:
+                        uid = ms.allocate_user_id()
+                        udata = None
+                    else:
+                        uid = udata["next_id"]
+                        udata["next_id"] += 1
                     full_name = _compose_full_name(first_name, middle_name, last_name)
                     user = {
                         "id": uid,
@@ -3510,10 +3574,11 @@ def signup():
                         "activity": [{"action": "Account created", "timestamp": now_str()}],
                     }
                     settings = load_settings()
-                    udata["users"].append(user)
+                    if not ms:
+                        udata["users"].append(user)
                     if settings.get("auth_require_email_verification", True):
                         otp = _issue_email_verification(user)
-                        save_users(udata)
+                        persist_user(user, udata)
                         result = _send_user_verification_email(user, otp)
                         if result.get("success"):
                             flash(
@@ -3524,7 +3589,7 @@ def signup():
                             _flash_email_send_failure("signup")
                         return redirect(url_for("verify_email_code", email=email))
                     user["email_verified"] = True
-                    save_users(udata)
+                    persist_user(user, udata)
                     flash("Account created. You can log in now.", "success")
                     return redirect(url_for("login"))
 
@@ -9634,12 +9699,17 @@ register_admin_registry_routes(app, {
     ),
 })
 
-# After all helpers exist: boot MySQL seed for gunicorn import path
+# After all helpers exist: start MySQL boot in the background so gunicorn can
+# bind $PORT quickly (Render health checks). before_request still awaits via lock.
 if USE_MYSQL and "pytest" not in sys.modules:
     try:
-        ensure_mysql_boot()
+        threading.Thread(
+            target=ensure_mysql_boot,
+            name="gurmadnet-mysql-boot",
+            daemon=True,
+        ).start()
     except Exception:
-        logging.getLogger(__name__).exception("Deferred MySQL boot failed")
+        logging.getLogger(__name__).exception("Deferred MySQL boot thread failed")
 
 # WebRTC voice signaling (Flask-SocketIO) — reuse existing auth/session
 try:

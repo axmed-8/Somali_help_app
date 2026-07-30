@@ -209,13 +209,13 @@ def load_config():
         # Cross-cloud (Render ↔ Railway proxy) needs generous timeouts,
         # but keep connect_timeout short enough that retries finish before gunicorn.
         "connect_timeout": _int_env(
-            "MYSQL_CONNECT_TIMEOUT", "DB_CONNECT_TIMEOUT", default=20, minimum=5, maximum=120
+            "MYSQL_CONNECT_TIMEOUT", "DB_CONNECT_TIMEOUT", default=10, minimum=3, maximum=60
         ),
         "read_timeout": _int_env(
-            "MYSQL_READ_TIMEOUT", "DB_READ_TIMEOUT", default=60, minimum=10, maximum=300
+            "MYSQL_READ_TIMEOUT", "DB_READ_TIMEOUT", default=30, minimum=5, maximum=120
         ),
         "write_timeout": _int_env(
-            "MYSQL_WRITE_TIMEOUT", "DB_WRITE_TIMEOUT", default=60, minimum=10, maximum=300
+            "MYSQL_WRITE_TIMEOUT", "DB_WRITE_TIMEOUT", default=30, minimum=5, maximum=120
         ),
         # Avoid 2013 on larger JSON / BLOB-ish payloads over the proxy.
         "max_allowed_packet": 64 * 1024 * 1024,

@@ -19,9 +19,9 @@ def test_load_config_includes_timeouts_and_autocommit(monkeypatch):
 
     cfg = load_config()
     assert cfg["autocommit"] is True
-    assert cfg["connect_timeout"] == 20
-    assert cfg["read_timeout"] == 60
-    assert cfg["write_timeout"] == 60
+    assert cfg["connect_timeout"] == 10
+    assert cfg["read_timeout"] == 30
+    assert cfg["write_timeout"] == 30
     assert cfg["max_allowed_packet"] >= 16 * 1024 * 1024
     # Railway public TCP proxy is plain MySQL — auto SSL must stay off
     assert "ssl" not in cfg

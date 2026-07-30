@@ -150,10 +150,11 @@ def available():
 
 def connect(database=None, retries=None):
     """
-    Open a PyMySQL connection with Render/Railway-friendly timeouts + TLS
-    (from load_config) and retry on transient proxy drops.
+    Open a PyMySQL connection with Render/Railway-friendly timeouts.
+    Railway public TCP proxy: MYSQL_SSL=false (plain MySQL).
 
     Always closes partially-opened sockets on failure. Does not keep a pool.
+    Fail-fast timeouts so gunicorn workers are not blocked into Worker Timeout.
     """
     if not available():
         raise RuntimeError("PyMySQL not installed. Run: pip install PyMySQL")
@@ -167,6 +168,11 @@ def connect(database=None, retries=None):
     if database is not None:
         cfg = {**cfg, "database": database}
     cfg["cursorclass"] = DictCursor
+    # Avoid client-side SSL surprise if env accidentally enables it on Railway.
+    if cfg.get("ssl") and _host_is_railway_proxy(cfg.get("host")):
+        ssl_mode = (os.environ.get("MYSQL_SSL") or "").strip().lower()
+        if ssl_mode not in ("1", "true", "yes", "on", "require", "required", "force"):
+            cfg.pop("ssl", None)
 
     host = (cfg.get("host") or "").strip()
     user = (cfg.get("user") or "").strip()
@@ -188,8 +194,7 @@ def connect(database=None, retries=None):
         conn = None
         try:
             conn = pymysql.connect(**cfg)
-            # Confirm the socket is alive (Railway proxy can accept then drop).
-            conn.ping(reconnect=True)
+            # Do not ping(reconnect=True) — extra RTT; connect success is enough.
             if attempt > 0:
                 logger.info(
                     "MySQL connect recovered on attempt %s/%s | %s",
@@ -202,6 +207,15 @@ def connect(database=None, retries=None):
             last_exc = exc
             _safe_close(conn)
             errno = exc.args[0] if getattr(exc, "args", None) else None
+            msg = str(exc).lower()
+            # TLS-on-plain-proxy is a config bug — do not burn retry budget.
+            if "wrong_version_number" in msg or "ssl" in msg and "wrong version" in msg:
+                logger.error(
+                    "MySQL SSL mismatch (set MYSQL_SSL=false for Railway proxy): %s | %s",
+                    exc,
+                    summary,
+                )
+                break
             transient = _is_transient_mysql_error(exc)
             logger.error(
                 "MySQL connect failed attempt=%s/%s errno=%s transient=%s "
@@ -215,8 +229,13 @@ def connect(database=None, retries=None):
             )
             if attempt >= retries - 1 or not transient:
                 break
-            time.sleep(min(1.5, 0.35 * (2 ** attempt)))
+            time.sleep(min(0.8, 0.25 * (2 ** attempt)))
     raise last_exc
+
+
+def _host_is_railway_proxy(host):
+    h = (host or "").strip().lower()
+    return h.endswith(".proxy.rlwy.net") or h.endswith(".rlwy.net")
 
 
 def _json_load(val, default=None):
@@ -525,31 +544,159 @@ def load_users():
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM users ORDER BY id")
             rows = cur.fetchall()
-        users = []
-        for r in rows:
-            u = dict(r)
-            u["saved_locations"] = _json_load(u.pop("saved_locations", None), [])
-            u["activity"] = _json_load(u.pop("activity", None), [])
-            u["created_at"] = _dt_str(u.get("created_at"))
-            u["last_login"] = _dt_str(u.get("last_login"))
-            u["reset_expires"] = _dt_str(u.get("reset_expires"))
-            u["email_verify_expires"] = _dt_str(u.get("email_verify_expires"))
-            u["last_seen_call_center"] = _dt_str(u.get("last_seen_call_center"))
-            if "email_verified" in u:
-                u["email_verified"] = bool(u.get("email_verified"))
-            else:
-                u["email_verified"] = True
-            if "notify_email_on_sos" in u:
-                u["notify_email_on_sos"] = bool(u.get("notify_email_on_sos"))
-            else:
-                u["notify_email_on_sos"] = True
-            if "notify_email_on_dispatch" in u:
-                u["notify_email_on_dispatch"] = bool(u.get("notify_email_on_dispatch"))
-            else:
-                u["notify_email_on_dispatch"] = True
-            users.append(u)
+        users = [_normalize_user_row(r) for r in rows]
         max_id = max((u["id"] for u in users), default=0)
         return {"users": users, "next_id": max_id + 1}
+
+
+def _normalize_user_row(r):
+    if not r:
+        return None
+    u = dict(r)
+    u["saved_locations"] = _json_load(u.pop("saved_locations", None), [])
+    u["activity"] = _json_load(u.pop("activity", None), [])
+    u["created_at"] = _dt_str(u.get("created_at"))
+    u["last_login"] = _dt_str(u.get("last_login"))
+    u["reset_expires"] = _dt_str(u.get("reset_expires"))
+    u["email_verify_expires"] = _dt_str(u.get("email_verify_expires"))
+    u["last_seen_call_center"] = _dt_str(u.get("last_seen_call_center"))
+    if "email_verified" in u:
+        u["email_verified"] = bool(u.get("email_verified"))
+    else:
+        u["email_verified"] = True
+    if "notify_email_on_sos" in u:
+        u["notify_email_on_sos"] = bool(u.get("notify_email_on_sos"))
+    else:
+        u["notify_email_on_sos"] = True
+    if "notify_email_on_dispatch" in u:
+        u["notify_email_on_dispatch"] = bool(u.get("notify_email_on_dispatch"))
+    else:
+        u["notify_email_on_dispatch"] = True
+    return u
+
+
+def find_user_by_id(uid):
+    """Single-row lookup — avoids loading the entire users table."""
+    try:
+        uid_int = int(uid)
+    except (TypeError, ValueError):
+        return None
+    with _db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM users WHERE id=%s LIMIT 1", (uid_int,))
+            row = cur.fetchone()
+    return _normalize_user_row(row)
+
+
+def find_user_by_login(login):
+    """Single-row email/username lookup for login hot path."""
+    key = (login or "").strip().lower()
+    if not key:
+        return None
+    with _db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM users WHERE LOWER(email)=%s OR LOWER(IFNULL(username,''))=%s LIMIT 1",
+                (key, key),
+            )
+            row = cur.fetchone()
+    return _normalize_user_row(row)
+
+
+def user_email_taken(email):
+    key = (email or "").strip().lower()
+    if not key:
+        return False
+    with _db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 AS ok FROM users WHERE LOWER(email)=%s LIMIT 1", (key,))
+            return cur.fetchone() is not None
+
+
+def user_national_id_taken(nid_hash):
+    if not nid_hash:
+        return False
+    with _db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT 1 AS ok FROM users WHERE national_id_hash=%s LIMIT 1",
+                (nid_hash,),
+            )
+            return cur.fetchone() is not None
+
+
+def allocate_user_id():
+    with _db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM users")
+            row = cur.fetchone() or {}
+            return int(row.get("next_id") or 1)
+
+
+_USER_COLS = (
+    "id", "username", "name", "email", "phone", "password_hash", "role", "status",
+    "profile_photo", "emergency_contact_name", "emergency_contact_phone",
+    "emergency_contact_relation", "emergency_contact_email", "address", "city", "date_of_birth",
+    "gender", "first_name", "middle_name", "last_name",
+    "national_id_last4", "national_id_hash", "national_id_encrypted",
+    "blood_type", "medical_notes", "allergies", "saved_locations", "hospital_id",
+    "station_id", "call_center_id",
+    "reset_token", "reset_expires",
+    "email_verified", "email_verify_token", "email_verify_expires",
+    "notify_email_on_sos", "notify_email_on_dispatch",
+    "created_at", "last_login",
+    "last_seen_call_center", "activity",
+)
+
+
+def _user_db_row(user):
+    row = dict(user)
+    row["saved_locations"] = _json_dump(row.get("saved_locations", []))
+    row["activity"] = _json_dump(row.get("activity", []))
+    row.setdefault("username", (row.get("email") or "user").split("@")[0])
+    nid = row.get("national_id_hash")
+    if isinstance(nid, str) and not nid.strip():
+        row["national_id_hash"] = None
+    row["email_verified"] = 1 if row.get("email_verified") else 0
+    row["notify_email_on_sos"] = 1 if row.get("notify_email_on_sos", True) else 0
+    row["notify_email_on_dispatch"] = 1 if row.get("notify_email_on_dispatch", True) else 0
+    return {c: row.get(c) for c in _USER_COLS}
+
+
+def upsert_user(user):
+    """Insert or update one user row — never rewrite the whole users table."""
+    if not user or user.get("id") is None:
+        raise ValueError("upsert_user requires user with id")
+    row = _user_db_row(user)
+    cols = list(_USER_COLS)
+    with _db() as conn:
+        prev = conn.get_autocommit()
+        conn.autocommit(False)
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id FROM users WHERE id=%s LIMIT 1", (row["id"],))
+                exists = cur.fetchone() is not None
+                if exists:
+                    sets = ", ".join(f"{c}=%s" for c in cols if c != "id")
+                    cur.execute(
+                        f"UPDATE users SET {sets} WHERE id=%s",
+                        [row.get(c) for c in cols if c != "id"] + [row["id"]],
+                    )
+                else:
+                    ph = ", ".join(["%s"] * len(cols))
+                    cur.execute(
+                        f"INSERT INTO users ({', '.join(cols)}) VALUES ({ph})",
+                        [row.get(c) for c in cols],
+                    )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            try:
+                conn.autocommit(prev)
+            except Exception:
+                pass
 
 
 def save_users(data):
@@ -558,31 +705,8 @@ def save_users(data):
         existing = {r["id"] for r in cur.fetchall()}
         keep_ids = set()
         for u in data.get("users", []):
-            row = dict(u)
-            row["saved_locations"] = _json_dump(row.get("saved_locations", []))
-            row["activity"] = _json_dump(row.get("activity", []))
-            row.setdefault("username", (row.get("email") or "user").split("@")[0])
-            # Normalize empty national_id_hash so UNIQUE allows multiple NULL
-            nid = row.get("national_id_hash")
-            if isinstance(nid, str) and not nid.strip():
-                row["national_id_hash"] = None
-            cols = [
-                "id", "username", "name", "email", "phone", "password_hash", "role", "status",
-                "profile_photo", "emergency_contact_name", "emergency_contact_phone",
-                "emergency_contact_relation", "emergency_contact_email", "address", "city", "date_of_birth",
-                "gender", "first_name", "middle_name", "last_name",
-                "national_id_last4", "national_id_hash", "national_id_encrypted",
-                "blood_type", "medical_notes", "allergies", "saved_locations", "hospital_id",
-                "station_id", "call_center_id",
-                "reset_token", "reset_expires",
-                "email_verified", "email_verify_token", "email_verify_expires",
-                "notify_email_on_sos", "notify_email_on_dispatch",
-                "created_at", "last_login",
-                "last_seen_call_center", "activity",
-            ]
-            row["email_verified"] = 1 if row.get("email_verified") else 0
-            row["notify_email_on_sos"] = 1 if row.get("notify_email_on_sos", True) else 0
-            row["notify_email_on_dispatch"] = 1 if row.get("notify_email_on_dispatch", True) else 0
+            row = _user_db_row(u)
+            cols = list(_USER_COLS)
             keep_ids.add(row["id"])
             if row["id"] in existing:
                 sets = ", ".join(f"{c}=%s" for c in cols if c != "id")
@@ -599,7 +723,8 @@ def save_users(data):
         stale = set(existing) - keep_ids
         if stale:
             _cleanup_before_user_delete(cur, stale)
-        _delete_stale_ids(cur, "users", existing, keep_ids)
+            _delete_stale_ids(cur, "users", existing, keep_ids)
+
 
 
 def load_hospitals():

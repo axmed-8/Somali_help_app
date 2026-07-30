@@ -9,7 +9,7 @@ services:
     plan: free
     region: oregon
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn --worker-class gthread --threads 25 -w 1 --bind 0.0.0.0:$PORT --timeout 120 app:app
+    startCommand: gunicorn --worker-class gthread --threads 8 -w 1 --bind 0.0.0.0:$PORT --timeout 120 --graceful-timeout 30 app:app
     healthCheckPath: /login
     envVars:
       - key: PYTHON_VERSION
@@ -42,7 +42,11 @@ services:
       - key: MYSQL_SSL
         value: "false"
       - key: MYSQL_CONNECT_TIMEOUT
-        value: "20"
+        value: "10"
+      - key: MYSQL_READ_TIMEOUT
+        value: "30"
+      - key: MYSQL_WRITE_TIMEOUT
+        value: "30"
       - key: MYSQL_CONNECT_RETRIES
         value: "2"
       - key: SMTP_HOST
