@@ -961,7 +961,7 @@ var EmergencyLocation = (function () {
           map: state.map,
           suppressMarkers: true,
           preserveViewport: true,
-          polylineOptions: { strokeColor: color, strokeWeight: 5, strokeOpacity: 0.85 }
+          polylineOptions: { strokeColor: color, strokeWeight: 6, strokeOpacity: 0.92 }
         });
         state.directionsRenderers[key] = renderer;
         state.directionsService.route({
@@ -985,8 +985,8 @@ var EmergencyLocation = (function () {
           } else {
             state.routeLines[key] = L.polyline(latlngs, {
               color: color,
-              weight: 5,
-              opacity: 0.85
+              weight: 6,
+              opacity: 0.92
             }).addTo(state.map);
           }
         }).catch(function () { clearRoute(key); });
@@ -1019,17 +1019,26 @@ var EmergencyLocation = (function () {
     function setLeafletMarker(key, lat, lng, className, title) {
       if (!state.map || typeof L === "undefined" || !validPoint(lat, lng)) return;
       var label = "";
-      if (className === "pin-hospital") label = "+";
-      if (className === "pin-ambulance") label = "A";
-      if (className === "pin-police") label = "P";
-      if (className === "pin-fire") label = "F";
+      if (className === "pin-user") label = "<span class='pin-label'>You</span>";
+      if (className === "pin-hospital") label = "+<span class='pin-label pin-label-dest'>Dest</span>";
+      if (className === "pin-ambulance") label = "A<span class='pin-label pin-label-team'>Unit</span>";
+      if (className === "pin-police") label = "P<span class='pin-label pin-label-team'>Unit</span>";
+      if (className === "pin-fire") label = "F<span class='pin-label pin-label-team'>Unit</span>";
+      if (className === "pin-emergency") label = "!";
       var html = "<div class='pin-dot " + className + "'>" + label + "</div>";
-      var icon = L.divIcon({ className: "map-pin-emergency", html: html, iconSize: [24, 24], iconAnchor: [12, 12] });
+      var size = className === "pin-user" || className === "pin-ambulance" || className === "pin-hospital" ? 28 : 26;
+      var icon = L.divIcon({
+        className: "map-pin-emergency",
+        html: html,
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size / 2]
+      });
       if (!state.markers[key]) {
-        state.markers[key] = L.marker([lat, lng], { icon: icon }).addTo(state.map);
+        state.markers[key] = L.marker([lat, lng], { icon: icon, zIndexOffset: className === "pin-user" ? 600 : 400 }).addTo(state.map);
         state.markers[key].bindPopup(title || key);
       } else {
         state.markers[key].setLatLng([lat, lng]);
+        state.markers[key].setIcon(icon);
         state.markers[key].setPopupContent(title || key);
       }
     }
@@ -1136,6 +1145,9 @@ var EmergencyLocation = (function () {
         }
       } else {
         clearRoute("hospital");
+        removeMarker("hospital");
+        removeMarker("police");
+        removeMarker("fire");
       }
 
       var resp = data.responder;

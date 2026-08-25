@@ -286,6 +286,23 @@ def _delete_stale_ids(cur, table, existing_ids, keep_ids):
             f"Refusing to wipe all {len(existing_ids)} rows from {table} "
             "(empty document snapshot). Reload and retry."
         )
+    # Guard against accidental mass-delete from a partial MySQL hot-path snapshot
+    # (e.g. get_user_by_login returning only one user then calling save_users).
+    # Skip deletes (do not raise) so the upsert loop still applies; log loudly.
+    if (
+        table in _PROTECTED_WIPE_TABLES
+        and keep_ids
+        and len(keep_ids) <= 3
+        and len(stale) >= 3
+    ):
+        logger.error(
+            "Skipping stale delete on %s: partial snapshot kept=%s would_delete=%s "
+            "(use upsert_user / persist_user for single-row updates)",
+            table,
+            len(keep_ids),
+            len(stale),
+        )
+        return []
     ids = list(stale)
     cur.execute(
         f"DELETE FROM {table} WHERE id IN ({', '.join(['%s'] * len(ids))})",
@@ -572,6 +589,12 @@ def _normalize_user_row(r):
         u["notify_email_on_dispatch"] = bool(u.get("notify_email_on_dispatch"))
     else:
         u["notify_email_on_dispatch"] = True
+    u["locked_until"] = _dt_str(u.get("locked_until"))
+    for key in ("failed_logins", "email_verify_attempts", "reset_otp_attempts"):
+        try:
+            u[key] = int(u.get(key) or 0)
+        except (TypeError, ValueError):
+            u[key] = 0
     return u
 
 
@@ -613,6 +636,20 @@ def user_email_taken(email):
             return cur.fetchone() is not None
 
 
+def user_phone_taken(phone):
+    """True when a non-empty phone is already registered (exact match after strip)."""
+    key = (phone or "").strip()
+    if not key:
+        return False
+    with _db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT 1 AS ok FROM users WHERE phone=%s AND phone <> '' LIMIT 1",
+                (key,),
+            )
+            return cur.fetchone() is not None
+
+
 def user_national_id_taken(nid_hash):
     if not nid_hash:
         return False
@@ -643,6 +680,8 @@ _USER_COLS = (
     "station_id", "call_center_id",
     "reset_token", "reset_expires",
     "email_verified", "email_verify_token", "email_verify_expires",
+    "email_verify_attempts", "reset_otp_attempts",
+    "failed_logins", "locked_until",
     "notify_email_on_sos", "notify_email_on_dispatch",
     "created_at", "last_login",
     "last_seen_call_center", "activity",
@@ -660,8 +699,21 @@ def _user_db_row(user):
     row["email_verified"] = 1 if row.get("email_verified") else 0
     row["notify_email_on_sos"] = 1 if row.get("notify_email_on_sos", True) else 0
     row["notify_email_on_dispatch"] = 1 if row.get("notify_email_on_dispatch", True) else 0
+    try:
+        row["failed_logins"] = int(row.get("failed_logins") or 0)
+    except (TypeError, ValueError):
+        row["failed_logins"] = 0
+    try:
+        row["email_verify_attempts"] = int(row.get("email_verify_attempts") or 0)
+    except (TypeError, ValueError):
+        row["email_verify_attempts"] = 0
+    try:
+        row["reset_otp_attempts"] = int(row.get("reset_otp_attempts") or 0)
+    except (TypeError, ValueError):
+        row["reset_otp_attempts"] = 0
+    locked = row.get("locked_until")
+    row["locked_until"] = _dt_str(locked) if locked else None
     return {c: row.get(c) for c in _USER_COLS}
-
 
 def upsert_user(user):
     """Insert or update one user row — never rewrite the whole users table."""
@@ -1675,6 +1727,17 @@ def ensure_email_verification_schema():
                     "AFTER email_verify_token"
                 )
                 changes.append("users.email_verify_expires")
+            # Auth security fields (lockout + OTP attempt counters)
+            for col, ddl in (
+                ("email_verify_attempts", "INT NOT NULL DEFAULT 0 AFTER email_verify_expires"),
+                ("reset_otp_attempts", "INT NOT NULL DEFAULT 0 AFTER email_verify_attempts"),
+                ("failed_logins", "INT NOT NULL DEFAULT 0 AFTER reset_otp_attempts"),
+                ("locked_until", "DATETIME NULL AFTER failed_logins"),
+            ):
+                cur.execute(f"SHOW COLUMNS FROM users LIKE '{col}'")
+                if not cur.fetchone():
+                    cur.execute(f"ALTER TABLE users ADD COLUMN {col} {ddl}")
+                    changes.append(f"users.{col}")
     return {"ok": True, "changes": changes}
 
 

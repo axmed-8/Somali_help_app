@@ -362,6 +362,7 @@ def test_call_center_ai_analyze_and_reject_does_not_dispatch(app_client):
 
 
 def test_call_center_ai_approve_uses_existing_dispatch(app_client):
+    """AI Approve only preselects teams — human Dispatch creates emergencies."""
     client, ers_app = app_client
     login(client, "ahmed@example.com", "123456")
     call_id = client.post(
@@ -383,6 +384,7 @@ def test_call_center_ai_approve_uses_existing_dispatch(app_client):
     ).get_json()
     assert analyzed["success"] is True
     rec_id = analyzed["panel"]["recommendation_id"]
+    types = analyzed["panel"].get("suggested_dispatch_types") or ["medical"]
     before = len(ers_app.load_emergencies().get("emergencies", []))
     approved = client.post(
         f"/api/call-center/calls/{call_id}/ai/decision",
@@ -390,7 +392,15 @@ def test_call_center_ai_approve_uses_existing_dispatch(app_client):
     ).get_json()
     assert approved["success"] is True
     assert approved["decision"] == "approve"
-    assert approved.get("emergencies")
+    # Recommend-only: approve must NOT auto-create emergencies
+    mid = len(ers_app.load_emergencies().get("emergencies", []))
+    assert mid == before
+    assert not approved.get("emergencies")
+    dispatched = client.post(
+        f"/api/call-center/calls/{call_id}/dispatch",
+        json={"types": types, "notes": "Operator confirmed AI recommendation"},
+    ).get_json()
+    assert dispatched.get("success") is True
     after = len(ers_app.load_emergencies().get("emergencies", []))
     assert after > before
 

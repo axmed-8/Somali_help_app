@@ -43,6 +43,7 @@
     chatSearch: "",
     chatMeta: {},
     chatMsgCache: {},
+    workspaceClosed: false,
   };
 
   function $(id) {
@@ -110,10 +111,266 @@
   }
 
   function priorityOf(em) {
-    var p = (em.priority || em.type || "").toString().toLowerCase();
-    if (p.indexOf("critical") >= 0 || p.indexOf("trauma") >= 0 || p === "high") return "high";
-    if (p.indexOf("fire") >= 0 || p === "medium") return "med";
+    var p = (em.priority || "").toString().toLowerCase();
+    if (p === "1" || p === "critical" || p === "high" || p.indexOf("trauma") >= 0) return "high";
+    if (p === "2" || p === "medium" || p === "med") return "med";
+    if (p === "3" || p === "4" || p === "5" || p === "low" || p === "normal") return "low";
+    var t = (em.type || "").toString().toLowerCase();
+    if (t === "medical" || t === "accident" || t === "fire") return "high";
+    if (t === "security") return "med";
     return "low";
+  }
+
+  function priorityLabel(level) {
+    if (level === "high") return "High";
+    if (level === "med") return "Medium";
+    return "Low";
+  }
+
+  function isPendingRequest(em) {
+    var st = ((em && em.status) || "").toLowerCase();
+    return st === "pending_hospital" || st === "pending";
+  }
+
+  function typeLabel(em) {
+    return String((em && em.type) || "medical")
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, function (c) {
+        return c.toUpperCase();
+      });
+  }
+
+  function citizenSummary(em) {
+    var name = (em && (em.caller_name || em.name)) || "Unknown citizen";
+    var phone = (em && em.phone) || "No phone";
+    var loc = (em && (em.location || em.district)) || "Location unknown";
+    var notes = em && em.notes ? String(em.notes).trim() : "";
+    return {
+      name: name,
+      phone: phone,
+      location: loc,
+      notes: notes ? notes.slice(0, 120) : "",
+    };
+  }
+
+  function sortQueue(list) {
+    var rank = { high: 0, med: 1, low: 2 };
+    return list.slice().sort(function (a, b) {
+      var pa = isPendingRequest(a) ? 0 : 1;
+      var pb = isPendingRequest(b) ? 0 : 1;
+      if (pa !== pb) return pa - pb;
+      var ra = rank[priorityOf(a)] != null ? rank[priorityOf(a)] : 2;
+      var rb = rank[priorityOf(b)] != null ? rank[priorityOf(b)] : 2;
+      if (ra !== rb) return ra - rb;
+      return String(a.timestamp || "").localeCompare(String(b.timestamp || ""));
+    });
+  }
+
+  /* ---------- Queue cards (Sprint 3.1.1 — pending queue) ---------- */
+  function isCallCenterCase(em) {
+    return (em && (em.source === "call_center" || em.request_mode === "call_center"));
+  }
+
+  function queueCardHtml(em) {
+    var prio = priorityOf(em);
+    var prioClass = prio === "high" ? "hcc-prio-high" : prio === "med" ? "hcc-prio-med" : "hcc-prio-low";
+    var dist = haversineKm(hospital().latitude, hospital().longitude, em.latitude, em.longitude);
+    var pending = isPendingRequest(em);
+    var citizen = citizenSummary(em);
+    var received = formatTime(em.timestamp);
+    var ago = elapsed(em.timestamp);
+    var typeTxt = typeLabel(em);
+    var st = ((em.status || "pending").replace(/_/g, " "));
+
+    var actions = "";
+    if (pending) {
+      actions =
+        '<button type="button" class="hcc-btn hcc-btn-success hcc-btn-sm q-accept" data-id="' +
+        em.id +
+        '">Accept</button>' +
+        '<button type="button" class="hcc-btn hcc-btn-danger hcc-btn-sm q-reject" data-id="' +
+        em.id +
+        '">Reject</button>' +
+        '<button type="button" class="hcc-btn hcc-btn-ghost hcc-btn-sm q-call" data-phone="' +
+        esc(citizen.phone === "No phone" ? "" : citizen.phone) +
+        '">Call</button>' +
+        '<button type="button" class="hcc-btn hcc-btn-primary hcc-btn-sm q-chat" data-id="' +
+        em.id +
+        '">Chat</button>';
+    } else {
+      actions =
+        '<button type="button" class="hcc-btn hcc-btn-ghost hcc-btn-sm q-call" data-phone="' +
+        esc(citizen.phone === "No phone" ? "" : citizen.phone) +
+        '">Call</button>' +
+        '<button type="button" class="hcc-btn hcc-btn-primary hcc-btn-sm q-chat" data-id="' +
+        em.id +
+        '">Chat</button>';
+    }
+
+    var ccBadge = isCallCenterCase(em)
+      ? '<span class="hcc-badge hcc-badge-cc">Call Center</span>'
+      : "";
+
+    return (
+      '<article class="hcc-q-card' +
+      (state.selectedId === em.id ? " is-selected" : "") +
+      (pending ? " hcc-q-pending" : "") +
+      (isCallCenterCase(em) ? " hcc-q-cc" : "") +
+      '" data-select="' +
+      em.id +
+      '">' +
+      '<div class="hcc-q-top">' +
+      '<span class="hcc-q-type ' +
+      prioClass +
+      '">' +
+      esc(typeTxt) +
+      "</span>" +
+      ccBadge +
+      '<span class="hcc-badge ' +
+      (pending ? "hcc-badge-active" : "hcc-badge-ok") +
+      '">' +
+      esc(st) +
+      "</span></div>" +
+      '<div class="hcc-q-fields">' +
+      '<div class="hcc-q-field"><span>Priority</span><strong class="' +
+      prioClass +
+      '">' +
+      esc(priorityLabel(prio)) +
+      "</strong></div>" +
+      '<div class="hcc-q-field"><span>Received</span><strong>' +
+      esc(received || "—") +
+      (ago ? " · " + esc(ago) : "") +
+      "</strong></div>" +
+      '<div class="hcc-q-field"><span>Distance</span><strong>' +
+      (dist != null ? dist.toFixed(1) + " km" : "—") +
+      "</strong></div>" +
+      '<div class="hcc-q-field"><span>Type</span><strong>' +
+      esc(typeTxt) +
+      "</strong></div>" +
+      "</div>" +
+      '<div class="hcc-q-citizen">' +
+      "<strong>" +
+      esc(citizen.name) +
+      "</strong>" +
+      "<em>" +
+      esc(citizen.phone) +
+      " · " +
+      esc(citizen.location) +
+      "</em>" +
+      (citizen.notes ? "<p>" + esc(citizen.notes) + "</p>" : "") +
+      "</div>" +
+      '<div class="hcc-q-actions">' +
+      actions +
+      "</div></article>"
+    );
+  }
+
+  function bindQueueActions(root) {
+    if (!root) return;
+    root.querySelectorAll("[data-select]").forEach(function (card) {
+      card.addEventListener("click", function (e) {
+        if (e.target.closest("button")) return;
+        state.selectedId = parseInt(card.getAttribute("data-select"), 10);
+        state.workspaceClosed = false;
+        renderQueue();
+        renderSuggestion();
+        renderTimeline();
+        renderWorkspace();
+        renderMap(false);
+      });
+    });
+    root.querySelectorAll(".q-accept").forEach(function (b) {
+      b.onclick = function (e) {
+        e.stopPropagation();
+        var id = parseInt(b.getAttribute("data-id"), 10);
+        b.disabled = true;
+        api("/api/hospital/request/" + id + "/accept", { method: "POST", body: {} })
+          .then(function (r) {
+            if (r && r.success === false) {
+              alert(r.message || "Accept failed");
+              b.disabled = false;
+              return;
+            }
+            state.selectedId = id;
+            state.workspaceClosed = false;
+            afterAcceptOpenChat(id);
+            return loadAll();
+          })
+          .catch(function () {
+            b.disabled = false;
+          });
+      };
+    });
+    root.querySelectorAll(".q-reject").forEach(function (b) {
+      b.onclick = function (e) {
+        e.stopPropagation();
+        var id = b.getAttribute("data-id");
+        b.disabled = true;
+        api("/api/hospital/request/" + id + "/reject", { method: "POST", body: {} })
+          .then(function () {
+            return loadAll();
+          })
+          .catch(function () {
+            b.disabled = false;
+          });
+      };
+    });
+    root.querySelectorAll(".q-call").forEach(function (b) {
+      b.onclick = function (e) {
+        e.stopPropagation();
+        var phone = b.getAttribute("data-phone");
+        if (phone) window.location.href = "tel:" + phone;
+      };
+    });
+    root.querySelectorAll(".q-chat").forEach(function (b) {
+      b.onclick = function (e) {
+        e.stopPropagation();
+        openCaseChat(parseInt(b.getAttribute("data-id"), 10));
+      };
+    });
+  }
+
+  function renderQueue() {
+    var pendingList = sortQueue(state.emergencies.filter(isPendingRequest));
+    var activeOther = sortQueue(
+      state.emergencies.filter(function (em) {
+        return !isPendingRequest(em);
+      })
+    );
+    var ccPending = pendingList.filter(isCallCenterCase);
+    var sosPending = pendingList.filter(function (em) {
+      return !isCallCenterCase(em);
+    });
+
+    var pill = $("cc-inbox-pill");
+    if (pill) pill.textContent = String(ccPending.length);
+    var ccEl = $("cc-inbox-list");
+    if (ccEl) {
+      ccEl.innerHTML = ccPending.length
+        ? ccPending.map(queueCardHtml).join("")
+        : '<div class="hcc-empty">No pending Call Center requests</div>';
+      bindQueueActions(ccEl);
+    }
+
+    var dashHtml = sosPending.length
+      ? sosPending.map(queueCardHtml).join("")
+      : '<div class="hcc-empty">No pending SOS requests</div>';
+    var fullList = pendingList.concat(activeOther);
+    var fullHtml = fullList.length
+      ? fullList.map(queueCardHtml).join("")
+      : '<div class="hcc-empty">No emergencies assigned to your hospital</div>';
+
+    var dashEl = $("queue-list");
+    if (dashEl) {
+      dashEl.innerHTML = dashHtml;
+      bindQueueActions(dashEl);
+    }
+    var fullEl = $("queue-list-full");
+    if (fullEl) {
+      fullEl.innerHTML = fullHtml;
+      bindQueueActions(fullEl);
+    }
+    renderChatCaseList();
   }
 
   function selectedEmergency() {
@@ -127,7 +384,7 @@
 
   function availableUnits() {
     return state.ambulances.filter(function (a) {
-      return (a.status || "") === "available";
+      return String(a.status || "").toLowerCase() === "available";
     });
   }
 
@@ -562,190 +819,6 @@
     if ($("pf-amb-ready")) {
       $("pf-amb-ready").value = avail + " available (from your units)";
     }
-  }
-
-  /* ---------- Queue cards ---------- */
-  function isCallCenterCase(em) {
-    return (em && (em.source === "call_center" || em.request_mode === "call_center"));
-  }
-
-  function queueCardHtml(em) {
-    var prio = priorityOf(em);
-    var prioClass = prio === "high" ? "hcc-prio-high" : prio === "med" ? "hcc-prio-med" : "hcc-prio-low";
-    var dist = haversineKm(hospital().latitude, hospital().longitude, em.latitude, em.longitude);
-    var st = (em.status || "").replace(/_/g, " ");
-    var pending = em.status === "pending_hospital" || em.status === "pending";
-    var amb =
-      em.assigned_ambulance_call_sign
-        ? esc(em.assigned_ambulance_call_sign) +
-          (em.assigned_ambulance_driver_phone ? " · " + esc(em.assigned_ambulance_driver_phone) : "")
-        : "";
-    var actions =
-      (pending
-        ? '<button type="button" class="hcc-btn hcc-btn-success hcc-btn-sm q-accept" data-id="' +
-          em.id +
-          '">Accept</button>' +
-          '<button type="button" class="hcc-btn hcc-btn-danger hcc-btn-sm q-reject" data-id="' +
-          em.id +
-          '">Reject</button>'
-        : "") +
-      (!pending
-        ? '<button type="button" class="hcc-btn hcc-btn-primary hcc-btn-sm q-assign" data-id="' +
-          em.id +
-          '">Assign unit</button>'
-        : "") +
-      '<button type="button" class="hcc-btn hcc-btn-ghost hcc-btn-sm q-call" data-phone="' +
-      esc(em.phone || "") +
-      '">Call</button>' +
-      '<button type="button" class="hcc-btn hcc-btn-primary hcc-btn-sm q-chat" data-id="' +
-      em.id +
-      '">Chat</button>' +
-      '<button type="button" class="hcc-btn hcc-btn-ghost hcc-btn-sm q-arrived" data-id="' +
-      em.id +
-      '">Arrived</button>' +
-      '<button type="button" class="hcc-btn hcc-btn-ghost hcc-btn-sm q-reached" data-id="' +
-      em.id +
-      '">Reached</button>';
-
-    var ccBadge = isCallCenterCase(em)
-      ? '<span class="hcc-badge hcc-badge-cc">Call Center</span>'
-      : "";
-
-    return (
-      '<article class="hcc-q-card' +
-      (state.selectedId === em.id ? " is-selected" : "") +
-      (isCallCenterCase(em) ? " hcc-q-cc" : "") +
-      '" data-select="' +
-      em.id +
-      '">' +
-      '<div class="hcc-q-top"><span class="hcc-q-type ' +
-      prioClass +
-      '">' +
-      esc((em.type || "medical").replace(/_/g, " ").toUpperCase()) +
-      "</span>" +
-      ccBadge +
-      '<span class="hcc-badge hcc-badge-active">' +
-      esc(st) +
-      "</span></div>" +
-      '<div class="hcc-q-loc">' +
-      esc(em.location || em.district || "Unknown location") +
-      "</div>" +
-      '<div class="hcc-q-meta">Caller: ' +
-      esc(em.caller_name || "Unknown") +
-      " · " +
-      esc(em.phone || "N/A") +
-      "<br>" +
-      (dist != null ? dist.toFixed(1) + " km from hospital · " : "") +
-      esc(elapsed(em.timestamp) || formatTime(em.timestamp)) +
-      (amb ? "<br>Unit: " + amb : "") +
-      (isCallCenterCase(em) && em.notes
-        ? "<br>CC notes: " + esc(String(em.notes).slice(0, 140))
-        : "") +
-      '</div><div class="hcc-q-actions">' +
-      actions +
-      "</div></article>"
-    );
-  }
-
-  function bindQueueActions(root) {
-    if (!root) return;
-    root.querySelectorAll("[data-select]").forEach(function (card) {
-      card.addEventListener("click", function (e) {
-        if (e.target.closest("button")) return;
-        state.selectedId = parseInt(card.getAttribute("data-select"), 10);
-        renderQueue();
-        renderSuggestion();
-        renderTimeline();
-        renderMap(false);
-      });
-    });
-    root.querySelectorAll(".q-accept").forEach(function (b) {
-      b.onclick = function (e) {
-        e.stopPropagation();
-        openAssignModal(parseInt(b.getAttribute("data-id"), 10), "accept");
-      };
-    });
-    root.querySelectorAll(".q-assign").forEach(function (b) {
-      b.onclick = function (e) {
-        e.stopPropagation();
-        openAssignModal(parseInt(b.getAttribute("data-id"), 10), "assign");
-      };
-    });
-    root.querySelectorAll(".q-reject").forEach(function (b) {
-      b.onclick = function (e) {
-        e.stopPropagation();
-        var id = b.getAttribute("data-id");
-        api("/api/hospital/request/" + id + "/reject", { method: "POST", body: {} }).then(loadAll);
-      };
-    });
-    root.querySelectorAll(".q-call").forEach(function (b) {
-      b.onclick = function (e) {
-        e.stopPropagation();
-        var phone = b.getAttribute("data-phone");
-        if (phone) window.location.href = "tel:" + phone;
-      };
-    });
-    root.querySelectorAll(".q-chat").forEach(function (b) {
-      b.onclick = function (e) {
-        e.stopPropagation();
-        openCaseChat(parseInt(b.getAttribute("data-id"), 10));
-      };
-    });
-    root.querySelectorAll(".q-arrived").forEach(function (b) {
-      b.onclick = function (e) {
-        e.stopPropagation();
-        api("/api/emergencies/" + b.getAttribute("data-id") + "/responder", {
-          method: "POST",
-          body: { action: "arrived_at_scene" },
-        }).then(loadAll);
-      };
-    });
-    root.querySelectorAll(".q-reached").forEach(function (b) {
-      b.onclick = function (e) {
-        e.stopPropagation();
-        api("/api/emergencies/" + b.getAttribute("data-id") + "/responder", {
-          method: "POST",
-          body: { action: "reached_victim" },
-        }).then(loadAll);
-      };
-    });
-  }
-
-  function renderQueue() {
-    var ccList = state.emergencies.filter(isCallCenterCase);
-    var otherList = state.emergencies.filter(function (em) {
-      return !isCallCenterCase(em);
-    });
-
-    var pill = $("cc-inbox-pill");
-    if (pill) pill.textContent = String(ccList.length);
-    var ccEl = $("cc-inbox-list");
-    if (ccEl) {
-      ccEl.innerHTML = ccList.length
-        ? ccList.map(queueCardHtml).join("")
-        : '<div class="hcc-empty">No Call Center cases yet</div>';
-      bindQueueActions(ccEl);
-    }
-
-    var html =
-      otherList.length === 0
-        ? '<div class="hcc-empty">No other active emergencies (SOS / walk-in)</div>'
-        : otherList.map(queueCardHtml).join("");
-    ["queue-list", "queue-list-full"].forEach(function (id) {
-      var el = $(id);
-      if (!el) return;
-      // Full queue panel still shows everything
-      if (id === "queue-list-full") {
-        el.innerHTML =
-          state.emergencies.length === 0
-            ? '<div class="hcc-empty">No active emergencies assigned to your hospital</div>'
-            : state.emergencies.map(queueCardHtml).join("");
-      } else {
-        el.innerHTML = html;
-      }
-      bindQueueActions(el);
-    });
-    renderChatCaseList();
   }
 
   /* ---------- Case Chat (WhatsApp-style inbox) ---------- */
@@ -1207,7 +1280,10 @@
   function afterAcceptOpenChat(eid) {
     var welcome =
       "Hospital-ku waa aqbalay codsigaaga. Halkan nala soo hadal haddii aad u baahan tahay caawimaad. / We accepted your request — message us here.";
-    return api("/api/messages/" + eid, { method: "POST", body: { text: welcome } })
+    return api("/api/messages/" + eid, {
+      method: "POST",
+      body: { text: welcome, unique_system: true, system_transition: "accepted" },
+    })
       .catch(function () {
         return null;
       })
@@ -1656,6 +1732,447 @@
     });
   }
 
+  /* ---------- Operator Workspace (Sprint 3.1.2) ---------- */
+  function wsStage(em) {
+    if (!em) return "none";
+    var st = String(em.status || "").toLowerCase();
+    var rs = em.responder_status || {};
+    if (st === "completed" || st === "resolved" || st === "cancelled" || st === "no_hospital_available") {
+      return "terminal";
+    }
+    if (rs.arrived_at_scene || st === "in_progress") return "arrived";
+    // En Route only after responder_status.en_route (assign sets dispatched without that stamp)
+    if (rs.en_route) return "en_route";
+    if (em.assigned_ambulance_id || st === "dispatched") return "assigned";
+    if (st === "accepted") return "accepted";
+    if (st === "pending" || st === "pending_hospital") return "pending";
+    return "accepted";
+  }
+
+  function wsElapsedLive(iso) {
+    if (!iso) return "—";
+    var ms = Date.now() - new Date(iso).getTime();
+    if (isNaN(ms) || ms < 0) return "—";
+    var m = Math.floor(ms / 60000);
+    var s = Math.floor((ms % 60000) / 1000);
+    if (m < 60) return m + "m " + s + "s";
+    return Math.floor(m / 60) + "h " + (m % 60) + "m";
+  }
+
+  function wsLifeSteps(em) {
+    var rs = em.responder_status || {};
+    var hist = em.status_history || [];
+    function histTs(status) {
+      for (var i = 0; i < hist.length; i++) {
+        if (String(hist[i].status || "").toLowerCase() === status) return hist[i].timestamp;
+      }
+      return null;
+    }
+    var steps = [
+      { key: "received", label: "Received", ts: em.timestamp || null },
+      {
+        key: "accepted",
+        label: "Accepted",
+        ts: em.accepted_at || histTs("accepted") || null,
+      },
+      {
+        key: "assigned",
+        label: "Ambulance Assigned",
+        ts: em.ambulance_assigned_at || (em.assigned_ambulance_id ? histTs("dispatched") || em.accepted_at : null),
+      },
+      { key: "en_route", label: "En Route", ts: rs.en_route || null },
+      { key: "arrived", label: "Arrived", ts: rs.arrived_at_scene || null },
+      {
+        key: "completed",
+        label: "Completed",
+        ts: rs.reached_victim || histTs("completed") || histTs("resolved") || null,
+      },
+    ];
+    var stage = wsStage(em);
+    var currentKey = {
+      pending: "received",
+      accepted: "accepted",
+      assigned: "assigned",
+      en_route: "en_route",
+      arrived: "arrived",
+      terminal: "completed",
+    }[stage];
+    return steps.map(function (step) {
+      var done = !!step.ts;
+      return {
+        label: step.label,
+        ts: step.ts,
+        done: done,
+        current: step.key === currentKey,
+      };
+    });
+  }
+
+  function setWorkspaceOpen(open) {
+    var ws = $("hcc-workspace");
+    var rail = $("hcc-rail-stack");
+    if (!ws) return;
+    if (open) {
+      ws.hidden = false;
+      if (rail) rail.classList.add("rail-has-workspace");
+    } else {
+      ws.hidden = true;
+      if (rail) rail.classList.remove("rail-has-workspace");
+    }
+  }
+
+  function renderWorkspace() {
+    var body = $("hcc-workspace-body");
+    if (!body) return;
+    var em = selectedEmergency();
+    if (!em) {
+      setWorkspaceOpen(false);
+      body.innerHTML =
+        '<p class="hcc-muted">Select an emergency from the queue to open the operator workspace.</p>';
+      return;
+    }
+    if (state.workspaceClosed) {
+      setWorkspaceOpen(false);
+      return;
+    }
+    setWorkspaceOpen(true);
+    var stage = wsStage(em);
+    var citizen = citizenSummary(em);
+    var prio = priorityOf(em);
+    var st = String(em.status || "").replace(/_/g, " ");
+    var phone = citizen.phone === "No phone" ? "" : citizen.phone;
+    var gps =
+      em.latitude != null && em.longitude != null
+        ? Number(em.latitude).toFixed(5) + ", " + Number(em.longitude).toFixed(5)
+        : "—";
+
+    var actions = [];
+    if (stage === "pending") {
+      actions.push(
+        '<button type="button" class="hcc-btn hcc-btn-success ws-accept" data-id="' + em.id + '">Accept</button>'
+      );
+      actions.push(
+        '<button type="button" class="hcc-btn hcc-btn-danger ws-reject" data-id="' + em.id + '">Reject</button>'
+      );
+    }
+    if (stage === "accepted") {
+      actions.push(
+        '<button type="button" class="hcc-btn hcc-btn-primary ws-assign-open" data-id="' +
+          em.id +
+          '">Assign Ambulance</button>'
+      );
+    }
+    if (stage === "assigned") {
+      actions.push(
+        '<button type="button" class="hcc-btn hcc-btn-primary ws-enroute" data-id="' + em.id + '">En Route</button>'
+      );
+    }
+    if (stage === "en_route") {
+      actions.push(
+        '<button type="button" class="hcc-btn hcc-btn-primary ws-arrived" data-id="' + em.id + '">Arrived</button>'
+      );
+    }
+    if (stage === "arrived") {
+      actions.push(
+        '<button type="button" class="hcc-btn hcc-btn-success ws-complete" data-id="' + em.id + '">Complete</button>'
+      );
+    }
+    if (stage !== "terminal") {
+      if (phone) {
+        actions.push(
+          '<a class="hcc-btn hcc-btn-ghost" href="tel:' + esc(phone.replace(/\s/g, "")) + '">Call</a>'
+        );
+      } else {
+        actions.push('<button type="button" class="hcc-btn hcc-btn-ghost" disabled>Call</button>');
+      }
+    }
+    actions.push(
+      '<button type="button" class="hcc-btn hcc-btn-primary ws-chat" data-id="' + em.id + '">Chat</button>'
+    );
+
+    var ambHtml = "";
+    if (stage === "pending" || stage === "terminal") {
+      ambHtml =
+        stage === "terminal"
+          ? '<p class="hcc-muted">Case closed — ambulance assignment locked.</p>'
+          : '<p class="hcc-muted">Accept the case first, then assign an available ambulance.</p>';
+    } else if (em.assigned_ambulance_id) {
+      var unit =
+        state.ambulances.filter(function (a) {
+          return a.id === em.assigned_ambulance_id;
+        })[0] || null;
+      ambHtml =
+        '<div class="hcc-ws-amb">' +
+        '<div class="hcc-ws-amb-meta"><strong>' +
+        esc(em.assigned_ambulance_call_sign || (unit && unit.call_sign) || "Unit #" + em.assigned_ambulance_id) +
+        "</strong><em>" +
+        esc(em.assigned_ambulance_driver_name || (unit && unit.driver_name) || "Driver") +
+        " · " +
+        esc(em.assigned_ambulance_driver_phone || (unit && unit.driver_phone) || "—") +
+        "</em><em>Status: assigned to this case</em></div></div>";
+      if (stage === "accepted" || stage === "assigned") {
+        var changeUnits = availableUnits();
+        if (changeUnits.length) {
+          ambHtml +=
+            '<p class="hcc-ws-note">Change to another available unit if needed:</p><div class="hcc-ws-amb-list">' +
+            changeUnits
+              .map(function (u) {
+                return (
+                  '<div class="hcc-ws-amb"><div class="hcc-ws-amb-meta"><strong>' +
+                  esc(u.call_sign || "Unit") +
+                  "</strong><em>Available</em></div>" +
+                  '<button type="button" class="hcc-btn hcc-btn-ghost hcc-btn-sm ws-assign" data-id="' +
+                  em.id +
+                  '" data-aid="' +
+                  u.id +
+                  '">Assign</button></div>'
+                );
+              })
+              .join("") +
+            "</div>";
+        } else {
+          ambHtml +=
+            '<p class="hcc-ws-note">Only available units can replace this assignment. No other available units right now.</p>';
+        }
+      }
+    } else {
+      var units = availableUnits();
+      if (!units.length) {
+        ambHtml = '<p class="hcc-muted">No available ambulances. Free a busy unit or add a new one.</p>';
+      } else {
+        ambHtml =
+          '<div class="hcc-ws-amb-list">' +
+          units
+            .map(function (u) {
+              var d = haversineKm(
+                u.latitude != null ? u.latitude : hospital().latitude,
+                u.longitude != null ? u.longitude : hospital().longitude,
+                em.latitude,
+                em.longitude
+              );
+              return (
+                '<div class="hcc-ws-amb" data-ws-amb="' +
+                u.id +
+                '">' +
+                '<div class="hcc-ws-amb-meta"><strong>' +
+                esc(u.call_sign || "Unit") +
+                '</strong><em>' +
+                esc(u.driver_name || "Driver") +
+                " · " +
+                esc(u.driver_phone || "—") +
+                "</em><em>Available" +
+                (d != null ? " · " + d.toFixed(1) + " km" : "") +
+                "</em></div>" +
+                '<button type="button" class="hcc-btn hcc-btn-success hcc-btn-sm ws-assign" data-id="' +
+                em.id +
+                '" data-aid="' +
+                u.id +
+                '">Assign</button></div>'
+              );
+            })
+            .join("") +
+          "</div>";
+      }
+    }
+
+    var life = wsLifeSteps(em);
+    var lifeHtml =
+      '<ol class="hcc-ws-life">' +
+      life
+        .map(function (s) {
+          var cls = s.done ? "is-done" : s.current ? "is-current" : "";
+          return (
+            '<li class="' +
+            cls +
+            '">' +
+            esc(s.label) +
+            (s.ts ? "<time>" + esc(formatTime(s.ts)) + "</time>" : "<time>Pending</time>") +
+            "</li>"
+          );
+        })
+        .join("") +
+      "</ol>";
+
+    var detailsNotes = (em.notes || em.description || "").toString().trim();
+    body.innerHTML =
+      '<div class="hcc-ws-section">' +
+      '<div class="hcc-ws-header-meta">' +
+      "<strong>#" +
+      esc(em.id) +
+      " · " +
+      esc(typeLabel(em)) +
+      "</strong>" +
+      '<span class="hcc-badge ' +
+      (stage === "terminal" ? "hcc-badge-ok" : "hcc-badge-active") +
+      '">' +
+      esc(st) +
+      "</span>" +
+      '<span class="hcc-prio-' +
+      (prio === "high" ? "high" : prio === "med" ? "med" : "low") +
+      '">' +
+      esc(priorityLabel(prio)) +
+      "</span>" +
+      '<span class="hcc-ws-elapsed" id="hcc-ws-elapsed">' +
+      esc(wsElapsedLive(em.timestamp)) +
+      "</span></div>" +
+      "<p class=\"hcc-muted\">Received " +
+      esc(formatTime(em.timestamp) || "—") +
+      "</p></div>" +
+      '<div class="hcc-ws-section"><h3>Citizen</h3><div class="hcc-ws-grid">' +
+      '<div class="hcc-ws-field"><span>Name</span><strong>' +
+      esc(citizen.name) +
+      "</strong></div>" +
+      '<div class="hcc-ws-field"><span>Phone</span><strong>' +
+      esc(citizen.phone) +
+      "</strong></div>" +
+      '<div class="hcc-ws-field"><span>Citizen ID</span><strong>' +
+      esc(em.user_id != null ? em.user_id : "—") +
+      "</strong></div>" +
+      '<div class="hcc-ws-field"><span>GPS</span><strong>' +
+      esc(gps) +
+      "</strong></div>" +
+      '<div class="hcc-ws-field hcc-ws-field-wide"><span>Location</span><strong>' +
+      esc(citizen.location) +
+      "</strong></div></div></div>" +
+      '<div class="hcc-ws-section"><h3>Details</h3><div class="hcc-ws-grid">' +
+      '<div class="hcc-ws-field"><span>Type</span><strong>' +
+      esc(typeLabel(em)) +
+      "</strong></div>" +
+      '<div class="hcc-ws-field"><span>Status</span><strong>' +
+      esc(st) +
+      "</strong></div>" +
+      '<div class="hcc-ws-field hcc-ws-field-wide"><span>Notes</span><strong>' +
+      esc(detailsNotes || "—") +
+      "</strong></div></div></div>" +
+      '<div class="hcc-ws-section"><h3>Lifecycle actions</h3><div class="hcc-ws-actions">' +
+      actions.join("") +
+      "</div>" +
+      (stage === "accepted"
+        ? '<p class="hcc-ws-note">Assign an available ambulance before marking En Route.</p>'
+        : "") +
+      "</div>" +
+      '<div class="hcc-ws-section"><h3>Ambulance assignment</h3>' +
+      ambHtml +
+      "</div>" +
+      '<div class="hcc-ws-section"><h3>Status timeline</h3>' +
+      lifeHtml +
+      "</div>" +
+      '<p class="hcc-muted">Map focus follows this case (queue + Leaflet unchanged).</p>';
+
+    bindWorkspaceActions(body, em);
+  }
+
+  function bindWorkspaceActions(root, em) {
+    if (!root || !em) return;
+    root.querySelectorAll(".ws-accept").forEach(function (b) {
+      b.onclick = function () {
+        b.disabled = true;
+        api("/api/hospital/request/" + em.id + "/accept", { method: "POST", body: {} })
+          .then(function (r) {
+            if (r && r.success === false) {
+              alert(r.message || "Accept failed");
+              b.disabled = false;
+              return;
+            }
+            state.selectedId = em.id;
+            state.workspaceClosed = false;
+            afterAcceptOpenChat(em.id);
+            return loadAll();
+          })
+          .catch(function () {
+            b.disabled = false;
+          });
+      };
+    });
+    root.querySelectorAll(".ws-reject").forEach(function (b) {
+      b.onclick = function () {
+        b.disabled = true;
+        api("/api/hospital/request/" + em.id + "/reject", { method: "POST", body: {} })
+          .then(function () {
+            return loadAll();
+          })
+          .catch(function () {
+            b.disabled = false;
+          });
+      };
+    });
+    root.querySelectorAll(".ws-assign-open").forEach(function (b) {
+      b.onclick = function () {
+        openAssignModal(em.id, "assign");
+      };
+    });
+    root.querySelectorAll(".ws-assign").forEach(function (b) {
+      b.onclick = function () {
+        var aid = parseInt(b.getAttribute("data-aid"), 10);
+        b.disabled = true;
+        api("/api/hospital/request/" + em.id + "/assign-ambulance", {
+          method: "POST",
+          body: { ambulance_unit_id: aid },
+        }).then(function (r) {
+          if (r && r.success === false) {
+            alert(r.message || "Assign failed");
+            b.disabled = false;
+            return;
+          }
+          return loadAll();
+        });
+      };
+    });
+    root.querySelectorAll(".ws-enroute").forEach(function (b) {
+      b.onclick = function () {
+        b.disabled = true;
+        api("/api/emergencies/" + em.id + "/responder", {
+          method: "POST",
+          body: { action: "en_route" },
+        }).then(function (r) {
+          if (r && r.success === false) {
+            alert(r.message || "En Route failed");
+            b.disabled = false;
+            return;
+          }
+          return loadAll();
+        });
+      };
+    });
+    root.querySelectorAll(".ws-arrived").forEach(function (b) {
+      b.onclick = function () {
+        b.disabled = true;
+        api("/api/emergencies/" + em.id + "/responder", {
+          method: "POST",
+          body: { action: "arrived_at_scene" },
+        }).then(function (r) {
+          if (r && r.success === false) {
+            alert(r.message || "Arrived failed");
+            b.disabled = false;
+            return;
+          }
+          return loadAll();
+        });
+      };
+    });
+    root.querySelectorAll(".ws-complete").forEach(function (b) {
+      b.onclick = function () {
+        b.disabled = true;
+        api("/api/emergencies/" + em.id + "/responder", {
+          method: "POST",
+          body: { action: "reached_victim" },
+        }).then(function (r) {
+          if (r && r.success === false) {
+            alert(r.message || "Complete failed");
+            b.disabled = false;
+            return;
+          }
+          return loadAll();
+        });
+      };
+    });
+    root.querySelectorAll(".ws-chat").forEach(function (b) {
+      b.onclick = function () {
+        openCaseChat(em.id);
+      };
+    });
+  }
+
   /* ---------- Suggestion + Timeline ---------- */
   function renderSuggestion() {
     var el = $("suggest-body");
@@ -1914,6 +2431,7 @@
       renderNotifs();
       renderSuggestion();
       renderTimeline();
+      renderWorkspace();
       renderMap(!state.mapFitted);
       syncAmbMotion();
       if ($("refresh-time")) {
@@ -2047,7 +2565,14 @@
         state.selectedId = id;
         renderChatCaseList();
         loadCaseChat();
+        renderWorkspace();
       });
+    }
+    if ($("btn-ws-close")) {
+      $("btn-ws-close").onclick = function () {
+        state.workspaceClosed = true;
+        setWorkspaceOpen(false);
+      };
     }
     function tickClock() {
       var el = $("hcc-clock");

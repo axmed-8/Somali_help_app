@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ hospital.name }} — Emergency Command</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/hospital_command.css') }}?v=hcc-cc1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/hospital_command.css') }}?v=hcc-313">
   {% include "_google_maps.html" %}
 </head>
 <body class="hcc-body">
@@ -35,12 +35,12 @@
           <span class="hcc-sys-ok"></span>
           <div>
             <strong>System Status</strong>
-            <em>All systems operational</em>
+            <em>Live operations desk</em>
           </div>
         </div>
         <p class="hcc-user-line">{{ user.name }}</p>
         <a href="{{ url_for('logout') }}" class="hcc-logout">Logout</a>
-        <p class="hcc-foot-brand">GurmadNet AI · Hospital Desk</p>
+        <p class="hcc-foot-brand">Somali Help App · Hospital Desk</p>
       </div>
     </aside>
 
@@ -72,7 +72,7 @@
       </header>
 
       <div class="hcc-content">
-        <!-- LIVE COMMAND DESK — mockup 3-column + bottom strip -->
+        <!-- LIVE COMMAND DESK — 3-column + bottom strip -->
         <section id="panel-live" class="hcc-panel">
           <div class="hcc-kpis">
             <article class="hcc-kpi hcc-kpi-red">
@@ -155,18 +155,31 @@
               <p class="hcc-map-eta" id="map-eta-line">Select a case to see route / ETA</p>
             </div>
 
-            <aside class="hcc-rail-stack">
-              <div class="hcc-card">
-                <div class="hcc-card-head"><h2>Notifications</h2></div>
-                <div id="notif-rail" class="hcc-notif-list"></div>
-              </div>
-              <div class="hcc-card hcc-suggest">
-                <div class="hcc-card-head">
-                  <h2>AI Recommendation</h2>
-                  <span class="hcc-pill-violet">Best match</span>
+            <aside class="hcc-rail-stack" id="hcc-rail-stack">
+              <!-- Sprint 3.1.2 — Operator Workspace (replaces rail when a case is open) -->
+              <div class="hcc-card hcc-workspace" id="hcc-workspace" data-sprint="3.1.2" hidden>
+                <div class="hcc-card-head hcc-ws-head">
+                  <h2>Operator Workspace</h2>
+                  <button type="button" class="hcc-btn hcc-btn-ghost hcc-btn-sm" id="btn-ws-close" title="Close workspace">Close</button>
                 </div>
-                <div id="suggest-body" class="hcc-suggest-body">
-                  <p class="hcc-muted">Select an emergency to get the nearest available ambulance.</p>
+                <div id="hcc-workspace-body" class="hcc-ws-body">
+                  <p class="hcc-muted">Select an emergency from the queue to open the operator workspace.</p>
+                </div>
+              </div>
+
+              <div class="hcc-rail-default" id="hcc-rail-default">
+                <div class="hcc-card">
+                  <div class="hcc-card-head"><h2>Notifications</h2></div>
+                  <div id="notif-rail" class="hcc-notif-list"></div>
+                </div>
+                <div class="hcc-card hcc-suggest">
+                  <div class="hcc-card-head">
+                    <h2>Nearest Unit</h2>
+                    <span class="hcc-pill-violet">Best match</span>
+                  </div>
+                  <div id="suggest-body" class="hcc-suggest-body">
+                    <p class="hcc-muted">Select an emergency to get the nearest available ambulance.</p>
+                  </div>
                 </div>
               </div>
             </aside>
@@ -485,6 +498,6 @@
     var HOSPITAL_DATA = {{ hospital|tojson }};
     var HCC_REFRESH_MS = {{ (settings.refresh_interval|default(5)) * 1000 }};
   </script>
-  <script src="{{ url_for('static', filename='js/hospital_command.js') }}?v=hcc-cc1"></script>
+  <script src="{{ url_for('static', filename='js/hospital_command.js') }}?v=hcc-313"></script>
 </body>
 </html>

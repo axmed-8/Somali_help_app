@@ -41,7 +41,37 @@
     profile: document.getElementById("page-profile")
   };
 
-  function showPage(name) {
+  var syncingRoute = false;
+  var PAGE_HASH = {
+    home: "",
+    type: "#type",
+    location: "#location",
+    map: "#map",
+    hospitals: "#hospitals",
+    status: "#status",
+    profile: "#profile",
+  };
+
+  function persistCitizenRoute(name) {
+    try {
+      sessionStorage.setItem("cit_page", name);
+      if (selectedType) sessionStorage.setItem("cit_type", selectedType);
+    } catch (e) {}
+    var want = PAGE_HASH[name];
+    if (want == null) return;
+    var cur = (location.hash || "").toLowerCase();
+    var next = (want || "").toLowerCase();
+    if (cur === next) return;
+    syncingRoute = true;
+    try {
+      var base = location.pathname + location.search;
+      history.replaceState(null, "", next ? base + want : base);
+    } catch (e) {}
+    syncingRoute = false;
+  }
+
+  function showPage(name, opts) {
+    opts = opts || {};
     Object.keys(pages).forEach(function (k) {
       if (pages[k]) pages[k].classList.toggle("active", k === name);
     });
@@ -55,6 +85,17 @@
         (nav === "type" && (name === "type" || name === "location"));
       btn.classList.toggle("active", !!active);
     });
+    // New page at top — no scroll-into-section behavior
+    try {
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+      var shell = document.querySelector(".cit-shell");
+      if (shell) shell.scrollTop = 0;
+      Object.keys(pages).forEach(function (k) {
+        if (pages[k]) pages[k].scrollTop = 0;
+      });
+    } catch (e) {}
+    if (!opts.fromRoute) persistCitizenRoute(name);
     if (name === "home") {
       if (pageWatchStop) { pageWatchStop(); pageWatchStop = null; }
       loadRecent();
@@ -68,6 +109,11 @@
       loadProfile();
     } else if (name === "status") {
       ensureStatusView();
+    } else if (name === "location") {
+      var label = TYPE_LABELS[selectedType] || String(selectedType || "medical").replace(/_/g, " ");
+      var heading = document.getElementById("location-heading");
+      if (heading) heading.textContent = "Xaqiiji goobtaada — " + label;
+      fetchLocation();
     }
   }
 
@@ -119,7 +165,7 @@
     if (userCoords.lat != null && userCoords.lng != null) {
       setHomeLocState(
         "active",
-        "Goobtu waa diyaar",
+        "GPS-kaaga waa la helay",
         locationLabel || (userCoords.lat.toFixed(4) + ", " + userCoords.lng.toFixed(4))
       );
       return;
@@ -130,27 +176,69 @@
         userCoords.lng = r.lng;
         locationLabel = r.district || EmergencyLocation.getDistrictName(r.lat, r.lng);
         if (r.accuracy != null) lastAccuracy = r.accuracy;
-        setHomeLocState("active", "Goobtu waa diyaar", locationLabel || "GPS ready");
+        setHomeLocState("active", "GPS-kaaga waa la helay", locationLabel || "Location Active");
       })
       .catch(function () {
-        setHomeLocState("denied", "Oggolow goobta", "Fur GPS si SOS sax ah");
+        setHomeLocState("denied", "Location required", "Fur GPS si SOS sax ah");
       });
+  }
+
+  function looksLikeCoords(text) {
+    return /^\s*-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?\s*$/.test(String(text || ""));
+  }
+
+  function formatGpsClock(d) {
+    try {
+      return (d || new Date()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    } catch (e) {
+      return "—";
+    }
+  }
+
+  function updateLocMapsLink() {
+    var btn = document.getElementById("btn-open-maps-loc");
+    if (!btn || userCoords.lat == null || userCoords.lng == null) return;
+    btn.href =
+      "https://www.google.com/maps/search/?api=1&query=" +
+      encodeURIComponent(userCoords.lat + "," + userCoords.lng);
   }
 
   function applyLocation(result) {
     userCoords.lat = result.lat;
     userCoords.lng = result.lng;
     locationLabel = result.district || EmergencyLocation.getDistrictName(result.lat, result.lng);
-    if (result.accuracy != null) {
-      lastAccuracy = result.accuracy;
-      var acc = document.getElementById("location-accuracy");
-      if (acc) { acc.classList.remove("hidden"); acc.textContent = "GPS accuracy: ±" + Math.round(result.accuracy) + "m"; }
-    }
+    if (result.accuracy != null) lastAccuracy = result.accuracy;
     var statusEl = document.getElementById("location-status");
     var coordsEl = document.getElementById("location-coords");
-  if (statusEl) { statusEl.textContent = "✓ Goobtu waa diyaar: " + locationLabel; statusEl.classList.add("ready"); }
-    if (coordsEl) coordsEl.textContent = userCoords.lat.toFixed(5) + ", " + userCoords.lng.toFixed(5);
-    EmergencyLocation.initMapProvider("user-location-map", userCoords.lat, userCoords.lng, { label: locationLabel, zoom: 15 });
+    var accEl = document.getElementById("location-accuracy");
+    var timeEl = document.getElementById("location-last-update");
+    var displayLabel = locationLabel;
+    if (!displayLabel || looksLikeCoords(displayLabel)) displayLabel = "Resolving address…";
+    if (statusEl) {
+      statusEl.textContent = "✓ Goobtu waa diyaar";
+      statusEl.classList.add("ready");
+    }
+    if (coordsEl) coordsEl.textContent = displayLabel;
+    if (timeEl) timeEl.textContent = formatGpsClock(new Date());
+    if (accEl) {
+      accEl.textContent =
+        result.accuracy != null && !isNaN(result.accuracy)
+          ? "±" + Math.round(result.accuracy) + " m"
+          : "—";
+    }
+    updateLocMapsLink();
+    if (EmergencyLocation.reverseGeocode) {
+      EmergencyLocation.reverseGeocode(result.lat, result.lng).then(function (label) {
+        if (!label || looksLikeCoords(label)) return;
+        locationLabel = label;
+        if (coordsEl) coordsEl.textContent = label;
+        setHomeLocState("active", "Location active", label);
+      }).catch(function () {});
+    }
+    EmergencyLocation.initMapProvider("user-location-map", userCoords.lat, userCoords.lng, {
+      label: locationLabel,
+      zoom: 15
+    });
     var btn = document.getElementById("btn-send-alert");
     if (btn) btn.disabled = false;
     setHomeLocState("active", "Location active", locationLabel || "GPS ready");
@@ -182,11 +270,10 @@
 
   function startTypeFlow(type) {
     selectedType = type || "medical";
+    try {
+      sessionStorage.setItem("cit_type", selectedType);
+    } catch (e) {}
     showPage("location");
-    var label = TYPE_LABELS[selectedType] || selectedType.replace(/_/g, " ");
-    var heading = document.getElementById("location-heading");
-    if (heading) heading.textContent = "Xaqiiji goobtaada — " + label;
-    fetchLocation();
   }
 
   function beginLiveTracking(eid) {
@@ -196,6 +283,14 @@
     EmergencyLocation.startEmergencyTracking(eid, function (fix) {
       EmergencyLocation.updateLiveMarker("status-map", fix.lat, fix.lng);
     });
+  }
+
+  function stopLiveTrackingUi() {
+    var badge = document.getElementById("status-live-badge");
+    if (badge) badge.classList.add("hidden");
+    if (EmergencyLocation && EmergencyLocation.stopEmergencyTracking) {
+      EmergencyLocation.stopEmergencyTracking();
+    }
   }
 
   function calmStatusLabel(raw) {
@@ -208,10 +303,140 @@
     return (raw || "Updating…").toString().replace(/_/g, " ");
   }
 
+  function emergencyUiState(r) {
+    if (!r) return "idle";
+    var st = String(r.status || "").toLowerCase();
+    var stage = String(r.display_stage || "").toLowerCase();
+    if (st === "cancelled" || stage === "cancelled") return "cancelled";
+    if (st === "completed" || st === "resolved" || stage === "completed") return "completed";
+    if (
+      st === "rejected_by_hospital" ||
+      st === "rejected" ||
+      st === "no_hospital_available" ||
+      st === "no_responder_available" ||
+      st === "timeout" ||
+      stage === "no_facility" ||
+      stage === "no_responder" ||
+      stage === "timeout" ||
+      stage === "rejected"
+    ) {
+      return "rejected";
+    }
+    return "active";
+  }
+
+  function setEmergencyChrome(state) {
+    var showLive = state === "active";
+    var mapEl = document.getElementById("status-map");
+    var chatBox = document.getElementById("chat-box");
+    var badge = document.getElementById("status-live-badge");
+    var tracker = document.getElementById("status-live-tracker-link");
+    var backBtn = document.getElementById("btn-back-home-4");
+    if (mapEl) mapEl.classList.toggle("hidden", !showLive);
+    if (chatBox) chatBox.classList.toggle("hidden", !showLive);
+    if (tracker) tracker.classList.toggle("hidden", !showLive);
+    if (badge && !showLive) badge.classList.add("hidden");
+    if (backBtn) backBtn.classList.toggle("hidden", state === "cancelled" || state === "completed");
+    if (!showLive) stopLiveTrackingUi();
+  }
+
+  function hospitalNameFrom(r) {
+    var hosp = r.hospital || r.recommended_hospital || {};
+    return hosp.name || r.assigned_hospital_name || "Nearest hospital";
+  }
+
+  function responseTimeLabel(r) {
+    var start = r.timestamp || (r.status_history && r.status_history[0] && r.status_history[0].timestamp);
+    var end = null;
+    (r.status_history || []).forEach(function (s) {
+      var st = String(s.status || "").toLowerCase();
+      if (st === "completed" || st === "resolved") end = s.timestamp || end;
+    });
+    if (!start || !end) return "—";
+    try {
+      var ms = new Date(end).getTime() - new Date(start).getTime();
+      if (!(ms >= 0)) return "—";
+      var mins = Math.round(ms / 60000);
+      if (mins < 1) return "< 1 min";
+      if (mins < 60) return mins + " min";
+      var h = Math.floor(mins / 60);
+      var m = mins % 60;
+      return h + "h " + m + "m";
+    } catch (e) {
+      return "—";
+    }
+  }
+
+  function bindStatusActions(root) {
+    if (!root) return;
+    root.querySelectorAll("[data-status-action]").forEach(function (btn) {
+      btn.onclick = function () {
+        var action = btn.getAttribute("data-status-action");
+        if (action === "home") showPage("home");
+        else if (action === "report") showPage("type");
+        else if (action === "call-center") initiateCallCenter();
+        else if (action === "retry") showPage("type");
+        else if (action === "rate") {
+          var box = root.querySelector(".cit-rate-box");
+          if (box) {
+            box.innerHTML = "<p class='cit-rate-thanks'>Thank you for your feedback.</p>";
+          }
+        }
+      };
+    });
+    root.querySelectorAll("[data-rate-star]").forEach(function (star) {
+      star.onclick = function () {
+        var n = parseInt(star.getAttribute("data-rate-star"), 10) || 0;
+        root.querySelectorAll("[data-rate-star]").forEach(function (s) {
+          var v = parseInt(s.getAttribute("data-rate-star"), 10) || 0;
+          s.classList.toggle("is-on", v <= n);
+        });
+      };
+    });
+  }
+
+  function renderTimelineHtml(r) {
+    var steps = r.timeline || r.progress || [];
+    if (steps.length) {
+      return (
+        "<ul class='status-timeline cit-em-timeline'>" +
+        steps.map(function (s) {
+          var mark = s.completed || s.current ? "✓" : "·";
+          var cls = "cit-em-tl";
+          if (s.completed) cls += " done";
+          if (s.current) cls += " current";
+          return (
+            "<li class='" + cls + "'>" +
+              "<span>" + mark + "</span>" +
+              "<strong>" + escapeHtml(s.label || s.key || "") + "</strong>" +
+              "<em>" + escapeHtml(s.timestamp ? formatTime(s.timestamp) : (s.current ? "Now" : "")) + "</em>" +
+            "</li>"
+          );
+        }).join("") +
+        "</ul>"
+      );
+    }
+    return (
+      "<ul class='status-timeline'>" +
+      (r.status_history || []).slice(-8).map(function (s) {
+        return (
+          "<li>" +
+          escapeHtml(formatTime(s.timestamp) || s.timestamp || "") +
+          " — " +
+          escapeHtml(String(s.status || "").replace(/_/g, " ")) +
+          (s.note ? " · " + escapeHtml(s.note) : "") +
+          "</li>"
+        );
+      }).join("") +
+      "</ul>"
+    );
+  }
+
   function renderStatus(data) {
     var panel = document.getElementById("status-panel");
     if (!panel) return;
-    if (!data.active || !data.request) {
+    if (!data.request) {
+      setEmergencyChrome("idle");
       panel.innerHTML =
         "<div class='cit-status-empty'>" +
           "<strong>No active emergency</strong>" +
@@ -222,25 +447,113 @@
       if (go) go.onclick = function () { showPage("type"); };
       return;
     }
+
     var r = data.request;
+    var state = emergencyUiState(r);
+    setEmergencyChrome(state);
+
+    if (state === "completed") {
+      panel.innerHTML =
+        "<div class='cit-em-state cit-em-completed'>" +
+          "<div class='cit-em-safe-icon' aria-hidden='true'>✓</div>" +
+          "<h3>You are Safe</h3>" +
+          "<p class='cit-em-state-lead'>Emergency Completed</p>" +
+          "<div class='cit-em-info-row'><em>Hospital</em><strong>" + escapeHtml(hospitalNameFrom(r)) + "</strong></div>" +
+          "<div class='cit-em-info-row'><em>Response Time</em><strong>" + escapeHtml(responseTimeLabel(r)) + "</strong></div>" +
+          "<p class='cit-em-thanks'>Thank you for using Somali Help App.</p>" +
+          "<div class='cit-rate-box'>" +
+            "<p class='cit-rate-label'>Rate Experience</p>" +
+            "<div class='cit-rate-stars' aria-label='Rate experience'>" +
+              [1, 2, 3, 4, 5].map(function (n) {
+                return "<button type='button' class='cit-rate-star' data-rate-star='" + n + "' aria-label='" + n + " stars'>★</button>";
+              }).join("") +
+            "</div>" +
+            "<button type='button' class='btn-primary cit-send' data-status-action='rate'>Submit rating</button>" +
+          "</div>" +
+          "<button type='button' class='cit-ghost-btn' data-status-action='home'>← Back Home</button>" +
+        "</div>";
+      bindStatusActions(panel);
+      return;
+    }
+
+    if (state === "rejected") {
+      var searching = String(r.status || "").toLowerCase() !== "no_hospital_available" &&
+        String(r.status || "").toLowerCase() !== "no_responder_available" &&
+        String(r.status || "").toLowerCase() !== "timeout" &&
+        String(r.status || "").toLowerCase() !== "rejected" &&
+        String(r.display_stage || "").toLowerCase() !== "no_facility" &&
+        String(r.display_stage || "").toLowerCase() !== "no_responder" &&
+        String(r.display_stage || "").toLowerCase() !== "timeout" &&
+        String(r.display_stage || "").toLowerCase() !== "rejected";
+      panel.innerHTML =
+        "<div class='cit-em-state cit-em-rejected'>" +
+          "<h3>Hospital could not accept your request</h3>" +
+          "<p class='cit-em-state-lead'>" +
+            (searching
+              ? "Searching for another hospital…"
+              : "No hospital is available right now.") +
+          "</p>" +
+          "<p class='cit-status-ref'>Ref #" + escapeHtml(r.id) + "</p>" +
+          "<div class='cit-em-actions'>" +
+            "<button type='button' class='btn-primary cit-send' data-status-action='call-center'>Call Center</button>" +
+            "<button type='button' class='cit-ghost-btn' data-status-action='retry'>Retry</button>" +
+          "</div>" +
+        "</div>";
+      bindStatusActions(panel);
+      return;
+    }
+
+    if (state === "cancelled") {
+      panel.innerHTML =
+        "<div class='cit-em-state cit-em-cancelled'>" +
+          "<h3>Emergency Cancelled</h3>" +
+          "<p class='cit-em-state-lead'>This request was cancelled. If you still need help, you can report a new emergency.</p>" +
+          "<div class='cit-em-actions'>" +
+            "<button type='button' class='btn-primary cit-send' data-status-action='report'>Report New Emergency</button>" +
+            "<button type='button' class='cit-ghost-btn' data-status-action='home'>← Back Home</button>" +
+          "</div>" +
+        "</div>";
+      bindStatusActions(panel);
+      return;
+    }
+
+    /* ACTIVE */
     var calm = calmStatusLabel(r.display_stage_label || r.status);
-    var team = r.team_label || r.assigned_hospital_name || "Emergency Response Team";
+    var eta =
+      r.eta_minutes != null && !isNaN(Number(r.eta_minutes))
+        ? "~" + Number(r.eta_minutes) + " min"
+        : "Calculating…";
+    var dist =
+      r.distance_km != null && !isNaN(Number(r.distance_km))
+        ? formatDist(r.distance_km)
+        : "—";
+
     panel.innerHTML =
-      "<div class='cit-status-card'>" +
+      "<div class='cit-em-hero cit-status-card'>" +
         "<div class='status-badge-live cit-status-badge'>" + escapeHtml(calm) + "</div>" +
-        "<p class='cit-status-ref'>Ref #" + escapeHtml(r.id) + " · " + escapeHtml(TYPE_LABELS[r.type] || r.type || "emergency") + "</p>" +
-        "<p class='status-team'><strong>" + escapeHtml(team) + "</strong></p>" +
-        "<p class='cit-status-loc'>" + escapeHtml(r.location || "Your shared GPS") + "</p>" +
-        (r.tracking_active ? "<p class='live-gps-badge'>● Live location sharing active</p>" : "") +
+        "<p class='cit-status-ref'>Ref #" + escapeHtml(r.id) +
+          " · " + escapeHtml(TYPE_LABELS[r.type] || r.type || "emergency") + "</p>" +
         "<p class='cit-status-breathe'>Breathe. Keep your phone nearby. Help is being coordinated.</p>" +
       "</div>" +
-      "<ul class='status-timeline'>" +
-      (r.status_history || []).slice(-8).map(function (s) {
-        return "<li>" + escapeHtml(s.timestamp) + " — " + escapeHtml(String(s.status || "").replace(/_/g, " ")) +
-          (s.note ? " · " + escapeHtml(s.note) : "") + "</li>";
-      }).join("") + "</ul>";
+      "<div class='cit-em-trip'>" +
+        "<div class='cit-em-info-row'><em>Hospital</em><strong>" + escapeHtml(hospitalNameFrom(r)) + "</strong></div>" +
+        "<div class='cit-em-info-row'><em>ETA</em><strong>" + escapeHtml(eta) + "</strong><small>" + escapeHtml(dist) + "</small></div>" +
+      "</div>" +
+      "<h4 class='cit-em-section'>Timeline</h4>" +
+      renderTimelineHtml(r);
+
+    if (r.tracking_active) {
+      var badge = document.getElementById("status-live-badge");
+      if (badge) badge.classList.remove("hidden");
+    }
     if (r.latitude && r.longitude) {
-      EmergencyLocation.initMapProvider("status-map", r.latitude, r.longitude, { zoom: 15, label: "Your location" });
+      EmergencyLocation.initMapProvider("status-map", r.latitude, r.longitude, {
+        zoom: 15,
+        label: "Your location"
+      });
+    }
+    if (data.active) {
+      beginLiveTracking(r.id);
     }
     loadMessages();
   }
@@ -331,7 +644,6 @@
           activeRequestId = btn.getAttribute("data-recent-id");
           showPage("status");
           startStatusPolling();
-          beginLiveTracking(activeRequestId);
         };
       });
     }).catch(function () {});
@@ -340,20 +652,34 @@
   function checkActiveBanner() {
     api("/api/patient/request/status").then(function (data) {
       var banner = document.getElementById("home-active-banner");
+      var idle = document.getElementById("home-idle-block");
       if (!banner) return;
       if (data.active && data.request) {
         activeRequestId = data.request.id;
+        var req = data.request;
+        var statusText = String(req.display_stage_label || req.status || "").replace(/_/g, " ");
         banner.classList.remove("hidden");
-        banner.innerHTML = "<strong>Active emergency #" + data.request.id + "</strong> — " +
-          (data.request.status || "").replace(/_/g, " ") +
-          " <button type='button' id='btn-view-active'>View status</button>";
-        document.getElementById("btn-view-active").onclick = function () {
-          showPage("status");
-          startStatusPolling();
-          beginLiveTracking(activeRequestId);
-        };
+        if (idle) idle.classList.add("hidden");
+        banner.innerHTML =
+          "<div class='cit-active-card'>" +
+            "<p class='cit-active-kicker'>Active Emergency</p>" +
+            "<h2>#" + escapeHtml(req.id) + "</h2>" +
+            "<p class='cit-active-status'>" + escapeHtml(statusText) + "</p>" +
+            "<button type='button' class='btn-primary cit-send' id='btn-view-active'>View Status</button>" +
+            "<a class='cit-ghost-btn' href='/dashboard' id='btn-open-live-tracker'>Live Tracking</a>" +
+          "</div>";
+        var viewBtn = document.getElementById("btn-view-active");
+        if (viewBtn) {
+          viewBtn.onclick = function () {
+            showPage("status");
+            startStatusPolling();
+            beginLiveTracking(activeRequestId);
+          };
+        }
       } else {
         banner.classList.add("hidden");
+        banner.innerHTML = "";
+        if (idle) idle.classList.remove("hidden");
       }
     });
   }
@@ -875,6 +1201,11 @@
     };
   }
 
+  var topProfile = document.getElementById("btn-top-profile");
+  if (topProfile) {
+    topProfile.onclick = function () { showPage("profile"); };
+  }
+
   var callCenterBtn = document.getElementById("btn-call-center");
   if (callCenterBtn) callCenterBtn.onclick = initiateCallCenter;
 
@@ -894,7 +1225,7 @@
   var backHome1 = document.getElementById("btn-back-home-1");
   if (backHome1) backHome1.onclick = function () { showPage("home"); };
   var backType = document.getElementById("btn-back-type");
-  if (backType) backType.onclick = function () { showPage("type"); };
+  if (backType) backType.onclick = function () { showPage("home"); };
   var backHome4 = document.getElementById("btn-back-home-4");
   if (backHome4) {
     backHome4.onclick = function () {
@@ -1101,22 +1432,43 @@
   refreshHomeLocationCard();
 
   function applyHashRoute() {
+    if (syncingRoute) return;
     var hash = (location.hash || "").toLowerCase();
+    var target = "";
+
     if (hash === "#type" || hash === "#emergency" || hash === "#report" || hash === "#sos") {
-      showPage("type");
-      return;
+      target = "type";
+    } else if (hash === "#location") {
+      target = "location";
+    } else if (hash === "#map") {
+      target = "map";
+    } else if (hash === "#hospitals") {
+      target = "hospitals";
+    } else if (hash === "#profile") {
+      target = "profile";
+    } else if (hash === "#status" || hash === "#alerts") {
+      target = "status";
+    } else if (hash === "#call-center") {
+      target = "home";
+    } else if (!hash) {
+      // Refresh: restore last step (e.g. type / location) instead of always Home
+      try {
+        var saved = sessionStorage.getItem("cit_page") || "";
+        if (saved && pages[saved]) target = saved;
+      } catch (e) {}
     }
-    if (hash === "#map") { showPage("map"); return; }
-    if (hash === "#hospitals") { showPage("hospitals"); return; }
-    if (hash === "#profile") { showPage("profile"); return; }
-    if (hash === "#status" || hash === "#alerts") { showPage("status"); return; }
-    if (hash === "#call-center") {
-      showPage("home");
-      var ccBtn = document.getElementById("btn-call-center");
-      var ccWrap = document.getElementById("call-center");
-      if (ccWrap && ccWrap.scrollIntoView) ccWrap.scrollIntoView({ behavior: "smooth", block: "center" });
-      if (ccBtn) setTimeout(function () { ccBtn.focus(); }, 200);
+
+    if (!target || !pages[target]) return;
+
+    if (target === "location") {
+      try {
+        var t = sessionStorage.getItem("cit_type");
+        if (t) selectedType = t;
+      } catch (e) {}
     }
+
+    showPage(target, { fromRoute: true });
+    persistCitizenRoute(target);
   }
   applyHashRoute();
   window.addEventListener("hashchange", applyHashRoute);

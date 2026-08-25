@@ -426,17 +426,19 @@ body {
 }
 
 .pin-dot {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   border: 3px solid #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 12px;
-  font-weight: bold;
+  font-weight: 800;
   color: #fff;
+  position: relative;
+  overflow: visible;
 }
 
 .pin-blue {
@@ -444,25 +446,70 @@ body {
 }
 
 .pin-user {
+  width: 26px;
+  height: 26px;
   background: #c62828;
+  box-shadow:
+    0 0 0 4px rgba(198, 40, 40, 0.28),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+  font-size: 0;
+}
+
+.pin-user .pin-label,
+.pin-label-dest,
+.pin-label-team {
+  position: absolute;
+  left: 50%;
+  top: auto;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  background: #1a0b24;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  z-index: 4;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+}
+
+.pin-label-dest {
+  background: #0d47a1;
+}
+
+.pin-label-team {
+  background: #1b5e20;
 }
 
 .pin-emergency {
   background: #ff6f00;
   font-size: 14px;
   font-weight: 700;
+  box-shadow:
+    0 0 0 3px rgba(255, 111, 0, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .pin-hospital {
   background: #1565c0;
   font-size: 14px;
   font-weight: 700;
+  box-shadow:
+    0 0 0 3px rgba(21, 101, 192, 0.28),
+    0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .pin-ambulance {
   background: #2e7d32;
   font-size: 11px;
   font-weight: 700;
+  box-shadow:
+    0 0 0 3px rgba(46, 125, 50, 0.28),
+    0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .pin-police {
@@ -1768,7 +1815,8 @@ body {
   align-items: center;
   gap: 16px;
   width: 100%;
-  padding: 16px 20px;
+  height: auto;
+  padding: 20px 30px;
   background: #fff;
   border: 2px solid #e0e0e0;
   border-radius: 16px;

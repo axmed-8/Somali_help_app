@@ -28,9 +28,25 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("GURMADNET_DB", "json")
     monkeypatch.setenv("DATABASE_DIR", str(tmp_path))
     monkeypatch.setenv("ALLOW_TEST_EMAILS", "1")
+    # Drop live MySQL credentials so reload cannot attach to Railway during suite runs
+    for key in (
+        "MYSQL_HOST",
+        "MYSQL_USER",
+        "MYSQL_PASSWORD",
+        "MYSQL_DATABASE",
+        "DB_HOST",
+        "DB_USER",
+        "DB_PASSWORD",
+        "DB_NAME",
+        "DATABASE_URL",
+    ):
+        monkeypatch.delenv(key, raising=False)
+    import importlib
     import app as app_module
 
+    importlib.reload(app_module)
     app_module.DATABASE_DIR = str(tmp_path)
+    app_module.USE_MYSQL = False
     app_module.configure_hospital_db(str(tmp_path))
     app_module.app.config["TESTING"] = True
     app_module.app.config["WTF_CSRF_ENABLED"] = False

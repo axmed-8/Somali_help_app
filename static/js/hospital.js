@@ -795,7 +795,7 @@ var HospitalApp = (function () {
     }
     if (wa) {
       var text = encodeURIComponent(
-        "GurmadNet Driver GPS link for " + (unitLabel || "ambulance") + ":\n" + (url || "")
+        "Driver GPS link for " + (unitLabel || "ambulance") + ":\n" + (url || "")
       );
       wa.href = url ? "https://wa.me/?text=" + text : "#";
     }
@@ -1127,7 +1127,7 @@ var HospitalApp = (function () {
         });
         tbody.querySelectorAll(".amb-del").forEach(function (b) {
           b.onclick = function () {
-            if (!confirm("Remove this ambulance from GurmadNet dispatch?")) return;
+            if (!confirm("Remove this ambulance from dispatch?")) return;
             apiAmb("/api/hospital/ambulances/" + b.getAttribute("data-id"), { method: "DELETE" }).then(
               function (r) {
                 if (r && r.success === false) {

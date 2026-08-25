@@ -1353,9 +1353,11 @@
       );
       setText(
         "ai-st-improve",
-        s.average_response_improvement != null
-          ? s.average_response_improvement + "%"
-          : "No data available"
+        s.approval_rate_pct != null
+          ? s.approval_rate_pct + "%"
+          : s.average_response_improvement != null
+            ? s.average_response_improvement + "%"
+            : "No data available"
       );
       setText(
         "ai-st-approved",
@@ -2026,13 +2028,16 @@
       payload.emergency_capacity = ($("rf-cap") && $("rf-cap").value) || 10;
       payload.ambulance_available = true;
       if (!payload.latitude || !payload.longitude) {
-        payload.latitude = 2.0469;
-        payload.longitude = 45.3182;
+        alert("Enter valid latitude and longitude for the hospital (map pin required).");
+        return;
+      }
+      if (!payload.phone || !String(payload.phone).trim()) {
+        alert("Enter a valid hospital phone number.");
+        return;
       }
       if (!payload.region) payload.region = "Banadir";
-      if (!payload.district) payload.district = payload.city || "Mogadishu";
-      if (!payload.address) payload.address = payload.city || "Mogadishu";
-      if (!payload.phone) payload.phone = "000000000";
+      if (!payload.district) payload.district = payload.city || "";
+      if (!payload.address) payload.address = payload.city || "";
       if (!hid) {
         payload.owner_name = ($("rf-owner-name") && $("rf-owner-name").value) || "";
         payload.owner_email = ($("rf-owner-email") && $("rf-owner-email").value) || "";
@@ -2270,7 +2275,7 @@
               esc(a.driver_phone || "—") +
               "<br>GPS: " +
               esc(gps) +
-              "</p><p class=\"sac-hint\">Managed by the hospital — fleet records stay outside GurmadNet.</p><h4>History</h4>" +
+              "</p><p class=\"sac-hint\">Managed by the hospital — fleet records stay with the hospital.</p><h4>History</h4>" +
               historyHtml(d.history);
             openFacilityProfile(panel);
           });
@@ -3465,7 +3470,7 @@
     if (!d) return;
     var k = d.kpis || {};
     var lines = [
-      "GurmadNet AI — Executive Analytics",
+      "Somali Help App — Executive Analytics",
       "Range," + ((d.filters && d.filters.range_start) || "") + " - " + ((d.filters && d.filters.range_end) || ""),
       "Updated," + (d.updated_at || ""),
       "",

@@ -355,7 +355,7 @@ def register_admin_registry_routes(app, deps):
     # ---------- Ambulances (admin = read-only dispatch board; hospitals own units) ----------
     _AMB_HOSPITAL_OWNED = (
         "Hospitals manage their own ambulances. "
-        "GurmadNet only shows dispatch status (availability, GPS, driver contact)."
+        "Somali Help App only shows dispatch status (availability, GPS, driver contact)."
     )
 
     @app.route("/api/admin/ambulances", methods=["GET", "POST"])

@@ -1,0 +1,714 @@
+{
+  "generated_at": "2026-08-22 12:44:25",
+  "scenarios": {
+    "1_medical_complete": {
+      "title": "Medical accept → complete → Home",
+      "result": "PASS",
+      "assertions": [
+        "status == completed",
+        "tracking_active == False",
+        "active_emergency is null",
+        "history shows completed timeline"
+      ],
+      "database_status": {
+        "id": 1,
+        "type": "medical",
+        "status": "completed",
+        "tracking_active": false,
+        "assigned_to": "hospital",
+        "assigned_hospital_id": 1,
+        "assigned_hospital_name": "Hodan General Hospital",
+        "assigned_station_id": null,
+        "accepted_at": "2026-08-22 12:44:01",
+        "timestamp": "2026-08-22 12:44:00",
+        "status_history": [
+          {
+            "status": "pending_hospital",
+            "timestamp": "2026-08-22 12:44:00",
+            "note": "Nearest hospital: Hodan General Hospital (0.0 km)"
+          },
+          {
+            "status": "accepted",
+            "timestamp": "2026-08-22 12:44:01",
+            "note": "Hospital accepted request"
+          },
+          {
+            "status": "completed",
+            "timestamp": "2026-08-22 12:44:01",
+            "note": "Ambulance reached scene — case completed"
+          }
+        ],
+        "lifecycle_timeout": {},
+        "responder_status": {
+          "reached_victim": "2026-08-22 12:44:01"
+        }
+      },
+      "extra": {
+        "dashboard_active_emergency": null,
+        "history_entry": {
+          "id": 1,
+          "status": "completed",
+          "display_stage": "completed",
+          "display_stage_label": "Emergency completed"
+        }
+      }
+    },
+    "2_all_hospitals_reject": {
+      "title": "Medical — all hospitals reject",
+      "result": "PASS",
+      "assertions": [
+        "status == no_hospital_available",
+        "tracking_active == False",
+        "active_emergency is null",
+        "history updated with terminal status"
+      ],
+      "database_status": {
+        "id": 1,
+        "type": "medical",
+        "status": "no_hospital_available",
+        "tracking_active": false,
+        "assigned_to": "hospital",
+        "assigned_hospital_id": 1,
+        "assigned_hospital_name": "Hodan General Hospital",
+        "assigned_station_id": null,
+        "accepted_at": null,
+        "timestamp": "2026-08-22 12:44:02",
+        "status_history": [
+          {
+            "status": "pending_hospital",
+            "timestamp": "2026-08-22 12:44:02",
+            "note": "Nearest hospital: Hodan General Hospital (0.0 km)"
+          },
+          {
+            "status": "rejected_by_hospital",
+            "timestamp": "2026-08-22 12:44:02",
+            "note": "Hospital rejected — escalating"
+          },
+          {
+            "status": "no_hospital_available",
+            "timestamp": "2026-08-22 12:44:02",
+            "note": "No more hospitals"
+          }
+        ],
+        "lifecycle_timeout": {},
+        "responder_status": {}
+      },
+      "extra": {
+        "dashboard_active_emergency": null,
+        "history_entry": {
+          "id": 1,
+          "status": "no_hospital_available",
+          "display_stage": "no_facility"
+        }
+      }
+    },
+    "3_police_no_activity": {
+      "title": "Police accepted — no activity → remind/escalate/reassign/timeout",
+      "result": "PASS",
+      "assertions": [
+        "lifecycle_remind present",
+        "lifecycle_escalate present",
+        "reassign_or_terminal after sweep: status=pending",
+        "final status=timeout",
+        "active_emergency is null"
+      ],
+      "database_status": {
+        "id": 1,
+        "type": "security",
+        "status": "timeout",
+        "tracking_active": false,
+        "assigned_to": "police",
+        "assigned_hospital_id": null,
+        "assigned_hospital_name": "",
+        "assigned_station_id": 2,
+        "accepted_at": null,
+        "timestamp": "2026-08-22 10:44:03",
+        "status_history": [
+          {
+            "status": "pending",
+            "timestamp": "2026-08-22 12:34:03",
+            "note": "routed"
+          },
+          {
+            "status": "accepted",
+            "timestamp": "2026-08-22 12:34:03",
+            "note": "accepted"
+          },
+          {
+            "status": "lifecycle_remind",
+            "timestamp": "2026-08-22 12:44:03",
+            "note": "Responder reminded — no activity for 600s after acceptance"
+          },
+          {
+            "status": "lifecycle_escalate",
+            "timestamp": "2026-08-22 12:44:03",
+            "note": "Escalated — no responder activity for 600s after acceptance"
+          },
+          {
+            "status": "pending",
+            "timestamp": "2026-08-22 12:44:03",
+            "note": "Reassigned after inactivity — Waberi Police Station (2.11 km)"
+          },
+          {
+            "status": "lifecycle_reassign",
+            "timestamp": "2026-08-22 12:44:03",
+            "note": "Reassigned to Waberi Police Station after post-accept inactivity"
+          },
+          {
+            "status": "timeout",
+            "timestamp": "2026-08-22 12:44:03",
+            "note": "Auto-closed: absolute timeout after 2h active"
+          }
+        ],
+        "lifecycle_timeout": {},
+        "responder_status": {}
+      },
+      "extra": {
+        "after_reassign_sweep": {
+          "id": 1,
+          "type": "security",
+          "status": "pending",
+          "tracking_active": true,
+          "assigned_to": "police",
+          "assigned_hospital_id": null,
+          "assigned_hospital_name": "",
+          "assigned_station_id": 2,
+          "accepted_at": null,
+          "timestamp": "2026-08-22 12:34:03",
+          "status_history": [
+            {
+              "status": "pending",
+              "timestamp": "2026-08-22 12:34:03",
+              "note": "routed"
+            },
+            {
+              "status": "accepted",
+              "timestamp": "2026-08-22 12:34:03",
+              "note": "accepted"
+            },
+            {
+              "status": "lifecycle_remind",
+              "timestamp": "2026-08-22 12:44:03",
+              "note": "Responder reminded — no activity for 600s after acceptance"
+            },
+            {
+              "status": "lifecycle_escalate",
+              "timestamp": "2026-08-22 12:44:03",
+              "note": "Escalated — no responder activity for 600s after acceptance"
+            },
+            {
+              "status": "pending",
+              "timestamp": "2026-08-22 12:44:03",
+              "note": "Reassigned after inactivity — Waberi Police Station (2.11 km)"
+            },
+            {
+              "status": "lifecycle_reassign",
+              "timestamp": "2026-08-22 12:44:03",
+              "note": "Reassigned to Waberi Police Station after post-accept inactivity"
+            }
+          ],
+          "lifecycle_timeout": {},
+          "responder_status": {}
+        },
+        "dashboard_active_emergency": null
+      }
+    },
+    "4_fire_never_accepted": {
+      "title": "Fire never accepted → No Responder Available → Home",
+      "result": "PASS",
+      "assertions": [
+        "status == no_responder_available",
+        "tracking_active == False",
+        "active_emergency is null",
+        "history display_stage == no_responder"
+      ],
+      "database_status": {
+        "id": 1,
+        "type": "fire",
+        "status": "no_responder_available",
+        "tracking_active": false,
+        "assigned_to": "fire",
+        "assigned_hospital_id": null,
+        "assigned_hospital_name": "",
+        "assigned_station_id": 3,
+        "accepted_at": null,
+        "timestamp": "2026-07-01 10:00:00",
+        "status_history": [
+          {
+            "status": "pending",
+            "timestamp": "2026-07-01 10:00:00",
+            "note": "Nearest fire"
+          },
+          {
+            "status": "no_responder_available",
+            "timestamp": "2026-08-22 12:44:04",
+            "note": "Auto-closed: No Responder Available — fire desk never accepted (stale 1250h)"
+          }
+        ],
+        "lifecycle_timeout": {},
+        "responder_status": {}
+      },
+      "extra": {
+        "dashboard_active_emergency": null,
+        "history_entry": {
+          "assigned_to": "fire",
+          "dispatch_unit": {
+            "contact_number": null,
+            "driver_name": null,
+            "team_id": null,
+            "team_name": "Banadir Fire Station",
+            "vehicle_number": null
+          },
+          "display_stage": "no_responder",
+          "display_stage_label": "No Responder Available",
+          "distance_km": 1.28,
+          "eta_minutes": 2,
+          "hospital": null,
+          "id": 1,
+          "last_update": "2026-07-01 10:00:00",
+          "latitude": 2.0469,
+          "location": null,
+          "longitude": 45.3182,
+          "progress": [
+            {
+              "completed": true,
+              "current": false,
+              "key": "submitted",
+              "label": "Request submitted",
+              "timestamp": "2026-07-01 10:00:00"
+            },
+            {
+              "completed": true,
+              "current": false,
+              "key": "finding_nearest",
+              "label": "Finding nearest hospital",
+              "timestamp": "2026-07-01 10:00:00"
+            },
+            {
+              "completed": true,
+              "current": false,
+              "key": "assigned",
+              "label": "Hospital received your request",
+              "timestamp": "2026-07-01 10:00:00"
+            },
+            {
+              "completed": false,
+              "current": false,
+              "key": "accepted",
+              "label": "Hospital accepted",
+              "timestamp": null
+            },
+            {
+              "completed": false,
+              "current": false,
+              "key": "responder_dispatched",
+              "label": "Ambulance dispatched",
+              "timestamp": null
+            },
+            {
+              "completed": false,
+              "current": false,
+              "key": "on_the_way",
+              "label": "Ambulance is on the way",
+              "timestamp": null
+            },
+            {
+              "completed": false,
+              "current": false,
+              "key": "arrived",
+              "label": "Ambulance arrived",
+              "timestamp": null
+            },
+            {
+              "completed": false,
+              "current": false,
+              "key": "completed",
+              "label": "Emergency completed",
+              "timestamp": null
+            },
+            {
+              "completed": true,
+              "current": false,
+              "key": "no_responder_available",
+              "label": "Auto-closed: No Responder Available — fire desk never accepted (stale 1250h)",
+              "timestamp": "2026-08-22 12:44:04"
+            }
+          ],
+          "responder_assigned": false,
+          "responder_status": {},
+          "status": "no_responder_available",
+          "team": "Fire & Rescue Team",
+          "timeline": [
+            {
+              "completed": true,
+              "key": "submitted",
+              "label": "Request submitted",
+              "timestamp": "2026-07-01 10:00:00"
+            },
+            {
+              "completed": true,
+              "key": "finding_nearest",
+              "label": "Finding nearest hospital",
+              "timestamp": "2026-07-01 10:00:00"
+            },
+            {
+              "completed": true,
+              "key": "assigned",
+              "label": "Hospital received your request",
+              "timestamp": "2026-07-01 10:00:00"
+            },
+            {
+              "completed": false,
+              "key": "accepted",
+              "label": "Hospital accepted",
+              "timestamp": null
+            },
+            {
+              "completed": false,
+              "key": "responder_dispatched",
+              "label": "Ambulance dispatched",
+              "timestamp": null
+            },
+            {
+              "completed": false,
+              "key": "on_the_way",
+              "label": "Ambulance is on the way",
+              "timestamp": null
+            },
+            {
+              "completed": false,
+              "key": "arrived",
+              "label": "Ambulance arrived",
+              "timestamp": null
+            },
+            {
+              "completed": false,
+              "key": "completed",
+              "label": "Emergency completed",
+              "timestamp": null
+            },
+            {
+              "completed": true,
+              "key": "no_responder_available",
+              "label": "Auto-closed: No Responder Available — fire desk never accepted (stale 1250h)",
+              "timestamp": "2026-08-22 12:44:04"
+            }
+          ],
+          "timestamp": "2026-07-01 10:00:00",
+          "tracking_active": false,
+          "type": "fire"
+        }
+      }
+    },
+    "5_timeout": {
+      "title": "Active emergency → absolute timeout → leave Live Tracking",
+      "result": "PASS",
+      "assertions": [
+        "before: active_emergency present",
+        "status == timeout",
+        "tracking_active == False",
+        "after: active_emergency is null"
+      ],
+      "database_status": {
+        "id": 1,
+        "type": "medical",
+        "status": "timeout",
+        "tracking_active": false,
+        "assigned_to": "hospital",
+        "assigned_hospital_id": 1,
+        "assigned_hospital_name": "Hodan General Hospital",
+        "assigned_station_id": null,
+        "accepted_at": "2026-06-01 12:00:00",
+        "timestamp": "2026-06-01 11:00:00",
+        "status_history": [
+          {
+            "status": "accepted",
+            "timestamp": "2026-06-01 12:00:00",
+            "note": "a"
+          },
+          {
+            "status": "dispatched",
+            "timestamp": "2026-06-01 12:10:00",
+            "note": "d"
+          },
+          {
+            "status": "timeout",
+            "timestamp": "2026-08-22 12:44:06",
+            "note": "Auto-closed: absolute timeout after 1969h active"
+          }
+        ],
+        "lifecycle_timeout": {},
+        "responder_status": {
+          "en_route": "2026-06-01 12:10:00"
+        }
+      },
+      "extra": {
+        "before_active_id": 1,
+        "dashboard_active_emergency": null
+      }
+    },
+    "6_google_maps": {
+      "title": "Google Maps destination = assigned responder only",
+      "result": "PASS",
+      "assertions": [
+        "hospital dest == assigned hospital coords",
+        "URL uses maps/dir not query search",
+        "destination is not unrelated business",
+        "resolveNavDestination ignores emergency-site coords",
+        "police dest == assigned station coords"
+      ],
+      "database_status": {
+        "medical_emergency": {
+          "id": 1,
+          "type": "medical",
+          "status": "accepted",
+          "tracking_active": true,
+          "assigned_to": "hospital",
+          "assigned_hospital_id": 1,
+          "assigned_hospital_name": "Hodan General Hospital",
+          "assigned_station_id": null,
+          "accepted_at": "2026-08-22 12:44:06",
+          "timestamp": "2026-08-22 12:44:06",
+          "status_history": [],
+          "lifecycle_timeout": {},
+          "responder_status": {}
+        },
+        "police_emergency": {
+          "id": 2,
+          "type": "security",
+          "status": "accepted",
+          "tracking_active": true,
+          "assigned_to": "police",
+          "assigned_hospital_id": null,
+          "assigned_hospital_name": "",
+          "assigned_station_id": 1,
+          "accepted_at": "2026-08-22 12:44:06",
+          "timestamp": "2026-08-22 12:44:06",
+          "status_history": [],
+          "lifecycle_timeout": {},
+          "responder_status": {}
+        }
+      },
+      "extra": {
+        "medical_tracking_hospital": {
+          "id": 1,
+          "name": "Hodan General Hospital",
+          "latitude": 2.0469,
+          "longitude": 45.3182,
+          "phone": "0622222222"
+        },
+        "medical_maps_url": "https://www.google.com/maps/dir/?api=1&origin=2.046900,45.318200&destination=2.046900,45.318200&travelmode=driving",
+        "police_notes": [
+          {
+            "station_payload": {
+              "type": "police",
+              "name": "Hodan Police Station",
+              "latitude": 2.051,
+              "longitude": 45.321
+            },
+            "resolved_dest": {
+              "lat": 2.051,
+              "lng": 45.321,
+              "source": "station"
+            },
+            "matches_assigned_station": true
+          }
+        ]
+      }
+    },
+    "7_dashboard_terminals": {
+      "title": "Dashboard active_emergency null for every terminal",
+      "result": "PASS",
+      "assertions": [
+        "completed: active_emergency is null",
+        "cancelled: active_emergency is null",
+        "rejected: active_emergency is null",
+        "no_hospital_available: active_emergency is null",
+        "no_responder_available: active_emergency is null",
+        "timeout: active_emergency is null",
+        "resolved: active_emergency is null"
+      ],
+      "database_status": {
+        "completed": {
+          "id": 1,
+          "type": "medical",
+          "status": "completed",
+          "tracking_active": false,
+          "assigned_to": "hospital",
+          "assigned_hospital_id": 1,
+          "assigned_hospital_name": "",
+          "assigned_station_id": null,
+          "accepted_at": null,
+          "timestamp": "2026-08-22 12:44:07",
+          "status_history": [
+            {
+              "status": "completed",
+              "timestamp": "2026-08-22 12:44:07",
+              "note": "verify completed"
+            }
+          ],
+          "lifecycle_timeout": {},
+          "responder_status": {}
+        },
+        "cancelled": {
+          "id": 1,
+          "type": "medical",
+          "status": "cancelled",
+          "tracking_active": false,
+          "assigned_to": "hospital",
+          "assigned_hospital_id": 1,
+          "assigned_hospital_name": "",
+          "assigned_station_id": null,
+          "accepted_at": null,
+          "timestamp": "2026-08-22 12:44:08",
+          "status_history": [
+            {
+              "status": "cancelled",
+              "timestamp": "2026-08-22 12:44:08",
+              "note": "verify cancelled"
+            }
+          ],
+          "lifecycle_timeout": {},
+          "responder_status": {}
+        },
+        "rejected": {
+          "id": 1,
+          "type": "medical",
+          "status": "rejected",
+          "tracking_active": false,
+          "assigned_to": "hospital",
+          "assigned_hospital_id": 1,
+          "assigned_hospital_name": "",
+          "assigned_station_id": null,
+          "accepted_at": null,
+          "timestamp": "2026-08-22 12:44:09",
+          "status_history": [
+            {
+              "status": "rejected",
+              "timestamp": "2026-08-22 12:44:09",
+              "note": "verify rejected"
+            }
+          ],
+          "lifecycle_timeout": {},
+          "responder_status": {}
+        },
+        "no_hospital_available": {
+          "id": 1,
+          "type": "medical",
+          "status": "no_hospital_available",
+          "tracking_active": false,
+          "assigned_to": "hospital",
+          "assigned_hospital_id": 1,
+          "assigned_hospital_name": "",
+          "assigned_station_id": null,
+          "accepted_at": null,
+          "timestamp": "2026-08-22 12:44:10",
+          "status_history": [
+            {
+              "status": "no_hospital_available",
+              "timestamp": "2026-08-22 12:44:10",
+              "note": "verify no_hospital_available"
+            }
+          ],
+          "lifecycle_timeout": {},
+          "responder_status": {}
+        },
+        "no_responder_available": {
+          "id": 1,
+          "type": "medical",
+          "status": "no_responder_available",
+          "tracking_active": false,
+          "assigned_to": "hospital",
+          "assigned_hospital_id": 1,
+          "assigned_hospital_name": "",
+          "assigned_station_id": null,
+          "accepted_at": null,
+          "timestamp": "2026-08-22 12:44:12",
+          "status_history": [
+            {
+              "status": "no_responder_available",
+              "timestamp": "2026-08-22 12:44:12",
+              "note": "verify no_responder_available"
+            }
+          ],
+          "lifecycle_timeout": {},
+          "responder_status": {}
+        },
+        "timeout": {
+          "id": 1,
+          "type": "medical",
+          "status": "timeout",
+          "tracking_active": false,
+          "assigned_to": "hospital",
+          "assigned_hospital_id": 1,
+          "assigned_hospital_name": "",
+          "assigned_station_id": null,
+          "accepted_at": null,
+          "timestamp": "2026-08-22 12:44:13",
+          "status_history": [
+            {
+              "status": "timeout",
+              "timestamp": "2026-08-22 12:44:13",
+              "note": "verify timeout"
+            }
+          ],
+          "lifecycle_timeout": {},
+          "responder_status": {}
+        },
+        "resolved": {
+          "id": 1,
+          "type": "medical",
+          "status": "resolved",
+          "tracking_active": false,
+          "assigned_to": "hospital",
+          "assigned_hospital_id": 1,
+          "assigned_hospital_name": "",
+          "assigned_station_id": null,
+          "accepted_at": null,
+          "timestamp": "2026-08-22 12:44:14",
+          "status_history": [
+            {
+              "status": "resolved",
+              "timestamp": "2026-08-22 12:44:14",
+              "note": "verify resolved"
+            }
+          ],
+          "lifecycle_timeout": {},
+          "responder_status": {}
+        }
+      },
+      "extra": {
+        "terminals": {
+          "completed": {
+            "active_emergency": null,
+            "in_history": true
+          },
+          "cancelled": {
+            "active_emergency": null,
+            "in_history": true
+          },
+          "rejected": {
+            "active_emergency": null,
+            "in_history": true
+          },
+          "no_hospital_available": {
+            "active_emergency": null,
+            "in_history": true
+          },
+          "no_responder_available": {
+            "active_emergency": null,
+            "in_history": true
+          },
+          "timeout": {
+            "active_emergency": null,
+            "in_history": true
+          },
+          "resolved": {
+            "active_emergency": null,
+            "in_history": true
+          }
+        }
+      }
+    }
+  }
+}

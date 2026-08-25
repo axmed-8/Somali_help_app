@@ -1,0 +1,185 @@
+{
+  "hospitals": [
+    {
+      "id": 10,
+      "name": "Banadir Hospital",
+      "city": "Mogadishu",
+      "region": "Banadir",
+      "district": "Wadajir",
+      "address": "Jidka Afgooye, Mogadishu",
+      "latitude": 2.0347553,
+      "longitude": 45.2991468,
+      "phone": "+252618035555",
+      "ambulance_available": false,
+      "ambulance_count": 0,
+      "emergency_capacity": 10,
+      "rating": 4.0,
+      "operating_status": "open",
+      "contact_email": "",
+      "owner_user_id": null,
+      "location_verified": true,
+      "logo_url": "",
+      "created_at": "2026-08-02 12:14:18",
+      "updated_at": "2026-08-02 12:14:18",
+      "emergency_contacts": [
+        "+252618035555",
+        "+252615334486"
+      ],
+      "services": [
+        "Emergency department",
+        "Maternal care",
+        "Pediatrics",
+        "24/7 emergency"
+      ],
+      "specialties": [
+        "Emergency department",
+        "Maternal care",
+        "Pediatrics",
+        "24/7 emergency"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "Madina Hospital",
+      "city": "Mogadishu",
+      "region": "Banadir",
+      "district": "Wadajir",
+      "address": "Wadajir District, Mogadishu (exact street address unverified)",
+      "latitude": 2.0292865,
+      "longitude": 45.2979802,
+      "phone": "+252616977388",
+      "ambulance_available": false,
+      "ambulance_count": 0,
+      "emergency_capacity": 10,
+      "rating": 4.0,
+      "operating_status": "open",
+      "contact_email": "",
+      "owner_user_id": null,
+      "location_verified": false,
+      "logo_url": "",
+      "created_at": "2026-08-02 12:14:18",
+      "updated_at": "2026-08-02 12:14:18",
+      "emergency_contacts": [
+        "+252616977388"
+      ],
+      "services": [
+        "Trauma",
+        "Maternal emergency",
+        "Emergency department"
+      ],
+      "specialties": [
+        "Trauma",
+        "Maternal emergency",
+        "Emergency department"
+      ]
+    },
+    {
+      "id": 12,
+      "name": "De Martino Public Hospital",
+      "city": "Mogadishu",
+      "region": "Banadir",
+      "district": "Hamar Jajab",
+      "address": "Via Londra Road, Hamar Jajab, Mogadishu",
+      "latitude": 2.0297769,
+      "longitude": 45.3386345,
+      "phone": "+252615572605",
+      "ambulance_available": false,
+      "ambulance_count": 0,
+      "emergency_capacity": 10,
+      "rating": 4.0,
+      "operating_status": "open",
+      "contact_email": "",
+      "owner_user_id": null,
+      "location_verified": true,
+      "logo_url": "",
+      "created_at": "2026-08-02 12:14:18",
+      "updated_at": "2026-08-02 12:14:18",
+      "emergency_contacts": [
+        "+252615572605"
+      ],
+      "services": [
+        "Emergency department",
+        "Day care",
+        "ICU"
+      ],
+      "specialties": [
+        "Emergency department",
+        "Day care",
+        "ICU"
+      ]
+    },
+    {
+      "id": 13,
+      "name": "Erdogan Hospital (Digfer)",
+      "city": "Mogadishu",
+      "region": "Banadir",
+      "district": "Hodan",
+      "address": "Digfer area, Hodan District, Mogadishu",
+      "latitude": 2.0437655,
+      "longitude": 45.3055247,
+      "phone": "+252613773333",
+      "ambulance_available": false,
+      "ambulance_count": 0,
+      "emergency_capacity": 10,
+      "rating": 4.0,
+      "operating_status": "open",
+      "contact_email": "safiaabukarsalad@gmail.com",
+      "owner_user_id": 15,
+      "location_verified": true,
+      "logo_url": "",
+      "created_at": "2026-08-02 12:14:18",
+      "updated_at": "2026-08-02 12:14:18",
+      "emergency_contacts": [
+        "+252613773333"
+      ],
+      "services": [
+        "Emergency department",
+        "ICU",
+        "Surgery",
+        "Teaching hospital"
+      ],
+      "specialties": [
+        "Emergency department",
+        "ICU",
+        "Surgery",
+        "Teaching hospital"
+      ]
+    },
+    {
+      "id": 14,
+      "name": "Wadajir Hospital",
+      "city": "Mogadishu",
+      "region": "Banadir",
+      "district": "Wadajir",
+      "address": "Jaale Siyaad Road, Mogadishu",
+      "latitude": 2.0206158,
+      "longitude": 45.2913877,
+      "phone": "+252610598888",
+      "ambulance_available": true,
+      "ambulance_count": 1,
+      "emergency_capacity": 10,
+      "rating": 4.0,
+      "operating_status": "open",
+      "contact_email": "",
+      "owner_user_id": null,
+      "location_verified": true,
+      "logo_url": "",
+      "created_at": "2026-08-02 12:14:18",
+      "updated_at": "2026-08-02 12:14:18",
+      "emergency_contacts": [
+        "+252610598888"
+      ],
+      "services": [
+        "Emergency department",
+        "ICU",
+        "Ambulance transport"
+      ],
+      "specialties": [
+        "Emergency department",
+        "ICU",
+        "Ambulance transport"
+      ]
+    }
+  ],
+  "next_id": 15
+}

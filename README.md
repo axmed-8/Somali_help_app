@@ -1,6 +1,6 @@
-# GurmadNet AI (Somali Help App)
+# Somali Help App
 
-Professional emergency response platform for Somalia. Citizens report emergencies with live GPS, track response teams in real time, and reach a Call Center for operator-led multi-service dispatch.
+Professional emergency help platform for Somalia. Citizens report emergencies with live GPS, track response teams in real time, and reach a Call Center for operator-led multi-service dispatch.
 
 **Repository:** [https://github.com/axmed-8/Somali_help_app](https://github.com/axmed-8/Somali_help_app)
 
@@ -8,7 +8,7 @@ Professional emergency response platform for Somalia. Citizens report emergencie
 
 ## Description
 
-GurmadNet AI connects citizens with hospitals, police, and fire services. Emergencies can be started from a mobile SOS form or by calling the Emergency Call Center (phone + silent GPS). An **AI Emergency Decision Support Engine** analyzes incidents and recommends responders — it never dispatches automatically. Final approval always belongs to a human operator (Call Center) or the existing SOS auto-routing rules for life-safety Method 1.
+Somali Help App connects citizens with hospitals, police, and fire services. Emergencies can be started from a mobile SOS form or by calling the Call Center (phone + silent GPS). An **AI Assistance** engine analyzes incidents and recommends responders — it never dispatches automatically. Final approval always belongs to a human operator (Call Center) or the existing SOS auto-routing rules for life-safety Method 1.
 
 ---
 

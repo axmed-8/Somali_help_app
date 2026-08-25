@@ -570,6 +570,9 @@ def test_signup_rejects_non_citizen_role(app_client):
     "/signup",
     data=citizen_signup_data(
       email="fake.hospital@test.so",
+      phone="0619999001",
+      emergency_contact_phone="0619999002",
+      national_id="998877665501",
       role="hospital",  # forged — must be ignored
     ),
     follow_redirects=True,
@@ -589,12 +592,15 @@ def test_sos_notifies_emergency_contact(app_client):
     "/signup",
     data=citizen_signup_data(
       email="sos.citizen@test.so",
+      phone="0619999101",
+      emergency_contact_phone="0619999102",
       emergency_contact_email="sos.contact@test.so",
       national_id="998877665544",
     ),
     follow_redirects=True,
   )
   user, udata = ers_app.get_user_by_login("sos.citizen@test.so")
+  assert user is not None
   user["email_verified"] = True
   ers_app.save_users(udata)
   clear_outbox()
@@ -686,10 +692,16 @@ def test_unverified_legacy_user_can_still_login(app_client):
   email = "legacy.unverified@test.so"
   client.post(
     "/signup",
-    data=citizen_signup_data(email=email, national_id="112233445566"),
+    data=citizen_signup_data(
+      email=email,
+      phone="0619999201",
+      emergency_contact_phone="0619999202",
+      national_id="112233445566",
+    ),
     follow_redirects=True,
   )
   user, udata = ers_app.get_user_by_login(email)
+  assert user is not None
   user["email_verified"] = False
   ers_app.save_users(udata)
   r = login(client, email, "123456")

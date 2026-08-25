@@ -164,7 +164,7 @@ def send_email(to_email, subject, text_body, html_body=None, from_email=None, pr
 
 def send_verification_email(to_email, verify_url, user_name=None):
     """Legacy link-based verification email (kept for compatibility)."""
-    app_name = os.environ.get("APP_NAME", "GurmadNet AI")
+    app_name = os.environ.get("APP_NAME", "Somali Help App")
     greeting = f"Hello {user_name}," if user_name else "Hello,"
     subject = f"Verify your {app_name} email address"
     text_body = (
@@ -188,7 +188,7 @@ def send_verification_email(to_email, verify_url, user_name=None):
 
 def send_email_verification_otp_email(to_email, otp_code, user_name=None, minutes=30):
     """Send a one-time email verification code after citizen registration."""
-    app_name = os.environ.get("APP_NAME", "GurmadNet AI")
+    app_name = os.environ.get("APP_NAME", "Somali Help App")
     greeting = f"Hello {user_name}," if user_name else "Hello,"
     subject = f"Your {app_name} email verification code"
     text_body = (
@@ -223,7 +223,7 @@ def send_emergency_contact_alert_email(
     longitude=None,
 ):
     """Notify a citizen's registered emergency contact when SOS is submitted."""
-    app_name = os.environ.get("APP_NAME", "GurmadNet AI")
+    app_name = os.environ.get("APP_NAME", "Somali Help App")
     greeting = f"Hello {contact_name}," if contact_name else "Hello,"
     etype = (emergency_type or "emergency").replace("_", " ").title()
     when = occurred_at or ""
@@ -269,7 +269,7 @@ def send_emergency_contact_alert_email(
 
 def send_password_reset_otp_email(to_email, otp_code, user_name=None, minutes=10):
     """Send a one-time password-reset code (OTP) via configured provider."""
-    app_name = os.environ.get("APP_NAME", "GurmadNet AI")
+    app_name = os.environ.get("APP_NAME", "Somali Help App")
     greeting = f"Hello {user_name}," if user_name else "Hello,"
     subject = f"Your {app_name} password reset code"
     text_body = (
@@ -290,7 +290,7 @@ def send_password_reset_otp_email(to_email, otp_code, user_name=None, minutes=10
 
 def send_password_reset_email(to_email, reset_url, user_name=None):
     """Legacy link-based reset email (kept for compatibility). Prefer OTP."""
-    app_name = os.environ.get("APP_NAME", "GurmadNet AI")
+    app_name = os.environ.get("APP_NAME", "Somali Help App")
     greeting = f"Hello {user_name}," if user_name else "Hello,"
     subject = f"Reset your {app_name} password"
     text_body = (

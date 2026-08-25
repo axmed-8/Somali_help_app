@@ -1,0 +1,2494 @@
+{
+  "items": [
+    {
+      "id": 1,
+      "reason": "banadir: closest suitable hospital, ETA 3 min. Ambulance available.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-14 14:28:25",
+      "analysis_id": 1,
+      "emergency_id": 20,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 1,
+        "name": "banadir",
+        "phone": "613919191",
+        "latitude": 2.034484,
+        "longitude": 45.298842,
+        "distance_km": 0.24,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 2,
+      "reason": "kalkaal: closest suitable hospital, ETA 3 min. Ambulance available.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-15 10:28:18",
+      "analysis_id": 2,
+      "emergency_id": 21,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 3,
+        "name": "kalkaal",
+        "phone": "6155555555",
+        "latitude": 2.036904,
+        "longitude": 45.301941,
+        "distance_km": 2.12,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 3,
+      "reason": "banadir: closest suitable hospital, ETA 4 min. Ambulance available.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-21 15:04:44",
+      "analysis_id": 3,
+      "emergency_id": 22,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 1,
+        "name": "banadir",
+        "phone": "613919191",
+        "latitude": 2.034484,
+        "longitude": 45.298842,
+        "distance_km": 2.89,
+        "eta_minutes": 4,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 4
+    },
+    {
+      "id": 4,
+      "reason": "banadir: closest suitable hospital, ETA 4 min. Ambulance available.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-21 15:41:40",
+      "analysis_id": 4,
+      "emergency_id": 23,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 1,
+        "name": "banadir",
+        "phone": "613919191",
+        "latitude": 2.034484,
+        "longitude": 45.298842,
+        "distance_km": 2.9,
+        "eta_minutes": 4,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 4
+    },
+    {
+      "id": 5,
+      "reason": "Fire: xarunta dabdamiska gobolka benaadir (~2.48 km, ETA 3 min).",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-21 15:46:15",
+      "analysis_id": 5,
+      "emergency_id": 24,
+      "recommended_fire": {
+        "id": "fire",
+        "name": "xarunta dabdamiska gobolka benaadir",
+        "phone": "613919191",
+        "latitude": 2.0423061,
+        "longitude": 45.3461292,
+        "distance_km": 2.48,
+        "eta_minutes": 3
+      },
+      "recommended_police": null,
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "fire"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 6,
+      "reason": "Police: Saldhigga Hodan (~0.0 km, ETA 3 min).",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-21 15:47:33",
+      "analysis_id": 6,
+      "emergency_id": 25,
+      "recommended_fire": null,
+      "recommended_police": {
+        "id": "police",
+        "name": "Saldhigga Hodan",
+        "phone": "616450245",
+        "latitude": 2.0353041,
+        "longitude": 45.3248821,
+        "distance_km": 0.0,
+        "eta_minutes": 3
+      },
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "security"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 7,
+      "reason": "banadir: closest suitable hospital, ETA 4 min. Ambulance available.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-21 17:26:20",
+      "analysis_id": 7,
+      "emergency_id": 26,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 1,
+        "name": "banadir",
+        "phone": "613919191",
+        "latitude": 2.034484,
+        "longitude": 45.298842,
+        "distance_km": 2.9,
+        "eta_minutes": 4,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 4
+    },
+    {
+      "id": 8,
+      "reason": "banadir: closest suitable hospital, ETA 4 min. Ambulance available.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-21 17:35:56",
+      "analysis_id": 8,
+      "emergency_id": 27,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 1,
+        "name": "banadir",
+        "phone": "613919191",
+        "latitude": 2.034484,
+        "longitude": 45.298842,
+        "distance_km": 2.9,
+        "eta_minutes": 4,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 4
+    },
+    {
+      "id": 9,
+      "reason": "banadir: closest suitable hospital, ETA 4 min. Ambulance available.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-21 17:39:17",
+      "analysis_id": 9,
+      "emergency_id": 28,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 1,
+        "name": "banadir",
+        "phone": "613919191",
+        "latitude": 2.034484,
+        "longitude": 45.298842,
+        "distance_km": 2.91,
+        "eta_minutes": 4,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 4
+    },
+    {
+      "id": 10,
+      "reason": "banadir: closest suitable hospital, ETA 4 min. Ambulance available.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-22 10:12:42",
+      "analysis_id": 10,
+      "emergency_id": 29,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 1,
+        "name": "banadir",
+        "phone": "613919191",
+        "latitude": 2.034484,
+        "longitude": 45.298842,
+        "distance_km": 2.9,
+        "eta_minutes": 4,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 4
+    },
+    {
+      "id": 11,
+      "reason": "banadir: closest suitable hospital, ETA 4 min. Ambulance available.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-22 13:06:51",
+      "analysis_id": 11,
+      "emergency_id": 30,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 1,
+        "name": "banadir",
+        "phone": "613919191",
+        "latitude": 2.034484,
+        "longitude": 45.298842,
+        "distance_km": 2.89,
+        "eta_minutes": 4,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 4
+    },
+    {
+      "id": 12,
+      "reason": "banadir: closest suitable hospital, ETA 4 min. Ambulance available.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-22 13:11:28",
+      "analysis_id": 12,
+      "emergency_id": 31,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 1,
+        "name": "banadir",
+        "phone": "613919191",
+        "latitude": 2.034484,
+        "longitude": 45.298842,
+        "distance_km": 2.89,
+        "eta_minutes": 4,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 4
+    },
+    {
+      "id": 13,
+      "reason": "banadir: closest suitable hospital, ETA 4 min.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-22 13:14:36",
+      "analysis_id": 13,
+      "emergency_id": 32,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 1,
+        "name": "banadir",
+        "phone": "613919191",
+        "latitude": 2.034484,
+        "longitude": 45.298842,
+        "distance_km": 2.91,
+        "eta_minutes": 4,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": false
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 4
+    },
+    {
+      "id": 14,
+      "reason": "banadir: closest suitable hospital, ETA 7 min. Ambulance available.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-22 13:23:26",
+      "analysis_id": 14,
+      "emergency_id": 33,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 1,
+        "name": "banadir",
+        "phone": "613919191",
+        "latitude": 2.034484,
+        "longitude": 45.298842,
+        "distance_km": 5.27,
+        "eta_minutes": 7,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 7
+    },
+    {
+      "id": 15,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-22 14:30:28",
+      "analysis_id": 15,
+      "emergency_id": 34,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 1.91,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": false
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 16,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-22 14:34:05",
+      "analysis_id": 16,
+      "emergency_id": 35,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 1.91,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 17,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-22 14:38:27",
+      "analysis_id": 17,
+      "emergency_id": 36,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 1.91,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 18,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-22 17:27:47",
+      "analysis_id": 18,
+      "emergency_id": 37,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 1.91,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 19,
+      "reason": "Police: Saldhigga Hodan (~1.49 km, ETA 3 min).",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 09:20:18",
+      "analysis_id": 19,
+      "emergency_id": 38,
+      "recommended_fire": null,
+      "recommended_police": {
+        "id": "police",
+        "name": "Saldhigga Hodan",
+        "phone": "616450245",
+        "latitude": 2.0353041,
+        "longitude": 45.3248821,
+        "distance_km": 1.49,
+        "eta_minutes": 3
+      },
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "security"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 20,
+      "reason": "Police: Saldhigga Hodan (~1.49 km, ETA 3 min).",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 09:22:32",
+      "analysis_id": 20,
+      "emergency_id": 39,
+      "recommended_fire": null,
+      "recommended_police": {
+        "id": "police",
+        "name": "Saldhigga Hodan",
+        "phone": "616450245",
+        "latitude": 2.0353041,
+        "longitude": 45.3248821,
+        "distance_km": 1.49,
+        "eta_minutes": 3
+      },
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "security"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 21,
+      "reason": "Police: Saldhigga Hodan (~0.0 km, ETA 3 min).",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 09:29:08",
+      "analysis_id": 21,
+      "emergency_id": 40,
+      "recommended_fire": null,
+      "recommended_police": {
+        "id": "police",
+        "name": "Saldhigga Hodan",
+        "phone": "616450245",
+        "latitude": 2.0353041,
+        "longitude": 45.3248821,
+        "distance_km": 0.0,
+        "eta_minutes": 3
+      },
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "security"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 22,
+      "reason": "Police: Saldhigga Hodan (~2.38 km, ETA 3 min).",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 11:09:35",
+      "analysis_id": 22,
+      "emergency_id": 41,
+      "recommended_fire": null,
+      "recommended_police": {
+        "id": "police",
+        "name": "Saldhigga Hodan",
+        "phone": "616450245",
+        "latitude": 2.0353041,
+        "longitude": 45.3248821,
+        "distance_km": 2.38,
+        "eta_minutes": 3
+      },
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "security"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 23,
+      "reason": "Fire: xarunta dabdamiska gobolka benaadir (~3.15 km, ETA 4 min).",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 11:29:10",
+      "analysis_id": 23,
+      "emergency_id": 42,
+      "recommended_fire": {
+        "id": "fire",
+        "name": "xarunta dabdamiska gobolka benaadir",
+        "phone": "613919191",
+        "latitude": 2.0423061,
+        "longitude": 45.3461292,
+        "distance_km": 3.15,
+        "eta_minutes": 4
+      },
+      "recommended_police": null,
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "fire"
+      ],
+      "estimated_arrival_minutes": 4
+    },
+    {
+      "id": 24,
+      "reason": "Fire: xarunta dabdamiska gobolka benaadir (~2.48 km, ETA 3 min).",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 11:38:30",
+      "analysis_id": 24,
+      "emergency_id": 43,
+      "recommended_fire": {
+        "id": "fire",
+        "name": "xarunta dabdamiska gobolka benaadir",
+        "phone": "613919191",
+        "latitude": 2.0423061,
+        "longitude": 45.3461292,
+        "distance_km": 2.48,
+        "eta_minutes": 3
+      },
+      "recommended_police": null,
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "fire"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 25,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+      "status": "pending",
+      "call_id": 3,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.613,
+      "created_at": "2026-07-23 12:20:52",
+      "analysis_id": 25,
+      "emergency_id": null,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 1.91,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 26,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+      "status": "pending",
+      "call_id": 18,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.613,
+      "created_at": "2026-07-23 13:09:27",
+      "analysis_id": 26,
+      "emergency_id": null,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 1.91,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 27,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+      "status": "pending",
+      "call_id": 17,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.613,
+      "created_at": "2026-07-23 13:22:44",
+      "analysis_id": 27,
+      "emergency_id": null,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 1.91,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 28,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+      "status": "pending",
+      "call_id": 16,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.613,
+      "created_at": "2026-07-23 13:24:28",
+      "analysis_id": 28,
+      "emergency_id": null,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 1.92,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 29,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 6 min. Ambulance available.",
+      "status": "pending",
+      "call_id": 15,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.613,
+      "created_at": "2026-07-23 13:29:36",
+      "analysis_id": 29,
+      "emergency_id": null,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 4.29,
+        "eta_minutes": 6,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 6
+    },
+    {
+      "id": 30,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 6 min. Ambulance available.",
+      "status": "pending",
+      "call_id": 15,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 13:30:59",
+      "analysis_id": 30,
+      "emergency_id": 44,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 4.29,
+        "eta_minutes": 6,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 6
+    },
+    {
+      "id": 31,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 6 min. Ambulance available.",
+      "status": "pending",
+      "call_id": 15,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 13:31:02",
+      "analysis_id": 31,
+      "emergency_id": 45,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 4.29,
+        "eta_minutes": 6,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 6
+    },
+    {
+      "id": 32,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+      "status": "pending",
+      "call_id": 14,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.613,
+      "created_at": "2026-07-23 13:31:51",
+      "analysis_id": 32,
+      "emergency_id": null,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 1.91,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 33,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+      "status": "pending",
+      "call_id": 13,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.613,
+      "created_at": "2026-07-23 13:57:14",
+      "analysis_id": 33,
+      "emergency_id": null,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 1.91,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 34,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 6 min. Ambulance available.",
+      "status": "pending",
+      "call_id": 12,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.613,
+      "created_at": "2026-07-23 13:58:46",
+      "analysis_id": 34,
+      "emergency_id": null,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 4.29,
+        "eta_minutes": 6,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 6
+    },
+    {
+      "id": 35,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 6 min. Ambulance available.",
+      "status": "pending",
+      "call_id": 12,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 14:00:06",
+      "analysis_id": 35,
+      "emergency_id": 46,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 4.29,
+        "eta_minutes": 6,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 6
+    },
+    {
+      "id": 36,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 6 min. Ambulance available.",
+      "status": "rejected",
+      "call_id": 19,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.613,
+      "created_at": "2026-07-23 14:02:55",
+      "updated_at": "2026-07-23 14:26:53",
+      "analysis_id": 36,
+      "operator_id": null,
+      "emergency_id": null,
+      "operator_name": "amiin",
+      "decision_notes": "",
+      "human_decision": "reject",
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 4.29,
+        "eta_minutes": 6,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 6
+    },
+    {
+      "id": 37,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 6 min. Ambulance available.",
+      "status": "pending",
+      "call_id": 19,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 14:03:07",
+      "analysis_id": 37,
+      "emergency_id": 47,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 4.29,
+        "eta_minutes": 6,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 6
+    },
+    {
+      "id": 38,
+      "reason": "Fire: xarunta dabdamiska gobolka benaadir (~1.05 km, ETA 3 min).",
+      "status": "pending",
+      "call_id": 19,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 14:27:13",
+      "analysis_id": 38,
+      "emergency_id": 48,
+      "recommended_fire": {
+        "id": 6,
+        "name": "xarunta dabdamiska gobolka benaadir",
+        "phone": "613919191",
+        "latitude": 2.0423061,
+        "longitude": 45.3461292,
+        "distance_km": 1.05,
+        "eta_minutes": 3
+      },
+      "recommended_police": null,
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "fire"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 39,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+      "status": "rejected",
+      "call_id": 20,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.613,
+      "created_at": "2026-07-23 14:27:36",
+      "updated_at": "2026-07-23 14:44:37",
+      "analysis_id": 39,
+      "operator_id": null,
+      "emergency_id": null,
+      "operator_name": "amiin",
+      "decision_notes": "",
+      "human_decision": "reject",
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 1.91,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 40,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+      "status": "pending",
+      "call_id": 20,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 14:27:57",
+      "analysis_id": 40,
+      "emergency_id": 49,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 1.91,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 41,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+      "status": "pending",
+      "call_id": 20,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 14:44:45",
+      "analysis_id": 41,
+      "emergency_id": 50,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 1.91,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 42,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 15:10:39",
+      "analysis_id": 42,
+      "emergency_id": 51,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 1.59,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 43,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 15:23:53",
+      "analysis_id": 43,
+      "emergency_id": 52,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 1.59,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 44,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available. Police: Saldhigga Hodan (~0.0 km, ETA 3 min).",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 15:45:32",
+      "analysis_id": 44,
+      "emergency_id": 53,
+      "recommended_fire": null,
+      "recommended_police": {
+        "id": 5,
+        "name": "Saldhigga Hodan",
+        "phone": "616450245",
+        "latitude": 2.0353041,
+        "longitude": 45.3248821,
+        "distance_km": 0.0,
+        "eta_minutes": 3
+      },
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 1.91,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical",
+        "accident"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 45,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 11:11:55",
+      "analysis_id": 45,
+      "emergency_id": 54,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 1.59,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 46,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 16:37:24",
+      "analysis_id": 46,
+      "emergency_id": 55,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 1.59,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 47,
+      "reason": "Fire: xarunta dabdamiska gobolka benaadir (~3.15 km, ETA 4 min).",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 16:37:36",
+      "analysis_id": 47,
+      "emergency_id": 56,
+      "recommended_fire": {
+        "id": 6,
+        "name": "xarunta dabdamiska gobolka benaadir",
+        "phone": "613919191",
+        "latitude": 2.0423061,
+        "longitude": 45.3461292,
+        "distance_km": 3.15,
+        "eta_minutes": 4
+      },
+      "recommended_police": null,
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "fire"
+      ],
+      "estimated_arrival_minutes": 4
+    },
+    {
+      "id": 48,
+      "reason": "Police: Saldhigga Hodan (~1.49 km, ETA 3 min).",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 16:37:45",
+      "analysis_id": 48,
+      "emergency_id": 57,
+      "recommended_fire": null,
+      "recommended_police": {
+        "id": 5,
+        "name": "Saldhigga Hodan",
+        "phone": "616450245",
+        "latitude": 2.0353041,
+        "longitude": 45.3248821,
+        "distance_km": 1.49,
+        "eta_minutes": 3
+      },
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "security"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 49,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 16:38:30",
+      "analysis_id": 49,
+      "emergency_id": 58,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 1.59,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 50,
+      "reason": "Police: Saldhigga Hodan (~1.49 km, ETA 3 min).",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 17:09:10",
+      "analysis_id": 62,
+      "emergency_id": 71,
+      "recommended_fire": null,
+      "recommended_police": {
+        "id": 5,
+        "name": "Saldhigga Hodan",
+        "phone": "616450245",
+        "latitude": 2.0353041,
+        "longitude": 45.3248821,
+        "distance_km": 1.49,
+        "eta_minutes": 3
+      },
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "security"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 51,
+      "reason": "Fire: xarunta dabdamiska gobolka benaadir (~3.15 km, ETA 4 min).",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 17:09:41",
+      "analysis_id": 63,
+      "emergency_id": 72,
+      "recommended_fire": {
+        "id": 6,
+        "name": "xarunta dabdamiska gobolka benaadir",
+        "phone": "613919191",
+        "latitude": 2.0423061,
+        "longitude": 45.3461292,
+        "distance_km": 3.15,
+        "eta_minutes": 4
+      },
+      "recommended_police": null,
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "fire"
+      ],
+      "estimated_arrival_minutes": 4
+    },
+    {
+      "id": 52,
+      "reason": "Police: Saldhigga Hodan (~1.49 km, ETA 3 min).",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 17:09:52",
+      "analysis_id": 64,
+      "emergency_id": 73,
+      "recommended_fire": null,
+      "recommended_police": {
+        "id": 5,
+        "name": "Saldhigga Hodan",
+        "phone": "616450245",
+        "latitude": 2.0353041,
+        "longitude": 45.3248821,
+        "distance_km": 1.49,
+        "eta_minutes": 3
+      },
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "security"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 53,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-26 10:53:36",
+      "analysis_id": 65,
+      "emergency_id": 74,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 1.92,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 54,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-26 10:59:42",
+      "analysis_id": 66,
+      "emergency_id": 75,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 1.91,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 55,
+      "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+      "status": "pending",
+      "call_id": 24,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.613,
+      "created_at": "2026-07-26 13:39:41",
+      "analysis_id": 67,
+      "emergency_id": null,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 4,
+        "name": "Hodan Hospital",
+        "phone": "614269444",
+        "latitude": 2.037072,
+        "longitude": 45.307787,
+        "distance_km": 1.91,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": true
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 56,
+      "reason": "Insufficient location or resource data for a firm recommendation.",
+      "status": "pending",
+      "call_id": 26,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.563,
+      "created_at": "2026-07-27 14:04:25",
+      "analysis_id": 69,
+      "emergency_id": null,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": null
+    },
+    {
+      "id": 57,
+      "reason": "Insufficient location or resource data for a firm recommendation.",
+      "status": "pending",
+      "call_id": 27,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.563,
+      "created_at": "2026-07-27 14:05:14",
+      "analysis_id": 70,
+      "emergency_id": null,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": null
+    },
+    {
+      "id": 58,
+      "reason": "Insufficient location or resource data for a firm recommendation.",
+      "status": "pending",
+      "call_id": 28,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.563,
+      "created_at": "2026-07-27 14:05:53",
+      "analysis_id": 71,
+      "emergency_id": null,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": null
+    },
+    {
+      "id": 59,
+      "reason": "Insufficient location or resource data for a firm recommendation.",
+      "status": "pending",
+      "call_id": 28,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-27 14:06:40",
+      "analysis_id": 72,
+      "emergency_id": 76,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": null
+    },
+    {
+      "id": 60,
+      "reason": "Insufficient location or resource data for a firm recommendation.",
+      "status": "pending",
+      "call_id": 29,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.563,
+      "created_at": "2026-07-27 14:07:17",
+      "analysis_id": 73,
+      "emergency_id": null,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": null
+    },
+    {
+      "id": 61,
+      "reason": "Insufficient location or resource data for a firm recommendation.",
+      "status": "pending",
+      "call_id": 32,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.563,
+      "created_at": "2026-07-27 14:27:44",
+      "analysis_id": 74,
+      "emergency_id": null,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": null
+    },
+    {
+      "id": 62,
+      "reason": "Insufficient location or resource data for a firm recommendation.",
+      "status": "pending",
+      "call_id": 33,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.563,
+      "created_at": "2026-07-27 14:29:00",
+      "analysis_id": 75,
+      "emergency_id": null,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": null
+    },
+    {
+      "id": 63,
+      "reason": "Insufficient location or resource data for a firm recommendation.",
+      "status": "pending",
+      "call_id": 35,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.563,
+      "created_at": "2026-07-27 14:29:33",
+      "analysis_id": 76,
+      "emergency_id": null,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": null
+    },
+    {
+      "id": 64,
+      "reason": "Insufficient location or resource data for a firm recommendation.",
+      "status": "pending",
+      "call_id": 36,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.563,
+      "created_at": "2026-07-27 14:29:50",
+      "analysis_id": 77,
+      "emergency_id": null,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": null
+    },
+    {
+      "id": 65,
+      "reason": "Insufficient location or resource data for a firm recommendation.",
+      "status": "pending",
+      "call_id": 37,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.563,
+      "created_at": "2026-07-27 14:30:15",
+      "analysis_id": 78,
+      "emergency_id": null,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": null
+    },
+    {
+      "id": 66,
+      "reason": "Insufficient location or resource data for a firm recommendation.",
+      "status": "pending",
+      "call_id": 37,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.563,
+      "created_at": "2026-07-27 14:30:27",
+      "analysis_id": 79,
+      "emergency_id": null,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": null
+    },
+    {
+      "id": 67,
+      "reason": "Insufficient location or resource data for a firm recommendation.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-27 14:33:56",
+      "analysis_id": 80,
+      "emergency_id": 77,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": null
+    },
+    {
+      "id": 68,
+      "reason": "Insufficient location or resource data for a firm recommendation.",
+      "status": "pending",
+      "call_id": 38,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.563,
+      "created_at": "2026-07-27 14:38:49",
+      "analysis_id": 81,
+      "emergency_id": null,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": null
+    },
+    {
+      "id": 69,
+      "reason": "Police: Police Response Unit (~3.37 km, ETA 5 min).",
+      "status": "pending",
+      "call_id": 38,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-27 14:50:19",
+      "analysis_id": 82,
+      "emergency_id": 78,
+      "recommended_fire": null,
+      "recommended_police": {
+        "id": 7,
+        "name": "Police Response Unit",
+        "phone": "",
+        "latitude": 2.038,
+        "longitude": 45.315,
+        "distance_km": 3.37,
+        "eta_minutes": 5
+      },
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "security"
+      ],
+      "estimated_arrival_minutes": 5
+    },
+    {
+      "id": 70,
+      "reason": "Fire: Fire & Rescue Station (~2.93 km, ETA 4 min).",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-28 13:31:53",
+      "analysis_id": 83,
+      "emergency_id": 79,
+      "recommended_fire": {
+        "id": 8,
+        "name": "Fire & Rescue Station",
+        "phone": "",
+        "latitude": 2.052,
+        "longitude": 45.328,
+        "distance_km": 2.93,
+        "eta_minutes": 4
+      },
+      "recommended_police": null,
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "fire"
+      ],
+      "estimated_arrival_minutes": 4
+    },
+    {
+      "id": 71,
+      "reason": "De Martino Public Hospital: closest suitable hospital, ETA 3 min.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-08-02 15:29:37",
+      "analysis_id": 84,
+      "emergency_id": 80,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 12,
+        "name": "De Martino Public Hospital",
+        "phone": "+252615572605",
+        "latitude": 2.0297769,
+        "longitude": 45.3386345,
+        "distance_km": 1.64,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": false
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 72,
+      "reason": "De Martino Public Hospital: closest suitable hospital, ETA 3 min.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-08-02 15:31:31",
+      "analysis_id": 85,
+      "emergency_id": 81,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 12,
+        "name": "De Martino Public Hospital",
+        "phone": "+252615572605",
+        "latitude": 2.0297769,
+        "longitude": 45.3386345,
+        "distance_km": 1.64,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": false
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 73,
+      "reason": "De Martino Public Hospital: closest suitable hospital, ETA 3 min.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-08-02 16:00:47",
+      "analysis_id": 86,
+      "emergency_id": 82,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 12,
+        "name": "De Martino Public Hospital",
+        "phone": "+252615572605",
+        "latitude": 2.0297769,
+        "longitude": 45.3386345,
+        "distance_km": 1.63,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": false
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 74,
+      "reason": "De Martino Public Hospital: closest suitable hospital, ETA 3 min.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-08-02 16:39:20",
+      "analysis_id": 87,
+      "emergency_id": 83,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 12,
+        "name": "De Martino Public Hospital",
+        "phone": "+252615572605",
+        "latitude": 2.0297769,
+        "longitude": 45.3386345,
+        "distance_km": 1.65,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": false
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 75,
+      "reason": "De Martino Public Hospital: closest suitable hospital, ETA 3 min.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-08-02 16:43:28",
+      "analysis_id": 88,
+      "emergency_id": 84,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 12,
+        "name": "De Martino Public Hospital",
+        "phone": "+252615572605",
+        "latitude": 2.0297769,
+        "longitude": 45.3386345,
+        "distance_km": 1.65,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": false
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 76,
+      "reason": "Erdogan Hospital (Digfer): closest suitable hospital, ETA 3 min.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-08-02 16:52:57",
+      "analysis_id": 89,
+      "emergency_id": 85,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 13,
+        "name": "Erdogan Hospital (Digfer)",
+        "phone": "+252613773333",
+        "latitude": 2.0437655,
+        "longitude": 45.3055247,
+        "distance_km": 1.45,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": false
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 77,
+      "reason": "Erdogan Hospital (Digfer): closest suitable hospital, ETA 3 min.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-08-02 17:02:11",
+      "analysis_id": 90,
+      "emergency_id": 86,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 13,
+        "name": "Erdogan Hospital (Digfer)",
+        "phone": "+252613773333",
+        "latitude": 2.0437655,
+        "longitude": 45.3055247,
+        "distance_km": 1.45,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": false
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 78,
+      "reason": "Fire: Mogadishu Fire Brigade (~2.5 km, ETA 3 min).",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {},
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-08-02 18:15:12",
+      "analysis_id": 91,
+      "emergency_id": 87,
+      "recommended_fire": {
+        "id": 13,
+        "name": "Mogadishu Fire Brigade",
+        "phone": "+252615852642",
+        "latitude": 2.0421032,
+        "longitude": 45.3462853,
+        "distance_km": 2.5,
+        "eta_minutes": 3
+      },
+      "recommended_police": null,
+      "recommended_hospital": null,
+      "suggested_dispatch_types": [
+        "fire"
+      ],
+      "estimated_arrival_minutes": 3
+    },
+    {
+      "id": 79,
+      "reason": "De Martino Public Hospital: closest suitable hospital, ETA 3 min.",
+      "status": "pending",
+      "call_id": null,
+      "scoring": {
+        "hospital": {
+          "source": "nearest_precomputed"
+        }
+      },
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-08-02 18:23:34",
+      "analysis_id": 92,
+      "emergency_id": 88,
+      "recommended_fire": null,
+      "recommended_police": null,
+      "recommended_hospital": {
+        "id": 12,
+        "name": "De Martino Public Hospital",
+        "phone": "+252615572605",
+        "latitude": 2.0297769,
+        "longitude": 45.3386345,
+        "distance_km": 1.65,
+        "eta_minutes": 3,
+        "score_detail": {
+          "source": "nearest_precomputed"
+        },
+        "emergency_capacity": null,
+        "ambulance_available": false
+      },
+      "suggested_dispatch_types": [
+        "medical"
+      ],
+      "estimated_arrival_minutes": 3
+    }
+  ],
+  "next_id": 80
+}

@@ -194,7 +194,15 @@ TEAM_LABELS = {
     "call_center": "Emergency Call Center",
 }
 
-COMPLETED_STATUSES = ("resolved", "completed", "cancelled", "no_hospital_available")
+COMPLETED_STATUSES = (
+    "resolved",
+    "completed",
+    "cancelled",
+    "no_hospital_available",
+    "no_responder_available",
+    "timeout",
+    "rejected",
+)
 
 # Seeded into MySQL settings.response_stations once; runtime reads via get_response_stations().
 DEFAULT_RESPONSE_STATIONS = {
@@ -312,6 +320,8 @@ def handle_csrf_error(e):
 
 TYPE_MAP = {
     "medical": ["medical", "family_help", "family help"],
+    # Role alias — hospital desks may request type=hospital
+    "hospital": ["medical", "family_help", "family help"],
     "police": ["police", "security", "accident"],
     "fire": ["fire"],
 }
@@ -601,16 +611,16 @@ logging.getLogger(__name__).info(
 # import-time ALTER/SHOW over Railway public proxy was blocking gunicorn workers.
 
 DEFAULT_CONTENT = {
-    "app_name": "GurmadNet AI",
+    "app_name": "Somali Help App",
     "sos_button_text": "SOS",
     "sos_subtitle": "Tap SOS button to start emergency request",
     "confirmation_message": "Help is on the way!",
     "hospital_dashboard_title": "Hospital Dashboard",
     "police_dashboard_title": "Police Operations Dashboard",
     "fire_dashboard_title": "Fire & Rescue Dashboard",
-    "admin_dashboard_title": "GurmadNet AI — Admin Control Panel",
-    "call_center_dashboard_title": "GurmadNet AI — Emergency Call Center",
-    "welcome_citizen": "Mogadishu & Somalia — 24/7 Emergency Response",
+    "admin_dashboard_title": "Somali Help App — Admin",
+    "call_center_dashboard_title": "Somali Help App — Call Center",
+    "welcome_citizen": "Emergency help for Somalia",
     "emergency_type_medical": "Medical",
     "emergency_type_accident": "Accident",
     "emergency_type_fire": "Fire",
@@ -635,6 +645,14 @@ DEFAULT_SETTINGS = {
     "color_fire": "#C62828",
     "dark_mode": False,
     "hospital_response_timeout_sec": 120,
+    # After accept with no responder activity: remind → escalate → reassign/close.
+    "post_accept_remind_sec": 180,
+    "post_accept_escalate_sec": 360,
+    "post_accept_reassign_sec": 540,
+    # Hard cap — no emergency may remain active forever.
+    "emergency_absolute_timeout_hours": 48,
+    # Police/fire desk: auto-terminal if no Complete after this many hours (ignores GPS pings).
+    "station_desk_stale_hours": 24,
     "google_maps_api_key": os.environ.get("GOOGLE_MAPS_API_KEY", ""),
     "call_center_enabled": True,
     "call_center_phone": "",
@@ -647,8 +665,8 @@ DEFAULT_SETTINGS = {
     "ai_enabled": True,
     "ai_provider": "rule_based",
     # --- general / branding ---
-    "app_name": "GurmadNet AI",
-    "app_description": "National Emergency Response Platform for Somalia",
+    "app_name": "Somali Help App",
+    "app_description": "Integrated Emergency Help Platform",
     "app_logo_url": "",
     "app_favicon_url": "",
     "default_language": "en",
@@ -696,7 +714,7 @@ DEFAULT_SETTINGS = {
     "sms_provider": "none",
     "sms_api_key": "",
     "sms_api_url": "",
-    "sms_sender_id": "GurmadNet",
+    "sms_sender_id": "SomaliHelp",
     # --- maps ---
     "maps_provider": "google",
     "maps_default_lat": 2.0469,
@@ -833,6 +851,11 @@ SYSTEM_SETTINGS_GROUPS = [
             {"key": "police_response_time", "label": "Target police response (min)", "type": "number", "min": 1},
             {"key": "fire_response_time", "label": "Target fire response (min)", "type": "number", "min": 1},
             {"key": "hospital_response_timeout_sec", "label": "Hospital accept timeout (sec)", "type": "number", "min": 30},
+            {"key": "post_accept_remind_sec", "label": "Post-accept inactivity remind (sec)", "type": "number", "min": 30},
+            {"key": "post_accept_escalate_sec", "label": "Post-accept inactivity escalate (sec)", "type": "number", "min": 60},
+            {"key": "post_accept_reassign_sec", "label": "Post-accept inactivity reassign (sec)", "type": "number", "min": 90},
+            {"key": "emergency_absolute_timeout_hours", "label": "Absolute active emergency timeout (hours)", "type": "number", "min": 1},
+            {"key": "station_desk_stale_hours", "label": "Police/fire desk stale auto-close (hours)", "type": "number", "min": 1},
             {"key": "max_emergencies_per_day", "label": "Max emergencies / day", "type": "number", "min": 1},
             {"key": "refresh_interval", "label": "Dashboard refresh (sec)", "type": "number", "min": 3},
         ],
@@ -1049,6 +1072,26 @@ def normalize_emergency_record(em):
     em.setdefault("status_history", [])
     em.setdefault("assigned_hospital_id", None)
     em.setdefault("assigned_hospital_name", "")
+    # If responder finished but status was overwritten (re-accept / race), restore terminal.
+    rs = em.get("responder_status") or {}
+    st = (em.get("status") or "").lower()
+    if rs.get("reached_victim") and st not in COMPLETED_STATUSES:
+        prev = em.get("status")
+        em["status"] = "completed"
+        hist = em.setdefault("status_history", [])
+        if not any((h.get("status") or "").lower() == "completed" for h in hist):
+            hist.append({
+                "status": "completed",
+                "timestamp": rs.get("reached_victim") or now_str(),
+                "note": "Healed: responder reached victim — status restored to completed",
+            })
+        app.logger.info(
+            "EMERGENCY_STATUS_TRANSITION eid=%s prev=%s new=%s note=%s",
+            em.get("id"),
+            prev,
+            "completed",
+            "heal_reached_victim",
+        )
     # Terminal SOS must never keep live tracking / map "live" flags
     if (em.get("status") or "").lower() in COMPLETED_STATUSES:
         em["tracking_active"] = False
@@ -1372,6 +1415,7 @@ def _auto_dispatch_emergency(emergency):
                     emergency,
                     "pending_hospital",
                     f"Nearest hospital: {hospital['name']}{dist_txt}",
+                    notify_citizen=False,
                 )
                 _notify("hospital", hospital["id"], f"URGENT: Emergency #{eid} — respond now", eid, "team_assigned")
                 _notify(
@@ -1381,9 +1425,22 @@ def _auto_dispatch_emergency(emergency):
                     eid,
                     "team_assigned",
                 )
+            else:
+                # Queue exhausted / all hospital ids invalid — do not leave bare pending.
+                _append_status(
+                    emergency,
+                    "no_hospital_available",
+                    "Closed unassigned pending — no hospitals in escalation queue",
+                )
+                _stop_sos_tracking(emergency)
         else:
-            emergency["status"] = "pending"
-            _append_status(emergency, "pending", "Awaiting dispatch assignment")
+            # Empty escalation queue: terminal state (not pending — that stuck Live Tracking forever).
+            _append_status(
+                emergency,
+                "no_hospital_available",
+                "Closed unassigned pending — no hospitals in escalation queue",
+            )
+            _stop_sos_tracking(emergency)
     else:
         emergency["status"] = "pending"
         # Soft-assign nearest open police/fire station when coordinates exist
@@ -1404,6 +1461,7 @@ def _auto_dispatch_emergency(emergency):
                     emergency,
                     "pending",
                     f"Nearest {team} station: {nearest.get('name')}{dist_txt}",
+                    notify_citizen=False,
                 )
                 _notify_role_operators(
                     team,
@@ -1420,13 +1478,23 @@ def _auto_dispatch_emergency(emergency):
                     "team_assigned",
                 )
             else:
-                _append_status(emergency, "pending", f"Routed to {emergency['assigned_team_label']}")
+                _append_status(
+                    emergency,
+                    "pending",
+                    f"Routed to {emergency['assigned_team_label']}",
+                    notify_citizen=False,
+                )
                 _notify_role_operators(
                     team, f"URGENT: Emergency #{eid} — open queue", eid, "team_assigned"
                 )
                 _notify("patient", uid, f"{emergency['assigned_team_label']} notified.", eid, "team_assigned")
         else:
-            _append_status(emergency, "pending", f"Routed to {emergency['assigned_team_label']}")
+            _append_status(
+                emergency,
+                "pending",
+                f"Routed to {emergency['assigned_team_label']}",
+                notify_citizen=False,
+            )
             if team in ("police", "fire"):
                 _notify_role_operators(
                     team, f"URGENT: Emergency #{eid} — open queue", eid, "team_assigned"
@@ -1775,11 +1843,54 @@ def _role_home(user):
     return ROLE_HOME.get(user.get("role") if user else None, "/login")
 
 
+def _settings_int(settings, key, default):
+    try:
+        return int(settings.get(key, default) or default)
+    except (TypeError, ValueError):
+        return int(default)
+
+
+def _settings_float(settings, key, default):
+    try:
+        return float(settings.get(key, default) or default)
+    except (TypeError, ValueError):
+        return float(default)
+
+
 def _run_escalations():
     settings = load_settings()
-    timeout = int(settings.get("hospital_response_timeout_sec", 120))
+    timeout = _settings_int(settings, "hospital_response_timeout_sec", 120)
+    stale_hours = _settings_float(settings, "station_desk_stale_hours", 24)
+    absolute_hours = _settings_float(settings, "emergency_absolute_timeout_hours", 48)
+    remind_sec = _settings_int(settings, "post_accept_remind_sec", 180)
+    escalate_sec = _settings_int(settings, "post_accept_escalate_sec", 360)
+    reassign_sec = _settings_int(settings, "post_accept_reassign_sec", 540)
+    # Keep remind < escalate < reassign even if misconfigured.
+    escalate_sec = max(escalate_sec, remind_sec)
+    reassign_sec = max(reassign_sec, escalate_sec)
+
     edata = load_emergencies()
     hdata = hl.load_hospitals(read_json, save_json)
+
+    # Close stuck / abandoned / timed-out cases so nothing stays active forever.
+    stuck_changed = False
+    for em in edata["emergencies"]:
+        if _close_stuck_unassigned_hospital_pending(em):
+            stuck_changed = True
+        if _close_absolute_timeout_case(em, absolute_hours):
+            stuck_changed = True
+            continue
+        if _process_post_accept_inactivity(
+            em, hdata, timeout, remind_sec, escalate_sec, reassign_sec
+        ):
+            stuck_changed = True
+            continue
+        if _close_stale_station_desk_case(em, stale_hours):
+            stuck_changed = True
+    if stuck_changed:
+        save_emergencies(edata)
+
+    before_status = {e.get("id"): e.get("status") for e in edata["emergencies"]}
 
     def _save(ed):
         save_emergencies(ed)
@@ -1796,11 +1907,562 @@ def _run_escalations():
         lambda tt, tid, msg, rid=None: _notify(tt, tid, msg, rid),
     )
 
+    # Ensure exhausted-queue transitions are logged in status_history + app log.
+    edata = load_emergencies()
+    hist_changed = False
+    terminal_no_facility = frozenset({
+        "no_hospital_available",
+        "no_responder_available",
+        "timeout",
+        "rejected",
+    })
+    for em in edata["emergencies"]:
+        eid = em.get("id")
+        prev = before_status.get(eid)
+        new = em.get("status")
+        if prev == new:
+            continue
+        new_l = (new or "").lower()
+        if new_l not in terminal_no_facility:
+            app.logger.info(
+                "EMERGENCY_STATUS_TRANSITION eid=%s prev=%s new=%s note=%s",
+                eid,
+                prev,
+                new,
+                "escalation",
+            )
+            continue
+        hist = em.get("status_history") or []
+        if hist and (hist[-1].get("status") or "").lower() == new_l:
+            app.logger.info(
+                "EMERGENCY_STATUS_TRANSITION eid=%s prev=%s new=%s note=%s",
+                eid,
+                prev,
+                new,
+                (hist[-1].get("note") or "escalation exhausted"),
+            )
+            _stop_sos_tracking(em)
+            continue
+        note = {
+            "no_hospital_available": "No more hospitals in escalation queue",
+            "no_responder_available": "No responder available",
+            "timeout": "Emergency timed out",
+            "rejected": "Request rejected — no further responder available",
+        }.get(new_l, "Lifecycle terminal")
+        _append_status(em, new_l, note, notify_citizen=False)
+        _stop_sos_tracking(em)
+        hist_changed = True
+    if hist_changed:
+        save_emergencies(edata)
 
-def _append_status(em, status, note=""):
+
+def _append_status(em, status, note="", *, notify_citizen=True):
+    prev = em.get("status")
     em.setdefault("status_history", [])
     em["status_history"].append({"status": status, "timestamp": now_str(), "note": note})
     em["status"] = status
+    if prev != status or note:
+        app.logger.info(
+            "EMERGENCY_STATUS_TRANSITION eid=%s prev=%s new=%s note=%s",
+            em.get("id"),
+            prev,
+            status,
+            note or "",
+        )
+    if (
+        notify_citizen
+        and em.get("user_id")
+        and prev != status
+        and load_settings().get("notify_citizen_status", True)
+    ):
+        _notify(
+            "patient",
+            em["user_id"],
+            _citizen_status_notify_message(em),
+            em.get("id"),
+            "status_changed",
+        )
+
+
+def _close_stuck_unassigned_hospital_pending(em):
+    """Close hospital-bound pending cases that can never escalate (empty queue, no deadline)."""
+    if not em:
+        return False
+    if (em.get("status") or "").lower() != "pending":
+        return False
+    if em.get("assigned_to") != "hospital" and em.get("type") not in ("medical", "family_help"):
+        return False
+    if em.get("assigned_hospital_id"):
+        return False
+    if em.get("response_deadline"):
+        return False
+    if em.get("escalation_queue"):
+        return False
+    _append_status(
+        em,
+        "no_hospital_available",
+        "Closed unassigned pending — no hospitals in escalation queue",
+    )
+    _stop_sos_tracking(em)
+    return True
+
+
+_STATION_DESK_ACTIVE = frozenset({
+    "pending",
+    "accepted",
+    "dispatched",
+    "in_progress",
+})
+
+_POST_ACCEPT_IDLE_STATUSES = frozenset({
+    "accepted",
+    "dispatched",
+    "in_progress",
+})
+
+_LIFECYCLE_EVENT_STATUSES = frozenset({
+    "lifecycle_remind",
+    "lifecycle_escalate",
+    "lifecycle_reassign",
+})
+
+_RESPONDER_ACTIVITY_STATUSES = frozenset({
+    "accepted",
+    "dispatched",
+    "in_progress",
+    "pending_hospital",
+    "rejected_by_hospital",
+    "completed",
+    "resolved",
+})
+
+
+def _station_desk_activity_ts(em):
+    """Last desk/status change. Citizen GPS (last_location_update) must not keep cases alive."""
+    candidates = []
+    for key in ("accepted_at", "timestamp"):
+        if em.get(key):
+            candidates.append(em.get(key))
+    for h in em.get("status_history") or []:
+        st = (h.get("status") or "").lower()
+        if st in _LIFECYCLE_EVENT_STATUSES:
+            continue
+        if h.get("timestamp"):
+            candidates.append(h["timestamp"])
+    best = None
+    for raw in candidates:
+        try:
+            dt = parse_dt(raw)
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if best is None or dt > best:
+            best = dt
+    return best
+
+
+def _responder_activity_ts(em):
+    """Last real responder/desk activity after (or at) acceptance. Ignores citizen GPS and lifecycle notes."""
+    candidates = []
+    if em.get("accepted_at"):
+        candidates.append(em["accepted_at"])
+    rs = em.get("responder_status") or {}
+    for key in ("en_route", "arrived_at_scene", "reached_victim"):
+        if rs.get(key):
+            candidates.append(rs[key])
+    if em.get("assigned_ambulance_id") and em.get("ambulance_assigned_at"):
+        candidates.append(em["ambulance_assigned_at"])
+    for h in em.get("status_history") or []:
+        st = (h.get("status") or "").lower()
+        if st in _LIFECYCLE_EVENT_STATUSES:
+            continue
+        if st in _RESPONDER_ACTIVITY_STATUSES and h.get("timestamp"):
+            candidates.append(h["timestamp"])
+    best = None
+    for raw in candidates:
+        try:
+            dt = parse_dt(raw)
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if best is None or dt > best:
+            best = dt
+    return best
+
+
+def _append_lifecycle_event(em, event_status, note):
+    """Record lifecycle timeline event without changing the operational status."""
+    em.setdefault("status_history", [])
+    em["status_history"].append({
+        "status": event_status,
+        "timestamp": now_str(),
+        "note": note,
+    })
+    app.logger.info(
+        "EMERGENCY_LIFECYCLE eid=%s event=%s note=%s",
+        em.get("id"),
+        event_status,
+        note or "",
+    )
+
+
+def _lifecycle_flags(em):
+    flags = em.get("lifecycle_timeout")
+    if not isinstance(flags, dict):
+        flags = {}
+        em["lifecycle_timeout"] = flags
+    return flags
+
+
+def _reset_lifecycle_flags(em):
+    em["lifecycle_timeout"] = {}
+
+
+def _notify_assigned_responder(em, message, ntype="system_alert"):
+    """Remind/escalate the currently assigned hospital or station operators."""
+    eid = em.get("id")
+    team = (em.get("assigned_to") or "").strip().lower()
+    hid = em.get("assigned_hospital_id")
+    if hid:
+        _notify("hospital", hid, message, eid, ntype)
+    if team in ("police", "fire"):
+        _notify_role_operators(
+            team,
+            message,
+            eid,
+            ntype,
+            station_id=em.get("assigned_station_id"),
+        )
+
+
+def _next_station_for_reassign(em, kind):
+    """Pick next nearest open station excluding already-tried ones."""
+    import police_logic as pl
+    import facility_registry as fr
+
+    lat, lng = em.get("latitude"), em.get("longitude")
+    if lat is None or lng is None:
+        return None
+    tried = set()
+    for sid in em.get("escalation_tried_stations") or []:
+        try:
+            tried.add(int(sid))
+        except (TypeError, ValueError):
+            continue
+    cur = em.get("assigned_station_id")
+    if cur not in (None, ""):
+        try:
+            tried.add(int(cur))
+        except (TypeError, ValueError):
+            pass
+
+    data = fr.load_stations(read_json)
+    ranked = []
+    for s in data.get("stations") or []:
+        if (s.get("kind") or "").lower() != kind:
+            continue
+        if (s.get("operating_status") or "open").lower() == "closed":
+            continue
+        if s.get("latitude") is None or s.get("longitude") is None:
+            continue
+        try:
+            sid = int(s.get("id"))
+        except (TypeError, ValueError):
+            continue
+        if sid in tried:
+            continue
+        try:
+            km = hl.haversine_km(float(lat), float(lng), float(s["latitude"]), float(s["longitude"]))
+        except (TypeError, ValueError):
+            continue
+        ranked.append((km, fr.normalize_station(s)))
+    if not ranked:
+        return None
+    ranked.sort(key=lambda x: x[0])
+    best = ranked[0][1]
+    best["_distance_km"] = round(ranked[0][0], 2)
+    return best
+
+
+def _reassign_inactive_emergency(em, hdata, accept_timeout_sec):
+    """
+    Reassign after post-accept inactivity.
+    Returns True if a new responder was assigned; False if closed as no_responder_available.
+    """
+    eid = em.get("id")
+    team = (em.get("assigned_to") or "").strip().lower()
+    etype = (em.get("type") or "").strip().lower()
+    if team == "hospital" or etype in ("medical", "family_help"):
+        old_hid = em.get("assigned_hospital_id")
+        _release_emergency_ambulance(em)
+        em["escalation_index"] = em.get("escalation_index", 0) + 1
+        if old_hid:
+            _notify(
+                "hospital",
+                old_hid,
+                f"Request #{eid} reassigned — no responder activity after acceptance",
+                eid,
+                "system_alert",
+            )
+        hospital = hl.assign_next_hospital(em, hdata, accept_timeout_sec)
+        em["accepted_at"] = None
+        em["responder_status"] = {}
+        _reset_lifecycle_flags(em)
+        if hospital:
+            _append_status(
+                em,
+                "pending_hospital",
+                f"Reassigned after inactivity — now {hospital.get('name')}",
+                notify_citizen=False,
+            )
+            _append_lifecycle_event(
+                em,
+                "lifecycle_reassign",
+                f"Reassigned to {hospital.get('name')} after post-accept inactivity",
+            )
+            _notify(
+                "hospital",
+                hospital["id"],
+                f"NEW emergency request #{eid} — respond now (reassigned)",
+                eid,
+                "team_assigned",
+            )
+            _notify(
+                "patient",
+                em.get("user_id"),
+                f"Your request was forwarded to {hospital['name']} after no responder activity.",
+                eid,
+                "team_assigned",
+            )
+            return True
+        _append_status(
+            em,
+            "no_responder_available",
+            "No Responder Available — reassignment exhausted after inactivity",
+        )
+        _stop_sos_tracking(em)
+        return False
+
+    # Police / fire station reassignment
+    kind = team if team in ("police", "fire") else (
+        "fire" if etype == "fire" else "police"
+    )
+    tried = list(em.get("escalation_tried_stations") or [])
+    cur = em.get("assigned_station_id")
+    if cur not in (None, ""):
+        try:
+            cur_i = int(cur)
+            if cur_i not in tried:
+                tried.append(cur_i)
+        except (TypeError, ValueError):
+            pass
+    em["escalation_tried_stations"] = tried
+
+    if cur not in (None, ""):
+        _notify_role_operators(
+            kind,
+            f"Request #{eid} reassigned — no responder activity after acceptance",
+            eid,
+            "system_alert",
+            station_id=cur,
+        )
+
+    nxt = _next_station_for_reassign(em, kind)
+    em["accepted_at"] = None
+    em["responder_status"] = {}
+    _reset_lifecycle_flags(em)
+    if nxt:
+        em["assigned_station_id"] = nxt.get("id")
+        em["assigned_to"] = kind
+        em["assigned_team_label"] = nxt.get("name") or TEAM_LABELS.get(kind, "Response Team")
+        if nxt.get("phone"):
+            em["contact_number"] = nxt.get("phone")
+        if nxt.get("latitude") is not None:
+            em["responder_latitude"] = nxt.get("latitude")
+            em["responder_longitude"] = nxt.get("longitude")
+        dist = nxt.get("_distance_km")
+        dist_txt = f" ({dist} km)" if dist is not None else ""
+        _append_status(
+            em,
+            "pending",
+            f"Reassigned after inactivity — {nxt.get('name')}{dist_txt}",
+            notify_citizen=False,
+        )
+        _append_lifecycle_event(
+            em,
+            "lifecycle_reassign",
+            f"Reassigned to {nxt.get('name')} after post-accept inactivity",
+        )
+        _notify_role_operators(
+            kind,
+            f"NEW emergency #{eid} — respond now (reassigned)",
+            eid,
+            "team_assigned",
+            station_id=nxt.get("id"),
+        )
+        _notify(
+            "patient",
+            em.get("user_id"),
+            f"Your request was forwarded to {nxt.get('name') or 'another unit'} after no responder activity.",
+            eid,
+            "team_assigned",
+        )
+        return True
+
+    _append_status(
+        em,
+        "no_responder_available",
+        "No Responder Available — no alternate station after inactivity",
+    )
+    _stop_sos_tracking(em)
+    return False
+
+
+def _process_post_accept_inactivity(em, hdata, accept_timeout_sec, remind_sec, escalate_sec, reassign_sec):
+    """
+    After acceptance with no responder activity: remind → escalate → reassign (or close).
+    Returns True when the emergency record changed.
+    """
+    if not em:
+        return False
+    st = (em.get("status") or "").lower()
+    if st in COMPLETED_STATUSES:
+        return False
+    if st not in _POST_ACCEPT_IDLE_STATUSES:
+        return False
+    if not em.get("accepted_at"):
+        return False
+
+    # Any progress past bare accept (dispatch / on-scene) counts as activity —
+    # further abandon is handled by absolute / desk-stale timeouts.
+    if st in ("dispatched", "in_progress"):
+        return False
+    rs = em.get("responder_status") or {}
+    if rs.get("en_route") or rs.get("arrived_at_scene") or rs.get("reached_victim"):
+        return False
+
+    anchor = _responder_activity_ts(em)
+    if not anchor:
+        return False
+    idle_sec = (datetime.now() - anchor).total_seconds()
+    if idle_sec < float(remind_sec):
+        return False
+
+    flags = _lifecycle_flags(em)
+    changed = False
+    eid = em.get("id")
+
+    if idle_sec >= float(remind_sec) and not flags.get("reminded_at"):
+        note = f"Responder reminded — no activity for {int(idle_sec)}s after acceptance"
+        _append_lifecycle_event(em, "lifecycle_remind", note)
+        flags["reminded_at"] = now_str()
+        _notify_assigned_responder(
+            em,
+            f"REMINDER: Emergency #{eid} accepted but no responder activity — please dispatch now",
+            "system_alert",
+        )
+        changed = True
+
+    if idle_sec >= float(escalate_sec) and not flags.get("escalated_at"):
+        note = f"Escalated — no responder activity for {int(idle_sec)}s after acceptance"
+        _append_lifecycle_event(em, "lifecycle_escalate", note)
+        flags["escalated_at"] = now_str()
+        _notify_admins(
+            f"ESCALATION: Emergency #{eid} — accepted with no responder activity ({int(idle_sec)}s)",
+            eid,
+            "system_alert",
+        )
+        _notify_assigned_responder(
+            em,
+            f"ESCALATED: Emergency #{eid} still has no responder activity — act immediately",
+            "system_alert",
+        )
+        _notify(
+            "patient",
+            em.get("user_id"),
+            "We are escalating your emergency because the assigned unit has not responded yet.",
+            eid,
+            "status_changed",
+        )
+        changed = True
+
+    if idle_sec >= float(reassign_sec) and not flags.get("reassign_attempted_at"):
+        flags["reassign_attempted_at"] = now_str()
+        _reassign_inactive_emergency(em, hdata, accept_timeout_sec)
+        changed = True
+
+    return changed
+
+
+def _close_absolute_timeout_case(em, absolute_hours=48):
+    """Hard cap: any still-active emergency past absolute_hours becomes timeout."""
+    if not em or absolute_hours is None or float(absolute_hours) <= 0:
+        return False
+    st = (em.get("status") or "").lower()
+    if st in COMPLETED_STATUSES:
+        return False
+    if st not in ACTIVE_SOS_STATUSES and st not in _STATION_DESK_ACTIVE:
+        # Catch any other non-terminal leftover (e.g. rejected_by_hospital stuck).
+        if st in ("rejected_by_hospital",):
+            pass
+        else:
+            return False
+    anchor = None
+    for raw in (em.get("timestamp"), em.get("accepted_at")):
+        if not raw:
+            continue
+        try:
+            dt = parse_dt(raw)
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if anchor is None or dt < anchor:
+            anchor = dt
+    if not anchor:
+        return False
+    age_h = (datetime.now() - anchor).total_seconds() / 3600.0
+    if age_h < float(absolute_hours):
+        return False
+    _append_status(
+        em,
+        "timeout",
+        f"Auto-closed: absolute timeout after {int(age_h)}h active",
+    )
+    _stop_sos_tracking(em)
+    _release_emergency_ambulance(em)
+    return True
+
+
+def _close_stale_station_desk_case(em, stale_hours=24):
+    """
+    Police/fire cases stay active forever if the desk never clicks Complete.
+    After stale_hours with no desk status change, mark terminal so citizen Home can idle.
+    """
+    if not em or stale_hours is None or float(stale_hours) <= 0:
+        return False
+    team = (em.get("assigned_to") or "").strip().lower()
+    etype = (em.get("type") or "").strip().lower()
+    if team not in ("police", "fire") and etype not in ("fire", "security", "accident"):
+        return False
+    st = (em.get("status") or "").lower()
+    if st not in _STATION_DESK_ACTIVE:
+        return False
+    if st in COMPLETED_STATUSES:
+        return False
+    anchor = _station_desk_activity_ts(em)
+    if not anchor:
+        return False
+    age_h = (datetime.now() - anchor).total_seconds() / 3600.0
+    if age_h < float(stale_hours):
+        return False
+    label = team or etype or "station"
+    # Never accepted → no responder; accepted/dispatched/in_progress → completed.
+    if st == "pending" and not em.get("accepted_at"):
+        terminal = "no_responder_available"
+        note = f"Auto-closed: No Responder Available — {label} desk never accepted (stale {int(age_h)}h)"
+    else:
+        terminal = "completed"
+        note = f"Auto-closed: {label} case closed without Complete (stale {int(age_h)}h)"
+    _append_status(em, terminal, note, notify_citizen=False)
+    _stop_sos_tracking(em)
+    return True
 
 
 def _create_healthcare_emergency(data, request_mode="emergency"):
@@ -1855,7 +2517,12 @@ def _create_healthcare_emergency(data, request_mode="emergency"):
         emergency["escalation_queue"] = [hid]
         emergency["escalation_index"] = 0
         hl.assign_next_hospital(emergency, hdata, timeout)
-        _append_status(emergency, "pending_hospital", f"Sent to chosen hospital: {hospital['name']}")
+        _append_status(
+            emergency,
+            "pending_hospital",
+            f"Sent to chosen hospital: {hospital['name']}",
+            notify_citizen=False,
+        )
     else:
         emergency["escalation_queue"] = hl.build_escalation_queue(lat, lng, hdata)
         emergency["escalation_index"] = 0
@@ -1866,7 +2533,12 @@ def _create_healthcare_emergency(data, request_mode="emergency"):
         else:
             hospital = hl.assign_next_hospital(emergency, hdata, timeout)
             if hospital:
-                _append_status(emergency, "pending_hospital", f"Nearest: {hospital['name']}")
+                _append_status(
+                    emergency,
+                    "pending_hospital",
+                    f"Nearest: {hospital['name']}",
+                    notify_citizen=False,
+                )
 
     edata["emergencies"].append(emergency)
     save_emergencies(edata)
@@ -2318,7 +2990,21 @@ def save_users(data):
 
 def load_emergencies():
     data = read_json(EMERGENCIES_FILE, {"emergencies": [], "next_id": 1})
-    data["emergencies"] = [normalize_emergency_record(e) for e in data.get("emergencies", [])]
+    healed = False
+    out = []
+    for e in data.get("emergencies", []):
+        before = (e.get("status") or "").lower()
+        e = normalize_emergency_record(e)
+        if (e.get("status") or "").lower() != before:
+            healed = True
+        out.append(e)
+    data["emergencies"] = out
+    if healed:
+        # Persist reached_victim → completed repairs so MySQL/status stay terminal.
+        save_json(EMERGENCIES_FILE, {
+            "emergencies": [normalize_emergency_record(dict(e)) for e in out],
+            "next_id": data.get("next_id", 1),
+        })
     return data
 
 
@@ -2541,7 +3227,7 @@ def _apply_runtime_settings(settings=None):
     if settings.get("google_maps_api_key"):
         os.environ["GOOGLE_MAPS_API_KEY"] = str(settings.get("google_maps_api_key") or "")
     if settings.get("app_name"):
-        os.environ["APP_NAME"] = str(settings.get("app_name") or "GurmadNet AI")
+        os.environ["APP_NAME"] = str(settings.get("app_name") or "Somali Help App")
     try:
         minutes = int(settings.get("session_timeout_minutes") or 120)
     except (TypeError, ValueError):
@@ -2761,7 +3447,7 @@ def seed_defaults():
         if not os.path.exists(settings_path):
             save_settings(DEFAULT_SETTINGS.copy())
 
-    # Drop legacy demo branding left in CMS from earlier seed content
+    # Drop legacy demo / development branding left in CMS from earlier seed content
     try:
         content = load_content()
         demo_titles = {
@@ -2774,8 +3460,57 @@ def seed_defaults():
             if content.get(key) == old:
                 content[key] = DEFAULT_CONTENT[key]
                 changed = True
+        brand_old = {
+            "app_name": (
+                "GurmadNet AI",
+                "GurmadNet",
+                "Gurmad AI",
+                "SmartRescue",
+                "Emergency Response",
+            ),
+            "admin_dashboard_title": (
+                "GurmadNet AI — Admin Control Panel",
+                "GurmadNet — Admin Control Panel",
+                "Emergency Response — Admin Control Panel",
+            ),
+            "call_center_dashboard_title": (
+                "GurmadNet AI — Emergency Call Center",
+                "GurmadNet — Emergency Call Center",
+                "Emergency Call Center",
+            ),
+            "welcome_citizen": (
+                "Mogadishu & Somalia — 24/7 Emergency Response",
+            ),
+            "app_description": (
+                "National Emergency Response Platform for Somalia",
+            ),
+        }
+        for key, olds in brand_old.items():
+            if content.get(key) in olds and key in DEFAULT_CONTENT:
+                content[key] = DEFAULT_CONTENT[key]
+                changed = True
         if changed:
             save_content(content)
+        settings = load_settings()
+        if settings.get("app_name") in (
+            "GurmadNet AI",
+            "GurmadNet",
+            "Gurmad AI",
+            "SmartRescue",
+            "Emergency Response",
+        ):
+            settings["app_name"] = DEFAULT_SETTINGS.get("app_name") or "Somali Help App"
+            if settings.get("app_description") in (
+                "National Emergency Response Platform for Somalia",
+                "",
+            ) or not settings.get("app_description"):
+                settings["app_description"] = DEFAULT_SETTINGS.get("app_description") or (
+                    "Integrated Emergency Help Platform"
+                )
+            save_settings(settings)
+        elif settings.get("app_description") == "National Emergency Response Platform for Somalia":
+            settings["app_description"] = "Integrated Emergency Help Platform"
+            save_settings(settings)
     except Exception:
         pass
     hl.seed_hospitals_if_empty(read_json, save_json)
@@ -2860,13 +3595,20 @@ def _mysql_request_scope_begin():
 
 @app.before_request
 def _mysql_boot_before_request():
-    # Do not block Render health checks / public auth pages behind schema boot.
-    if _BOOT_SEEDED:
+    # Never block Render health checks (HEAD/GET /) or public auth pages on schema boot.
+    if _BOOT_SEEDED or not USE_MYSQL:
         return None
     path = (request.path or "").rstrip("/") or "/"
-    if request.method == "GET" and path in ("/login", "/signup", "/"):
+    if request.method in ("GET", "HEAD") and path in ("/", "/login", "/signup"):
         return None
-    ensure_mysql_boot()
+    # Never run seed_defaults() on a request worker — Gunicorn would WORKER TIMEOUT.
+    # Background import thread already boots; only start another if none holds the lock.
+    if not _BOOT_LOCK.locked():
+        threading.Thread(
+            target=ensure_mysql_boot,
+            name="gurmadnet-mysql-boot",
+            daemon=True,
+        ).start()
     return None
 
 
@@ -3290,7 +4032,8 @@ def login():
 
         user, udata = get_user_by_login(login_id)
 
-        if user and user.get("status") == "blocked":
+        status = (user.get("status") or "active").lower() if user else "active"
+        if user and status in ("blocked", "disabled", "inactive", "deleted"):
             flash("Your account has been blocked. Contact admin.", "error")
         elif user and _account_lockout_active(user):
             flash("Too many failed attempts. Try again later.", "error")
@@ -3343,7 +4086,7 @@ def forgot_password():
             return render_template("forgot_password.html", email=email)
 
         otp, minutes = _issue_password_otp(user)
-        save_users(udata)
+        persist_user(user, udata)
         result = send_password_reset_otp_email(
             to_email=email,
             otp_code=otp,
@@ -3359,7 +4102,7 @@ def forgot_password():
             )
             # Roll back OTP so a failed send cannot leave a usable code
             _clear_password_otp(user)
-            save_users(udata)
+            persist_user(user, udata)
             if "smtp not configured" in err or "smtp_password" in err:
                 flash(
                     "Email delivery is not configured yet. "
@@ -3405,7 +4148,7 @@ def verify_reset_otp():
         return render_template("verify_reset_otp.html", email=email)
 
     ok, payload = _verify_password_otp(user, otp_code)
-    save_users(udata)
+    persist_user(user, udata)
     if not ok:
         flash(payload, "error")
         return render_template("verify_reset_otp.html", email=email)
@@ -3431,7 +4174,7 @@ def reset_password(token):
     if expires < datetime.now():
         user.pop("reset_token", None)
         user.pop("reset_expires", None)
-        save_users(udata)
+        persist_user(user, udata)
         flash("Reset session expired. Request a new code.", "error")
         return redirect(url_for("forgot_password"))
     if request.method == "POST":
@@ -3448,7 +4191,7 @@ def reset_password(token):
             user.pop("reset_expires", None)
             _clear_password_otp(user)
             log_activity(user, "Password reset via OTP")
-            save_users(udata)
+            persist_user(user, udata)
             flash("Password updated. You can log in now.", "success")
             return redirect(url_for("login"))
     return render_template("reset_password.html", token=token)
@@ -3525,15 +4268,21 @@ def signup():
                 ms = _mysql_backend()
                 if ms:
                     email_taken = ms.user_email_taken(email)
+                    phone_taken = ms.user_phone_taken(phone)
                     nid_taken = bool(nid_hash) and ms.user_national_id_taken(nid_hash)
                 else:
                     udata = load_users()
                     email_taken = any(u["email"].lower() == email for u in udata["users"])
+                    phone_taken = any(
+                        (u.get("phone") or "").strip() == phone for u in udata["users"] if u.get("phone")
+                    )
                     nid_taken = bool(nid_hash) and any(
                         u.get("national_id_hash") == nid_hash for u in udata["users"]
                     )
                 if email_taken:
                     flash("Email already registered.", "error")
+                elif phone_taken:
+                    flash("This phone number is already registered.", "error")
                 elif nid_taken:
                     flash("This National ID is already registered.", "error")
                 else:
@@ -3620,14 +4369,14 @@ def verify_email_code():
 
     ok, err = _verify_email_otp(user, otp_code)
     if not ok:
-        save_users(udata)
+        persist_user(user, udata)
         flash(err, "error")
         return render_template("verify_email.html", email=email)
 
     user["last_login"] = now_str()
     log_activity(user, "Email verified")
     log_activity(user, "Logged in")
-    save_users(udata)
+    persist_user(user, udata)
     login_user(user)
     flash("Email verified. Welcome, " + user_name(user) + "!", "success")
     return redirect(_role_home(user))
@@ -3653,7 +4402,7 @@ def resend_verification():
         flash("This email is already verified. You can log in.", "success")
         return redirect(url_for("login"))
     otp = _issue_email_verification(user)
-    save_users(udata)
+    persist_user(user, udata)
     result = _send_user_verification_email(user, otp)
     if result.get("success"):
         flash("Verification code sent. Please check your inbox.", "success")
@@ -3689,7 +4438,7 @@ def index():
     status = (user.get("status") or "active").lower()
     if status in ("blocked", "disabled", "inactive", "deleted"):
         session.clear()
-        flash("Your account is not allowed to access GurmadNet.", "error")
+        flash("Your account is not allowed to access Somali Help App.", "error")
         return redirect(url_for("login"))
 
     role = user.get("role") or ""
@@ -4370,7 +5119,11 @@ def _hospital_sync_ambulance_counts(hid):
 
 
 def _assign_ambulance_to_emergency(em, aid, hospital_id):
-    """Bind a hospital-owned unit to an emergency and mark it busy."""
+    """Bind a hospital-owned unit to an emergency and mark it busy.
+
+    Busy/offline units cannot be assigned to a *different* emergency.
+    Rebinding the same unit already on this emergency remains allowed.
+    """
     import facility_registry as fr
     try:
         aid = int(aid)
@@ -4387,6 +5140,17 @@ def _assign_ambulance_to_emergency(em, aid, hospital_id):
         raise ValueError("Ambulance is offline")
     if st not in ("available", "busy"):
         raise ValueError("Ambulance is not available for dispatch")
+
+    already_on_this = False
+    try:
+        already_on_this = int(em.get("assigned_ambulance_id") or 0) == aid
+    except (TypeError, ValueError):
+        already_on_this = False
+
+    if st == "busy" and not already_on_this:
+        # Reject busy unit on another mission (or orphan busy not on this case).
+        raise ValueError("Ambulance is busy on another emergency")
+
     em["assigned_ambulance_id"] = aid
     em["assigned_ambulance_call_sign"] = unit.get("call_sign") or ""
     em["assigned_ambulance_driver_name"] = unit.get("driver_name") or ""
@@ -4867,7 +5631,12 @@ def _station_desk_mutate(role, eid, action):
             if not pl.emergency_visible_to_station(em, sid, role):
                 return jsonify({"success": False, "message": "Case not in your queue"}), 403
             pl.claim_station(em, station, role)
-            _append_status(em, "accepted", f"{station.get('name') or label} accepted")
+            _append_status(
+                em,
+                "accepted",
+                f"{station.get('name') or label} accepted",
+                notify_citizen=False,
+            )
             em["accepted_at"] = now_str()
             _notify(
                 "patient",
@@ -4884,7 +5653,9 @@ def _station_desk_mutate(role, eid, action):
                 return jsonify({"success": False, "message": "Case is already closed"}), 400
             pl.claim_station(em, station, role)
             unit_word = "Police units" if role == "police" else "Fire crews"
-            _append_status(em, "dispatched", f"{unit_word} dispatched")
+            _append_status(
+                em, "dispatched", f"{unit_word} dispatched", notify_citizen=False
+            )
             em["status"] = "dispatched"
             _notify(
                 "patient",
@@ -4895,9 +5666,28 @@ def _station_desk_mutate(role, eid, action):
             )
             append_audit(f"{role}_dispatch", "emergency", eid, {"station_id": sid}, user.get("id"))
         elif action == "complete":
-            if em.get("assigned_station_id") != sid:
+            if (em.get("status") or "").lower() in COMPLETED_STATUSES:
+                return jsonify({
+                    "success": True,
+                    "emergency": em,
+                    "status": em.get("status"),
+                    "message": "Case is already closed",
+                })
+            asid = em.get("assigned_station_id")
+            try:
+                asid_int = int(asid) if asid not in (None, "") else None
+            except (TypeError, ValueError):
+                asid_int = None
+            if asid_int is not None and asid_int != int(sid):
                 return jsonify({"success": False, "message": "Not assigned to your station"}), 403
-            _append_status(em, "completed", f"{label} closed the case")
+            # Legacy accepts left assigned_station_id NULL — Complete was impossible. Claim now.
+            if asid_int is None:
+                if not pl.emergency_visible_to_station(em, sid, role):
+                    return jsonify({"success": False, "message": "Case not in your queue"}), 403
+                pl.claim_station(em, station, role)
+            _append_status(
+                em, "completed", f"{label} closed the case", notify_citizen=False
+            )
             em["status"] = "completed"
             _stop_sos_tracking(em)
             _notify(
@@ -5325,6 +6115,14 @@ def api_patient_request_status():
             2,
         )
     team_label = em.get("assigned_team_label") or TEAM_LABELS.get(em.get("assigned_to"), "Emergency Response Team")
+    stage_key, stage_label = _emergency_display_stage(em)
+    timeline = _build_emergency_timeline(em)
+    progress = _build_status_progress(em)
+    recommended = _citizen_recommended_hospital(em)
+    # Prefer already-computed distance when helper did not resolve one
+    if recommended and recommended.get("distance_km") is None and dist is not None:
+        recommended = dict(recommended)
+        recommended["distance_km"] = dist
     return jsonify({
         "success": True,
         "active": active,
@@ -5333,8 +6131,20 @@ def api_patient_request_status():
             "type": em.get("type"),
             "status": em.get("status"),
             "status_history": em.get("status_history", []),
+            "display_stage": stage_key,
+            "display_stage_label": stage_label,
+            "timeline": timeline,
+            "progress": progress,
             "team_label": team_label,
             "assigned_to": em.get("assigned_to"),
+            "assigned_hospital_name": em.get("assigned_hospital_name"),
+            "hospital": recommended,
+            "recommended_hospital": recommended,
+            "distance_km": (recommended or {}).get("distance_km", dist),
+            "eta_minutes": (recommended or {}).get("eta_minutes"),
+            "timestamp": em.get("timestamp"),
+            "accepted_at": em.get("accepted_at"),
+            "responder_status": em.get("responder_status") or {},
             "location": em.get("location"),
             "latitude": em.get("latitude"),
             "longitude": em.get("longitude"),
@@ -5397,6 +6207,31 @@ def hospital_accept_request(eid):
         return jsonify({"success": False}), 404
     if em.get("assigned_hospital_id") != hid:
         return jsonify({"success": False, "message": "Not assigned to your hospital"}), 403
+    st = (em.get("status") or "").lower()
+    if st in COMPLETED_STATUSES:
+        return jsonify({"success": False, "message": "Case is already closed", "status": em.get("status")}), 400
+    # Idempotent: already accepted — do not re-append status (that could race with complete).
+    if st == "accepted" and em.get("accepted_at"):
+        data = request.get_json(silent=True) or {}
+        amb_id = data.get("ambulance_unit_id")
+        if amb_id not in (None, ""):
+            try:
+                _assign_ambulance_to_emergency(em, amb_id, hid)
+                save_emergencies(edata)
+            except ValueError as exc:
+                return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
+        return jsonify({
+            "success": True,
+            "status": em["status"],
+            "assigned_ambulance_id": em.get("assigned_ambulance_id"),
+            "assigned_ambulance_call_sign": em.get("assigned_ambulance_call_sign"),
+        })
+    if st not in ("pending_hospital", "pending", "rejected_by_hospital"):
+        return jsonify({
+            "success": False,
+            "message": f"Cannot accept from status '{em.get('status')}'",
+            "status": em.get("status"),
+        }), 400
     data = request.get_json(silent=True) or {}
     amb_id = data.get("ambulance_unit_id")
     unit = None
@@ -5405,7 +6240,7 @@ def hospital_accept_request(eid):
             unit = _assign_ambulance_to_emergency(em, amb_id, hid)
         except ValueError as exc:
             return jsonify({"success": False, "message": _safe_client_message(exc)}), 400
-    _append_status(em, "accepted", "Hospital accepted request")
+    _append_status(em, "accepted", "Hospital accepted request", notify_citizen=False)
     em["accepted_at"] = now_str()
     em["assigned_to"] = "hospital"
     if not unit:
@@ -5415,7 +6250,16 @@ def hospital_accept_request(eid):
             em["responder_latitude"] = hospital["latitude"]
             em["responder_longitude"] = hospital["longitude"]
     save_emergencies(edata)
-    _notify("patient", em.get("user_id"), "Your emergency request has been accepted.", eid, "request_accepted")
+    _notify(
+        "patient",
+        em.get("user_id"),
+        (
+            f"✅ {(em.get('assigned_hospital_name') or 'A hospital')} has accepted your emergency. "
+            "Medical professionals are coordinating your assistance. Please keep your phone nearby."
+        ),
+        eid,
+        "request_accepted",
+    )
     append_audit(
         "hospital_accept",
         "emergency",
@@ -5497,6 +6341,8 @@ def hospital_reject_request(eid):
         return jsonify({"success": False}), 404
     if em.get("assigned_hospital_id") != hid:
         return jsonify({"success": False, "message": "Forbidden"}), 403
+    if (em.get("status") or "").lower() in COMPLETED_STATUSES:
+        return jsonify({"success": False, "message": "Case is already closed", "status": em.get("status")}), 400
     settings = load_settings()
     timeout = int(settings.get("hospital_response_timeout_sec", 120))
     hdata = hl.load_hospitals(read_json, save_json)
@@ -5582,6 +6428,11 @@ def api_messages(request_id):
         msg = hl.add_message(
             read_json, save_json, request_id, session.get("role"), session.get("user_id"),
             text, msg_type=msg_type, audio_data=audio,
+            unique_system=bool(
+                data.get("unique_system")
+                or data.get("system")
+                or data.get("system_transition")
+            ),
         )
         em_chat, edata = get_emergency_by_id(request_id)
         if em_chat:
@@ -5664,11 +6515,23 @@ def api_user_profile():
             last4, nid_hash, nid_enc = _national_id_fields(data.get("national_id"))
         except ValueError as exc:
             return jsonify({"success": False, "message": str(exc)}), 400
-        if nid_hash and any(
-            u.get("national_id_hash") == nid_hash and u.get("id") != user.get("id")
-            for u in udata["users"]
-        ):
-            return jsonify({"success": False, "message": "This National ID is already registered."}), 400
+        if nid_hash:
+            ms = _mysql_backend()
+            if ms:
+                with ms._db() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            "SELECT id FROM users WHERE national_id_hash=%s AND id<>%s LIMIT 1",
+                            (nid_hash, user.get("id")),
+                        )
+                        taken = cur.fetchone() is not None
+            else:
+                taken = any(
+                    u.get("national_id_hash") == nid_hash and u.get("id") != user.get("id")
+                    for u in (udata or {}).get("users") or []
+                )
+            if taken:
+                return jsonify({"success": False, "message": "This National ID is already registered."}), 400
         user["national_id_last4"] = last4
         user["national_id_hash"] = nid_hash
         user["national_id_encrypted"] = nid_enc
@@ -5682,7 +6545,8 @@ def api_user_profile():
         if photo and len(str(photo)) > 120000:
             return jsonify({"success": False, "message": "Photo too large"}), 400
         user["profile_photo"] = photo
-    save_users(udata)
+    # Single-row upsert — never save_users() with MySQL hot-path stub udata.
+    persist_user(user, udata)
     return jsonify({"success": True, "profile": public_user_profile(user)})
 
 
@@ -5711,10 +6575,9 @@ def api_user_change_password():
     if pw_err:
         return jsonify({"success": False, "message": pw_err}), 400
     user["password_hash"] = generate_password_hash(new_password)
-    save_users(udata)
+    persist_user(user, udata)
     append_audit("citizen_password_changed", "user", user.get("id"), {}, user.get("id"))
     return jsonify({"success": True, "message": "Password updated successfully."})
-
 
 @app.route("/api/user/dashboard")
 @role_required("citizen")
@@ -5759,22 +6622,73 @@ def api_user_dashboard():
 
 
 TIMELINE_STEPS = (
-    ("request_submitted", "Request Submitted"),
-    ("request_accepted", "Request Accepted"),
-    ("team_assigned", "Team Assigned"),
-    ("en_route", "Team En Route"),
-    ("arrived", "Team Arrived"),
-    ("completed", "Case Completed"),
+    ("submitted", "Request submitted"),
+    ("finding_nearest", "Finding nearest hospital"),
+    ("assigned", "Hospital received your request"),
+    ("accepted", "Hospital accepted"),
+    ("responder_dispatched", "Ambulance dispatched"),
+    ("on_the_way", "Ambulance is on the way"),
+    ("arrived", "Ambulance arrived"),
+    ("completed", "Emergency completed"),
 )
 
 DISPLAY_STAGE_LABELS = {
-    "request_received": "Request Received",
-    "team_assigned": "Team Assigned",
-    "on_the_way": "On The Way",
-    "arrived": "Arrived",
-    "assistance_complete": "Assistance Complete",
+    "submitted": "Request submitted",
+    "finding_nearest": "Finding nearest hospital",
+    "assigned": "Hospital received your request",
+    "accepted": "Hospital accepted your request",
+    "responder_dispatched": "Ambulance dispatched",
+    "on_the_way": "Ambulance is on the way",
+    "arrived": "Ambulance arrived",
+    "completed": "Emergency completed",
+    "cancelled": "Request cancelled",
+    "no_facility": "No hospital available",
+    "no_responder": "No Responder Available",
+    "timeout": "Emergency timed out",
+    "rejected": "Request rejected",
     "standby": "Ready — No Active Emergency",
 }
+
+
+def _has_facility_assignment(em):
+    """True when a hospital or police/fire station has been assigned."""
+    if em.get("assigned_hospital_id") or em.get("assigned_station_id"):
+        return True
+    return (em.get("status") or "").lower() == "pending_hospital"
+
+
+def _timeline_history_map(em):
+    history = {}
+    for h in em.get("status_history") or []:
+        key = h.get("status")
+        if key and key not in history:
+            history[key] = h.get("timestamp")
+    return history
+
+
+def _timeline_reached_index(em):
+    """Highest TIMELINE_STEPS index reached (for progress / terminal cases)."""
+    order = [k for k, _ in TIMELINE_STEPS]
+    stage_key, _ = _emergency_display_stage(em)
+    if stage_key in order:
+        return order.index(stage_key)
+    # Terminal side-states: infer how far the case progressed
+    rs = em.get("responder_status") or {}
+    st = (em.get("status") or "").lower()
+    history = _timeline_history_map(em)
+    if rs.get("arrived_at_scene") or st == "in_progress" or history.get("in_progress"):
+        return order.index("arrived")
+    if rs.get("en_route"):
+        return order.index("on_the_way")
+    if st == "dispatched" or history.get("dispatched"):
+        return order.index("responder_dispatched")
+    if em.get("accepted_at") or history.get("accepted"):
+        return order.index("accepted")
+    if _has_facility_assignment(em):
+        return order.index("assigned")
+    if st in ("pending", "rejected_by_hospital") or history.get("pending"):
+        return order.index("finding_nearest")
+    return order.index("submitted")
 
 
 def _distance_remaining_km(em, responder=None):
@@ -5820,50 +6734,269 @@ def _dispatch_unit_info(em):
     }
 
 
+def _hospital_assignment_status_labels(stage_key, stage_label):
+    """Bilingual friendly assignment status for the hospital recommendation card."""
+    mapping = {
+        "submitted": ("📩 Codsiga waa la diray", "Request submitted"),
+        "finding_nearest": ("🟠 Raadinta isbitaalka ugu dhow…", "Finding nearest hospital…"),
+        "assigned": ("🏥 Isbitaal ayaa helay codsigaaga", "Hospital received your request"),
+        "accepted": ("✅ Isbitaalku waa aqbalay", "Hospital accepted your request"),
+        "responder_dispatched": ("🚑 Ambulance ayaa kusoo socota", "Ambulance is on the way"),
+        "on_the_way": ("🚑 Ambulance ayaa kusoo socota", "Ambulance is on the way"),
+        "arrived": ("📍 Ambulance way timid", "Ambulance arrived"),
+        "completed": ("❤️ Hawshu waa dhammaatay", "Emergency completed"),
+        "cancelled": ("Codsiga waa la joojiyay", "Request cancelled"),
+        "no_facility": ("Isbitaal lama helin", "No hospital available"),
+        "no_responder": ("Gurmad lama helin", "No Responder Available"),
+        "timeout": ("Waqtiga wuu dhammaaday", "Emergency timed out"),
+        "rejected": ("Codsiga waa la diiday", "Request rejected"),
+    }
+    so, en = mapping.get(stage_key, (stage_label, stage_label))
+    return so, en
+
+
+def _citizen_status_notify_message(em):
+    """Calm, reassuring citizen notification copy (presentation only)."""
+    stage_key, _ = _emergency_display_stage(em)
+    hospital = (em.get("assigned_hospital_name") or "").strip()
+    mapping = {
+        "submitted": (
+            "✅ Your emergency request has been received. "
+            "Please stay where you are — help is being arranged."
+        ),
+        "finding_nearest": (
+            "🟠 We are finding the nearest hospital for you. "
+            "Please stay where you are and keep your phone nearby."
+        ),
+        "assigned": (
+            f"🏥 {(hospital + ' has') if hospital else 'A hospital has'} received your request. "
+            "Medical help is being coordinated."
+        ),
+        "accepted": (
+            f"✅ {(hospital + ' has') if hospital else 'A hospital has'} accepted your emergency. "
+            "Medical professionals are coordinating your assistance. Please keep your phone nearby."
+        ),
+        "responder_dispatched": (
+            "🚑 An ambulance is on the way to your location. Please keep your phone nearby."
+        ),
+        "on_the_way": (
+            "🚑 The ambulance is travelling to you now. Please keep your phone nearby."
+        ),
+        "arrived": (
+            "📍 The ambulance has arrived. Please follow the medical team's instructions."
+        ),
+        "completed": (
+            "❤️ Your emergency care is complete. You are safe. Stay safe."
+        ),
+        "cancelled": (
+            "Your emergency request was cancelled. If you still need help, you can send a new SOS."
+        ),
+        "no_facility": (
+            "We could not find an available hospital right now. Please try again or call local emergency services."
+        ),
+        "no_responder": (
+            "No responder was available for your emergency. Please try again or call local emergency services."
+        ),
+        "timeout": (
+            "Your emergency request timed out. If you still need help, please send a new SOS or call local emergency services."
+        ),
+        "rejected": (
+            "Your emergency request was rejected and no further responder was available. Please try again or call local emergency services."
+        ),
+    }
+    return mapping.get(
+        stage_key,
+        "Your emergency status was updated. Please keep your phone nearby.",
+    )
+
+
+def _citizen_recommended_hospital(em):
+    """
+    Citizen-facing hospital card from existing assignment fields only.
+    Does not change routing or selection — reads assigned hospital + stored distance.
+    """
+    hid = em.get("assigned_hospital_id")
+    name = (em.get("assigned_hospital_name") or "").strip()
+    if not hid and not name:
+        return None
+
+    hospital = None
+    if hid:
+        hdata = hl.load_hospitals(read_json, save_json)
+        hospital = hl.get_hospital_by_id(hdata, hid)
+        if hospital and not name:
+            name = hospital.get("name") or ""
+    if not name:
+        return None
+
+    dist = em.get("hospital_distance_km")
+    if dist is None and hospital:
+        coords = hl.resolve_hospital_coords(hospital)
+        lat, lng = hl.best_emergency_coords(em)
+        if coords and lat is not None and lng is not None:
+            dist = hl.cap_local_distance_km(
+                round(hl.haversine_km(lat, lng, coords[0], coords[1]), 2)
+            )
+
+    victim_lat, victim_lng, _ = _emergency_coords_view(em)
+    em_view = dict(em)
+    em_view["latitude"] = victim_lat
+    em_view["longitude"] = victim_lng
+    responder = _compute_responder_location(em_view)
+    eta = _compute_eta_minutes(em_view, responder)
+
+    stage_key, stage_label = _emergency_display_stage(em)
+    status_so, status_en = _hospital_assignment_status_labels(stage_key, stage_label)
+
+    phone = None
+    district = ""
+    if hospital:
+        district = (hospital.get("district") or hospital.get("city") or "").strip()
+        phone = (hospital.get("phone") or "").strip() or None
+        if not phone:
+            contacts = hospital.get("emergency_contacts") or []
+            if contacts:
+                phone = str(contacts[0]).strip() or None
+
+    return {
+        "id": hid,
+        "name": name,
+        "district": district,
+        "phone": phone,
+        "distance_km": dist,
+        "eta_minutes": eta,
+        "assignment_status": stage_key,
+        "assignment_status_label": stage_label,
+        "assignment_status_so": status_so,
+        "assignment_status_en": status_en,
+    }
+
+
 def _emergency_display_stage(em):
-    if em.get("status") in COMPLETED_STATUSES:
-        return "assistance_complete", DISPLAY_STAGE_LABELS["assistance_complete"]
-    rs = em.get("responder_status", {})
-    if rs.get("arrived_at_scene") or em.get("status") == "in_progress":
+    """Citizen-facing smart stage derived from existing DB fields only."""
+    st = (em.get("status") or "").lower()
+    if st == "cancelled":
+        return "cancelled", DISPLAY_STAGE_LABELS["cancelled"]
+    if st == "timeout":
+        return "timeout", DISPLAY_STAGE_LABELS["timeout"]
+    if st == "no_responder_available":
+        return "no_responder", DISPLAY_STAGE_LABELS["no_responder"]
+    if st == "rejected":
+        return "rejected", DISPLAY_STAGE_LABELS["rejected"]
+    if st == "no_hospital_available":
+        return "no_facility", DISPLAY_STAGE_LABELS["no_facility"]
+    if st in ("completed", "resolved"):
+        return "completed", DISPLAY_STAGE_LABELS["completed"]
+    rs = em.get("responder_status") or {}
+    # reached_victim is terminal even if status was accidentally left non-completed
+    if rs.get("reached_victim"):
+        return "completed", DISPLAY_STAGE_LABELS["completed"]
+    if rs.get("arrived_at_scene") or st == "in_progress":
         return "arrived", DISPLAY_STAGE_LABELS["arrived"]
-    if rs.get("en_route") or em.get("status") == "dispatched":
+    if rs.get("en_route"):
         return "on_the_way", DISPLAY_STAGE_LABELS["on_the_way"]
-    if em.get("assigned_hospital_id") or em.get("assigned_to") in get_response_stations():
-        return "team_assigned", DISPLAY_STAGE_LABELS["team_assigned"]
-    if em.get("status") in ("pending", "pending_hospital", "accepted"):
-        return "request_received", DISPLAY_STAGE_LABELS["request_received"]
-    return "request_received", DISPLAY_STAGE_LABELS["request_received"]
+    if st == "dispatched":
+        return "responder_dispatched", DISPLAY_STAGE_LABELS["responder_dispatched"]
+    if st == "accepted":
+        return "accepted", DISPLAY_STAGE_LABELS["accepted"]
+    if _has_facility_assignment(em):
+        return "assigned", DISPLAY_STAGE_LABELS["assigned"]
+    if st in ("pending", "rejected_by_hospital"):
+        return "finding_nearest", DISPLAY_STAGE_LABELS["finding_nearest"]
+    return "submitted", DISPLAY_STAGE_LABELS["submitted"]
+
+
+_LIFECYCLE_TIMELINE_LABELS = {
+    "lifecycle_remind": "Responder reminded",
+    "lifecycle_escalate": "Case escalated",
+    "lifecycle_reassign": "Reassigned to next responder",
+    "timeout": "Emergency timed out",
+    "no_responder_available": "No Responder Available",
+    "no_hospital_available": "No hospital available",
+    "rejected": "Request rejected",
+    "cancelled": "Request cancelled",
+}
 
 
 def _build_emergency_timeline(em):
-    rs = em.get("responder_status", {})
-    history = {h.get("status"): h.get("timestamp") for h in em.get("status_history", [])}
+    rs = em.get("responder_status") or {}
+    history = _timeline_history_map(em)
+    stage_key, _ = _emergency_display_stage(em)
+    reached = _timeline_reached_index(em)
+    terminal = stage_key in (
+        "cancelled",
+        "no_facility",
+        "no_responder",
+        "timeout",
+        "rejected",
+    )
+    all_done = stage_key == "completed"
+    has_assign = _has_facility_assignment(em)
     steps = []
-    for key, label in TIMELINE_STEPS:
+    for i, (key, label) in enumerate(TIMELINE_STEPS):
         ts = None
-        done = False
-        if key == "request_submitted":
-            ts = em.get("timestamp")
-            done = bool(ts)
-        elif key == "request_accepted":
+        if key == "submitted":
+            hist0 = (em.get("status_history") or [{}])[0]
+            ts = em.get("timestamp") or hist0.get("timestamp")
+        elif key == "finding_nearest":
+            ts = history.get("pending") or history.get("rejected_by_hospital") or em.get("timestamp")
+        elif key == "assigned":
+            ts = history.get("pending_hospital")
+            if not ts and has_assign:
+                ts = history.get("pending") or em.get("timestamp")
+        elif key == "accepted":
             ts = em.get("accepted_at") or history.get("accepted")
-            done = bool(ts) or em.get("status") not in ("pending",)
-        elif key == "team_assigned":
-            ts = history.get("pending_hospital") or history.get("pending")
-            done = bool(em.get("assigned_hospital_id")) or em.get("assigned_to") in get_response_stations()
-            if done and not ts:
-                ts = em.get("timestamp")
-        elif key == "en_route":
+        elif key == "responder_dispatched":
+            ts = history.get("dispatched")
+        elif key == "on_the_way":
             ts = rs.get("en_route")
-            done = bool(ts) or em.get("status") in ("dispatched", "in_progress", "completed", "resolved")
         elif key == "arrived":
-            ts = rs.get("arrived_at_scene")
-            done = bool(ts) or em.get("status") in ("in_progress", "completed", "resolved")
+            ts = rs.get("arrived_at_scene") or history.get("in_progress")
         elif key == "completed":
             ts = rs.get("reached_victim") or history.get("completed") or history.get("resolved")
-            done = em.get("status") in COMPLETED_STATUSES
+
+        if all_done:
+            done = True
+        elif terminal:
+            done = i <= reached
+        else:
+            # Past steps completed; current step not yet marked complete
+            done = i < reached
         steps.append({"key": key, "label": label, "timestamp": ts, "completed": done})
+
+    # Preserve full lifecycle history (remind / escalate / reassign / terminal) in Timeline.
+    for h in em.get("status_history") or []:
+        st = (h.get("status") or "").lower()
+        if st not in _LIFECYCLE_TIMELINE_LABELS:
+            continue
+        label = h.get("note") or _LIFECYCLE_TIMELINE_LABELS[st]
+        steps.append({
+            "key": st,
+            "label": label,
+            "timestamp": h.get("timestamp"),
+            "completed": True,
+        })
     return steps
+
+
+def _build_status_progress(em):
+    """Timeline steps with a current flag for the citizen stepper UI."""
+    stage_key, _ = _emergency_display_stage(em)
+    timeline = _build_emergency_timeline(em)
+    order = [k for k, _ in TIMELINE_STEPS]
+    current_idx = order.index(stage_key) if stage_key in order else -1
+    progress = []
+    for i, step in enumerate(timeline):
+        row = dict(step)
+        row["current"] = (i == current_idx) and stage_key not in (
+            "cancelled",
+            "no_facility",
+            "no_responder",
+            "timeout",
+            "rejected",
+        )
+        progress.append(row)
+    return progress
 
 
 def _emergency_summary(em):
@@ -5907,6 +7040,7 @@ def _emergency_summary(em):
         "assigned_to": em.get("assigned_to"),
         "dispatch_unit": unit,
         "timeline": _build_emergency_timeline(em),
+        "progress": _build_status_progress(em),
         "responder_status": em.get("responder_status", {}),
     }
 
@@ -6355,20 +7489,59 @@ def responder_status_update(eid):
     if action not in valid_actions:
         return jsonify({"success": False, "message": "Invalid action"}), 400
 
+    st = (em.get("status") or "").lower()
+    if st in COMPLETED_STATUSES:
+        # Idempotent complete; block other actions on closed cases
+        if action == "reached_victim":
+            em.setdefault("responder_status", {})
+            em["responder_status"].setdefault("reached_victim", now_str())
+            _stop_sos_tracking(em)
+            save_emergencies(edata)
+            return jsonify({
+                "success": True,
+                "responder_status": em["responder_status"],
+                "status": em["status"],
+            })
+        return jsonify({"success": False, "message": "Case is already closed", "status": em.get("status")}), 400
+
     em.setdefault("responder_status", {})
     em["responder_status"][action] = now_str()
     uid = em.get("user_id")
+    em_type = (em.get("type") or "").lower()
+    assigned_to = (em.get("assigned_to") or "").lower()
+    if assigned_to == "police" or em_type == "security":
+        team = "Police"
+        en_route_note = "Police units en route"
+        arrived_note = "Police arrived at scene"
+        en_route_msg = "Police units are on the way to your location. Please keep your phone nearby."
+        arrived_msg = "Police have arrived. Please follow their instructions."
+        done_msg = "Your emergency has been completed. You are safe. Stay safe."
+    elif assigned_to == "fire" or em_type == "fire":
+        team = "Fire & Rescue"
+        en_route_note = "Fire crews en route"
+        arrived_note = "Fire crews arrived at scene"
+        en_route_msg = "Fire & Rescue crews are on the way to your location. Please keep your phone nearby."
+        arrived_msg = "Fire & Rescue have arrived. Please follow their instructions."
+        done_msg = "Your emergency has been completed. You are safe. Stay safe."
+    else:
+        team = "Ambulance"
+        en_route_note = "Ambulance en route"
+        arrived_note = "Ambulance arrived at scene"
+        en_route_msg = "An ambulance is on the way to your location. Please keep your phone nearby."
+        arrived_msg = "The ambulance has arrived. Please follow the medical team's instructions."
+        done_msg = "Your emergency care is complete. You are safe. Stay safe."
     if action == "en_route":
-        em["status"] = "dispatched"
-        _notify("patient", uid, "Your emergency response team is on the way.", eid, "team_dispatched")
+        _append_status(em, "dispatched", en_route_note, notify_citizen=False)
+        _notify("patient", uid, en_route_msg, eid, "team_dispatched")
     elif action == "arrived_at_scene":
-        em["status"] = "in_progress"
-        _notify("patient", uid, "The response team has arrived at your location.", eid, "team_arrived")
+        _append_status(em, "in_progress", arrived_note, notify_citizen=False)
+        _notify("patient", uid, arrived_msg, eid, "team_arrived")
     elif action == "reached_victim":
-        em["status"] = "completed"
+        _append_status(em, "completed", f"{team} reached scene — case completed", notify_citizen=False)
         _stop_sos_tracking(em)
         _release_emergency_ambulance(em)
-        _notify("patient", uid, "Your emergency has been resolved.", eid, "emergency_completed")
+        _notify("patient", uid, done_msg, eid, "emergency_completed")
+        _ai_record_outcome(em)
     save_emergencies(edata)
     append_audit(action, "emergency", eid)
     return jsonify({"success": True, "responder_status": em["responder_status"], "status": em["status"]})
@@ -6447,7 +7620,8 @@ def get_emergencies():
 
     if role in ROLE_API_TYPE:
         allowed = ROLE_API_TYPE[role]
-        if filter_type and filter_type != allowed:
+        # Accept canonical filter (medical) or role name alias (hospital)
+        if filter_type and filter_type not in (allowed, role):
             return jsonify({"success": False, "message": "Forbidden"}), 403
         filter_type = allowed
     elif role not in STAFF_ADMIN_ROLES:
@@ -6514,6 +7688,7 @@ def get_emergencies():
 @app.route("/api/update_status", methods=["POST"])
 @login_required
 def update_status():
+    """Legacy status update — ownership-scoped. Prefer desk mutate / responder APIs."""
     role = session.get("role")
     if role not in ROLE_API_TYPE and role not in STAFF_ADMIN_ROLES:
         return jsonify({"success": False, "message": "Forbidden"}), 403
@@ -6529,8 +7704,23 @@ def update_status():
         if em["id"] == eid:
             if role in ROLE_API_TYPE and not matches_filter(em["type"], ROLE_API_TYPE[role]):
                 return jsonify({"success": False, "message": "Forbidden"}), 403
-            em["status"] = new_status
+            # Prevent cross-facility mutation via this weak legacy endpoint
+            if role == "hospital":
+                user = current_user()
+                hid, _ = _get_user_hospital(user)
+                if not hid or em.get("assigned_hospital_id") != hid:
+                    return jsonify({"success": False, "message": "Not assigned to your hospital"}), 403
+            elif role in ("police", "fire"):
+                import police_logic as pl
+                user = current_user()
+                sid, _ = _get_user_station(user, role)
+                if sid and not pl.emergency_visible_to_station(em, sid, role):
+                    return jsonify({"success": False, "message": "Case not in your queue"}), 403
+                # Unlinked desks keep type-match only (legacy); linked desks are station-scoped.
+            if (em.get("status") or "").lower() in COMPLETED_STATUSES and new_status not in COMPLETED_STATUSES:
+                return jsonify({"success": False, "message": "Case is already closed", "status": em.get("status")}), 400
             uid = em.get("user_id")
+            _append_status(em, new_status, f"Status updated via desk ({role})", notify_citizen=False)
             if new_status == "dispatched":
                 _notify("patient", uid, "Your emergency response team has been dispatched.", eid, "team_dispatched")
             elif new_status in ("completed", "resolved"):
@@ -8716,7 +9906,8 @@ def call_center_login():
         login_id = request.form.get("username", "").strip()
         password = request.form.get("password", "")
         user, udata = get_user_by_login(login_id)
-        if user and user.get("status") == "blocked":
+        status = (user.get("status") or "active").lower() if user else "active"
+        if user and status in ("blocked", "disabled", "inactive", "deleted"):
             flash("Your account has been blocked. Contact admin.", "error")
         elif user and user.get("role") != "call_center":
             flash("This login is for Call Center Operators only.", "error")
@@ -8724,7 +9915,7 @@ def call_center_login():
             user["last_login"] = now_str()
             user["last_seen_call_center"] = now_str()
             log_activity(user, "Call Center login")
-            save_users(udata)
+            persist_user(user, udata)
             login_user(user)
             flash("Welcome to the Emergency Call Center, " + user_name(user) + "!", "success")
             return redirect(url_for("call_center_dashboard"))
@@ -9012,7 +10203,9 @@ def api_call_center_ai_analyze(call_id):
 def api_call_center_ai_decision(call_id):
     """
     Operator decision on AI recommendation: approve | reject | manual.
-    Approve uses existing Call Center dispatch (AI never dispatches itself).
+
+    Sprint 3: Approve locks the recommendation and returns suggested types only.
+    AI never dispatches — operator must use POST .../dispatch (Dispatch now).
     """
     payload = request.get_json(silent=True) or {}
     decision = (payload.get("decision") or "").strip().lower()
@@ -9050,6 +10243,9 @@ def api_call_center_ai_decision(call_id):
         "notes": payload.get("decision_notes") or "",
     })
 
+    panel_pack = _ai_panel_for_call(call_id)
+    panel = panel_pack.get("panel") or {}
+
     if decision in ("reject", "rejected", "manual"):
         return jsonify({
             "success": True,
@@ -9059,80 +10255,34 @@ def api_call_center_ai_decision(call_id):
                 if decision in ("reject", "rejected")
                 else "Manual selection mode — choose types and dispatch."
             ),
-            "panel": _ai_panel_for_call(call_id).get("panel"),
+            "panel": panel,
+            "suggested_dispatch_types": panel.get("suggested_dispatch_types") or [],
         })
 
-    # Approve → existing multi-dispatch path (human-approved)
-    types = payload.get("types") or rec.get("suggested_dispatch_types") or []
+    # Approve → recommend-only (no emergency create / auto-dispatch)
+    types = payload.get("types") or rec.get("suggested_dispatch_types") or panel.get("suggested_dispatch_types") or []
     if isinstance(types, str):
         types = [types]
-    if not types and rec.get("recommended_hospital"):
+    if not types and (rec.get("recommended_hospital") or panel.get("recommended_hospital")):
         types = ["medical"]
     if not types:
         return jsonify({
             "success": False,
             "message": "No suggested dispatch types. Use Manual Dispatch.",
+            "panel": panel,
         }), 400
-
-    if not call.get("operator_id"):
-        try:
-            call = cc.answer_call(
-                call_id, operator, read_json, save_json, stations=get_response_station_list()
-            )
-        except ValueError:
-            pass
-        data = cc.load_calls(read_json, save_json)
-        call = cc.get_call_by_id(data, call_id)
-
-    pairs = cc.resolve_dispatch_types(types)
-    if not pairs:
-        return jsonify({"success": False, "message": "Invalid emergency types."}), 400
-
-    created = []
-    teams = []
-    for etype, team in pairs:
-        em = _create_emergency_from_call(call, etype, team, operator, notes or call.get("notes") or "")
-        created.append(em)
-        teams.append(team)
-        _notify_call_dispatch(call, em, [team])
-
-    call = cc.record_dispatch(
-        call_id,
-        [e.get("type") for e in created],
-        [e["id"] for e in created],
-        teams,
-        read_json,
-        save_json,
-    )
-
-    try:
-        engine.record_dispatch_result({
-            "call_id": call_id,
-            "recommendation_id": rec_id,
-            "human_decision": "approve",
-            "dispatched_to": teams,
-            "emergency_ids": [e["id"] for e in created],
-            "notes": "Operator approved AI recommendation",
-        })
-    except Exception:
-        pass
 
     return jsonify({
         "success": True,
         "decision": "approve",
-        "message": f"AI recommendation approved. Dispatched to {', '.join(teams)}.",
+        "message": (
+            "AI recommendation approved. Suggested teams are preselected — "
+            "press Dispatch now to send (AI does not dispatch)."
+        ),
         "call": call,
-        "emergencies": [
-            {
-                "id": e["id"],
-                "type": e.get("type"),
-                "status": e.get("status"),
-                "assigned_to": e.get("assigned_to"),
-                "assigned_hospital_name": e.get("assigned_hospital_name"),
-            }
-            for e in created
-        ],
-        "panel": _ai_panel_for_call(call_id).get("panel"),
+        "emergencies": [],
+        "suggested_dispatch_types": types,
+        "panel": panel,
     })
 
 

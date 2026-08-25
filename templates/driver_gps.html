@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#0b141a">
-  <title>{% if valid %}{{ unit.call_sign }} GPS{% else %}GPS link{% endif %} — GurmadNet</title>
+  <title>{% if valid %}{{ unit.call_sign }} GPS{% else %}GPS link{% endif %} — Somali Help App</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/driver_gps.css') }}">
 </head>
 <body class="dgps-body">
@@ -16,7 +16,7 @@
       </section>
     {% else %}
       <header class="dgps-hero">
-        <p class="dgps-kicker">{{ unit.hospital_name or 'GurmadNet' }}</p>
+        <p class="dgps-kicker">{{ unit.hospital_name or 'Somali Help App' }}</p>
         <h1>{{ unit.call_sign }}</h1>
         <p>{% if unit.driver_name %}{{ unit.driver_name }} · {% endif %}Live GPS share</p>
       </header>

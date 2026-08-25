@@ -182,24 +182,27 @@
         '">Dispatch</button>';
     }
     if (mine && ACTIVE[em.status]) {
-      actions +=
-        '<button type="button" class="hcc-btn hcc-btn-ghost hcc-btn-sm q-complete" data-id="' +
-        em.id +
-        '">Complete</button>';
       if (em.status !== "pending") {
         actions +=
-          '<button type="button" class="hcc-btn hcc-btn-ghost hcc-btn-sm q-release" data-id="' +
+          '<button type="button" class="hcc-btn hcc-btn-ghost hcc-btn-sm q-complete" data-id="' +
           em.id +
-          '">Release</button>';
+          '">Complete</button>';
       }
+      // Soft-assigned pending cases must be releasable so the queue cannot dead-lock
       actions +=
-        '<button type="button" class="hcc-btn hcc-btn-ghost hcc-btn-sm q-arrived" data-id="' +
+        '<button type="button" class="hcc-btn hcc-btn-ghost hcc-btn-sm q-release" data-id="' +
         em.id +
-        '">Arrived</button>';
-      actions +=
-        '<button type="button" class="hcc-btn hcc-btn-ghost hcc-btn-sm q-chat" data-id="' +
-        em.id +
-        '">Chat</button>';
+        '">Release</button>';
+      if (em.status !== "pending") {
+        actions +=
+          '<button type="button" class="hcc-btn hcc-btn-ghost hcc-btn-sm q-arrived" data-id="' +
+          em.id +
+          '">Arrived</button>';
+        actions +=
+          '<button type="button" class="hcc-btn hcc-btn-ghost hcc-btn-sm q-chat" data-id="' +
+          em.id +
+          '">Chat</button>';
+      }
     }
     if (em.phone) {
       actions +=
@@ -533,7 +536,10 @@
   function afterAcceptOpenChat(eid) {
     var welcome =
       "Police-ku waa aqbalay xaaladdaada. Halkan nala soo hadal. / We accepted your emergency — message us here.";
-    return api("/api/messages/" + eid, { method: "POST", body: { text: welcome } })
+    return api("/api/messages/" + eid, {
+      method: "POST",
+      body: { text: welcome, unique_system: true, system_transition: "accepted" },
+    })
       .catch(function () {
         return null;
       })

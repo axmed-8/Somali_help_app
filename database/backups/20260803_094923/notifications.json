@@ -1,0 +1,1525 @@
+{
+  "notifications": [
+    {
+      "id": 1057,
+      "timestamp": "2026-07-26 10:55:37",
+      "target_type": "hospital",
+      "target_id": 3,
+      "message": "NEW emergency request #74 — respond now",
+      "request_id": 74,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1059,
+      "timestamp": "2026-07-26 10:57:37",
+      "target_type": "hospital",
+      "target_id": 3,
+      "message": "Request #74 escalated (no response in time)",
+      "request_id": 74,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1077,
+      "timestamp": "2026-07-26 11:02:07",
+      "target_type": "hospital",
+      "target_id": 3,
+      "message": "NEW emergency request #75 — respond now",
+      "request_id": 75,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1079,
+      "timestamp": "2026-07-26 11:05:05",
+      "target_type": "hospital",
+      "target_id": 3,
+      "message": "Request #75 escalated (no response in time)",
+      "request_id": 75,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1080,
+      "timestamp": "2026-07-27 14:02:57",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #25 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1081,
+      "timestamp": "2026-07-27 14:03:36",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #26 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1082,
+      "timestamp": "2026-07-27 14:04:57",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #27 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1083,
+      "timestamp": "2026-07-27 14:05:29",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #28 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1085,
+      "timestamp": "2026-07-27 14:06:23",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "New emergency #76 (medical) — auto-dispatch initiated.",
+      "request_id": 76,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1087,
+      "timestamp": "2026-07-27 14:06:38",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Call Center dispatched emergency #76 (medical) from call #28.",
+      "request_id": 76,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1089,
+      "timestamp": "2026-07-27 14:07:05",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #29 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1090,
+      "timestamp": "2026-07-27 14:19:38",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #30 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1091,
+      "timestamp": "2026-07-27 14:19:50",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #31 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1092,
+      "timestamp": "2026-07-27 14:27:11",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #32 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1094,
+      "timestamp": "2026-07-27 14:28:57",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #33 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1095,
+      "timestamp": "2026-07-27 14:29:19",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #34 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1096,
+      "timestamp": "2026-07-27 14:29:30",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #35 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1097,
+      "timestamp": "2026-07-27 14:29:44",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #36 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1099,
+      "timestamp": "2026-07-27 14:30:10",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #37 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1101,
+      "timestamp": "2026-07-27 14:33:50",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "New emergency #77 (medical) — auto-dispatch initiated.",
+      "request_id": 77,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1102,
+      "timestamp": "2026-07-27 14:38:44",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #38 from Canab Quru (613231821)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1103,
+      "timestamp": "2026-07-27 14:41:14",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "New citizen message on emergency #77",
+      "request_id": 77,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1104,
+      "timestamp": "2026-07-27 14:41:16",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "New citizen message on emergency #77",
+      "request_id": 77,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1105,
+      "timestamp": "2026-07-27 14:41:19",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "New citizen message on emergency #77",
+      "request_id": 77,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1106,
+      "timestamp": "2026-07-27 14:41:21",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "New citizen message on emergency #77",
+      "request_id": 77,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1108,
+      "timestamp": "2026-07-27 14:50:18",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "New emergency #78 (security) — auto-dispatch initiated.",
+      "request_id": 78,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1111,
+      "timestamp": "2026-07-27 14:50:19",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Call Center dispatched emergency #78 (security) from call #38.",
+      "request_id": 78,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1112,
+      "timestamp": "2026-07-28 13:30:54",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #39 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1113,
+      "timestamp": "2026-07-28 13:31:07",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #40 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1114,
+      "timestamp": "2026-07-28 13:31:14",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #41 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1115,
+      "timestamp": "2026-07-28 13:31:31",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #42 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1117,
+      "timestamp": "2026-07-28 13:31:52",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "New emergency #79 (fire) — auto-dispatch initiated.",
+      "request_id": 79,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1119,
+      "timestamp": "2026-07-28 13:32:11",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #43 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1121,
+      "timestamp": "2026-07-28 13:34:00",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #44 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1122,
+      "timestamp": "2026-07-28 13:34:06",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #45 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1123,
+      "timestamp": "2026-07-28 13:34:13",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #46 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1124,
+      "timestamp": "2026-07-28 13:34:22",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #47 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1125,
+      "timestamp": "2026-07-28 13:35:28",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #48 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1126,
+      "timestamp": "2026-07-28 13:35:38",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #49 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1127,
+      "timestamp": "2026-07-28 13:35:46",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #50 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1128,
+      "timestamp": "2026-07-28 13:35:52",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #51 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1129,
+      "timestamp": "2026-07-28 13:36:00",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #52 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1130,
+      "timestamp": "2026-07-28 13:37:49",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #53 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1131,
+      "timestamp": "2026-07-28 13:38:02",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #54 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1132,
+      "timestamp": "2026-07-28 13:38:54",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #55 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1133,
+      "timestamp": "2026-07-28 13:39:00",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #56 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1134,
+      "timestamp": "2026-07-28 13:39:09",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #57 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1135,
+      "timestamp": "2026-07-28 13:55:42",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #58 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1136,
+      "timestamp": "2026-07-28 13:55:56",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #59 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1137,
+      "timestamp": "2026-07-28 13:56:31",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #60 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1138,
+      "timestamp": "2026-07-28 13:56:42",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #60 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1139,
+      "timestamp": "2026-07-28 13:56:57",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #61 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1140,
+      "timestamp": "2026-07-28 14:01:00",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #62 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1141,
+      "timestamp": "2026-07-28 14:01:49",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #63 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1142,
+      "timestamp": "2026-07-28 14:02:08",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #64 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1143,
+      "timestamp": "2026-07-28 14:02:36",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "Incoming Call Center call #65 from amiish  qurux (613919191)",
+      "request_id": null,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1145,
+      "timestamp": "2026-08-02 15:29:37",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "New emergency #80 (medical) — auto-dispatch initiated.",
+      "request_id": 80,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1149,
+      "timestamp": "2026-08-02 15:31:30",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "New emergency #81 (medical) — auto-dispatch initiated.",
+      "request_id": 81,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1181,
+      "timestamp": "2026-08-02 16:00:47",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "New emergency #82 (medical) — auto-dispatch initiated.",
+      "request_id": 82,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1182,
+      "timestamp": "2026-08-02 16:39:20",
+      "target_type": "patient",
+      "target_id": 9,
+      "message": "Your emergency request has been received.",
+      "request_id": 83,
+      "type": "request_received",
+      "read": false
+    },
+    {
+      "id": 1183,
+      "timestamp": "2026-08-02 16:39:20",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "New emergency #83 (medical) — auto-dispatch initiated.",
+      "request_id": 83,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1184,
+      "timestamp": "2026-08-02 16:39:20",
+      "target_type": "admin",
+      "target_id": 14,
+      "message": "New emergency #83 (medical) — auto-dispatch initiated.",
+      "request_id": 83,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1185,
+      "timestamp": "2026-08-02 16:39:20",
+      "target_type": "hospital",
+      "target_id": 12,
+      "message": "URGENT: Emergency #83 — respond now",
+      "request_id": 83,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 1186,
+      "timestamp": "2026-08-02 16:39:20",
+      "target_type": "patient",
+      "target_id": 9,
+      "message": "Nearest hospital De Martino Public Hospital (1.65 km) has been assigned to your request.",
+      "request_id": 83,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 1187,
+      "timestamp": "2026-08-02 16:41:23",
+      "target_type": "hospital",
+      "target_id": 12,
+      "message": "Request #83 escalated (no response in time)",
+      "request_id": 83,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1188,
+      "timestamp": "2026-08-02 16:41:23",
+      "target_type": "hospital",
+      "target_id": 13,
+      "message": "NEW emergency request #83 — respond now",
+      "request_id": 83,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1189,
+      "timestamp": "2026-08-02 16:41:23",
+      "target_type": "patient",
+      "target_id": 9,
+      "message": "Request sent to Erdogan Hospital (Digfer) (2.28 km)",
+      "request_id": 83,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1190,
+      "timestamp": "2026-08-02 16:43:27",
+      "target_type": "patient",
+      "target_id": 9,
+      "message": "Your emergency request has been received.",
+      "request_id": 84,
+      "type": "request_received",
+      "read": false
+    },
+    {
+      "id": 1191,
+      "timestamp": "2026-08-02 16:43:27",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "New emergency #84 (medical) — auto-dispatch initiated.",
+      "request_id": 84,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1192,
+      "timestamp": "2026-08-02 16:43:27",
+      "target_type": "admin",
+      "target_id": 14,
+      "message": "New emergency #84 (medical) — auto-dispatch initiated.",
+      "request_id": 84,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1193,
+      "timestamp": "2026-08-02 16:43:27",
+      "target_type": "hospital",
+      "target_id": 12,
+      "message": "URGENT: Emergency #84 — respond now",
+      "request_id": 84,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 1194,
+      "timestamp": "2026-08-02 16:43:27",
+      "target_type": "patient",
+      "target_id": 9,
+      "message": "Nearest hospital De Martino Public Hospital (1.65 km) has been assigned to your request.",
+      "request_id": 84,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 1195,
+      "timestamp": "2026-08-02 16:43:27",
+      "target_type": "hospital",
+      "target_id": 13,
+      "message": "Request #83 escalated (no response in time)",
+      "request_id": 83,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1196,
+      "timestamp": "2026-08-02 16:43:27",
+      "target_type": "hospital",
+      "target_id": 10,
+      "message": "NEW emergency request #83 — respond now",
+      "request_id": 83,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1197,
+      "timestamp": "2026-08-02 16:43:27",
+      "target_type": "patient",
+      "target_id": 9,
+      "message": "Request sent to Banadir Hospital (2.85 km)",
+      "request_id": 83,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1198,
+      "timestamp": "2026-08-02 16:45:28",
+      "target_type": "hospital",
+      "target_id": 10,
+      "message": "Request #83 escalated (no response in time)",
+      "request_id": 83,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1199,
+      "timestamp": "2026-08-02 16:45:28",
+      "target_type": "hospital",
+      "target_id": 11,
+      "message": "NEW emergency request #83 — respond now",
+      "request_id": 83,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1200,
+      "timestamp": "2026-08-02 16:45:28",
+      "target_type": "patient",
+      "target_id": 9,
+      "message": "Request sent to Madina Hospital (3.05 km)",
+      "request_id": 83,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1201,
+      "timestamp": "2026-08-02 16:45:28",
+      "target_type": "hospital",
+      "target_id": 12,
+      "message": "Request #84 escalated (no response in time)",
+      "request_id": 84,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1202,
+      "timestamp": "2026-08-02 16:45:28",
+      "target_type": "hospital",
+      "target_id": 13,
+      "message": "NEW emergency request #84 — respond now",
+      "request_id": 84,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1203,
+      "timestamp": "2026-08-02 16:45:28",
+      "target_type": "patient",
+      "target_id": 9,
+      "message": "Request sent to Erdogan Hospital (Digfer) (2.35 km)",
+      "request_id": 84,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1204,
+      "timestamp": "2026-08-02 16:47:43",
+      "target_type": "hospital",
+      "target_id": 11,
+      "message": "Request #83 escalated (no response in time)",
+      "request_id": 83,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1205,
+      "timestamp": "2026-08-02 16:47:44",
+      "target_type": "hospital",
+      "target_id": 14,
+      "message": "NEW emergency request #83 — respond now",
+      "request_id": 83,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1206,
+      "timestamp": "2026-08-02 16:47:44",
+      "target_type": "patient",
+      "target_id": 9,
+      "message": "Request sent to Wadajir Hospital (4.06 km)",
+      "request_id": 83,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1207,
+      "timestamp": "2026-08-02 16:47:44",
+      "target_type": "hospital",
+      "target_id": 13,
+      "message": "Request #84 escalated (no response in time)",
+      "request_id": 84,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1208,
+      "timestamp": "2026-08-02 16:47:45",
+      "target_type": "hospital",
+      "target_id": 10,
+      "message": "NEW emergency request #84 — respond now",
+      "request_id": 84,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1209,
+      "timestamp": "2026-08-02 16:47:45",
+      "target_type": "patient",
+      "target_id": 9,
+      "message": "Request sent to Banadir Hospital (2.86 km)",
+      "request_id": 84,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1210,
+      "timestamp": "2026-08-02 16:49:44",
+      "target_type": "hospital",
+      "target_id": 14,
+      "message": "Request #83 escalated (no response in time)",
+      "request_id": 83,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1211,
+      "timestamp": "2026-08-02 16:49:50",
+      "target_type": "hospital",
+      "target_id": 10,
+      "message": "Request #84 escalated (no response in time)",
+      "request_id": 84,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1212,
+      "timestamp": "2026-08-02 16:49:50",
+      "target_type": "hospital",
+      "target_id": 11,
+      "message": "NEW emergency request #84 — respond now",
+      "request_id": 84,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1213,
+      "timestamp": "2026-08-02 16:49:50",
+      "target_type": "patient",
+      "target_id": 9,
+      "message": "Request sent to Madina Hospital (3.05 km)",
+      "request_id": 84,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1214,
+      "timestamp": "2026-08-02 16:51:54",
+      "target_type": "hospital",
+      "target_id": 11,
+      "message": "Request #84 escalated (no response in time)",
+      "request_id": 84,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1215,
+      "timestamp": "2026-08-02 16:51:55",
+      "target_type": "hospital",
+      "target_id": 14,
+      "message": "NEW emergency request #84 — respond now",
+      "request_id": 84,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1216,
+      "timestamp": "2026-08-02 16:51:55",
+      "target_type": "patient",
+      "target_id": 9,
+      "message": "Request sent to Wadajir Hospital (4.06 km)",
+      "request_id": 84,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1217,
+      "timestamp": "2026-08-02 16:52:56",
+      "target_type": "patient",
+      "target_id": 9,
+      "message": "Your emergency request has been received.",
+      "request_id": 85,
+      "type": "request_received",
+      "read": false
+    },
+    {
+      "id": 1218,
+      "timestamp": "2026-08-02 16:52:56",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "New emergency #85 (medical) — auto-dispatch initiated.",
+      "request_id": 85,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1219,
+      "timestamp": "2026-08-02 16:52:56",
+      "target_type": "admin",
+      "target_id": 14,
+      "message": "New emergency #85 (medical) — auto-dispatch initiated.",
+      "request_id": 85,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1220,
+      "timestamp": "2026-08-02 16:52:56",
+      "target_type": "hospital",
+      "target_id": 13,
+      "message": "URGENT: Emergency #85 — respond now",
+      "request_id": 85,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 1221,
+      "timestamp": "2026-08-02 16:52:56",
+      "target_type": "patient",
+      "target_id": 9,
+      "message": "Nearest hospital Erdogan Hospital (Digfer) (1.45 km) has been assigned to your request.",
+      "request_id": 85,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 1222,
+      "timestamp": "2026-08-02 16:53:03",
+      "target_type": "hospital",
+      "target_id": 13,
+      "message": "Citizen cancelled emergency #85.",
+      "request_id": 85,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1223,
+      "timestamp": "2026-08-02 16:54:44",
+      "target_type": "hospital",
+      "target_id": 14,
+      "message": "Request #84 escalated (no response in time)",
+      "request_id": 84,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1224,
+      "timestamp": "2026-08-02 16:55:44",
+      "target_type": "hospital",
+      "target_id": 13,
+      "message": "Request #85 escalated (no response in time)",
+      "request_id": 85,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1225,
+      "timestamp": "2026-08-02 16:55:45",
+      "target_type": "hospital",
+      "target_id": 10,
+      "message": "NEW emergency request #85 — respond now",
+      "request_id": 85,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1226,
+      "timestamp": "2026-08-02 16:55:46",
+      "target_type": "patient",
+      "target_id": 9,
+      "message": "Request sent to Banadir Hospital (2.85 km)",
+      "request_id": 85,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1227,
+      "timestamp": "2026-08-02 16:58:44",
+      "target_type": "hospital",
+      "target_id": 10,
+      "message": "Request #85 escalated (no response in time)",
+      "request_id": 85,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1228,
+      "timestamp": "2026-08-02 16:58:45",
+      "target_type": "hospital",
+      "target_id": 12,
+      "message": "NEW emergency request #85 — respond now",
+      "request_id": 85,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1229,
+      "timestamp": "2026-08-02 16:58:47",
+      "target_type": "patient",
+      "target_id": 9,
+      "message": "Request sent to De Martino Public Hospital (1.65 km)",
+      "request_id": 85,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1230,
+      "timestamp": "2026-08-02 17:01:44",
+      "target_type": "hospital",
+      "target_id": 12,
+      "message": "Request #85 escalated (no response in time)",
+      "request_id": 85,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1231,
+      "timestamp": "2026-08-02 17:01:44",
+      "target_type": "hospital",
+      "target_id": 11,
+      "message": "NEW emergency request #85 — respond now",
+      "request_id": 85,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1232,
+      "timestamp": "2026-08-02 17:01:45",
+      "target_type": "patient",
+      "target_id": 9,
+      "message": "Request sent to Madina Hospital (3.12 km)",
+      "request_id": 85,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1233,
+      "timestamp": "2026-08-02 17:02:09",
+      "target_type": "patient",
+      "target_id": 9,
+      "message": "Your emergency request has been received.",
+      "request_id": 86,
+      "type": "request_received",
+      "read": false
+    },
+    {
+      "id": 1234,
+      "timestamp": "2026-08-02 17:02:09",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "New emergency #86 (medical) — auto-dispatch initiated.",
+      "request_id": 86,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1235,
+      "timestamp": "2026-08-02 17:02:09",
+      "target_type": "admin",
+      "target_id": 14,
+      "message": "New emergency #86 (medical) — auto-dispatch initiated.",
+      "request_id": 86,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1236,
+      "timestamp": "2026-08-02 17:02:09",
+      "target_type": "hospital",
+      "target_id": 13,
+      "message": "URGENT: Emergency #86 — respond now",
+      "request_id": 86,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 1237,
+      "timestamp": "2026-08-02 17:02:09",
+      "target_type": "patient",
+      "target_id": 9,
+      "message": "Nearest hospital Erdogan Hospital (Digfer) (1.45 km) has been assigned to your request.",
+      "request_id": 86,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 1238,
+      "timestamp": "2026-08-02 17:02:15",
+      "target_type": "hospital",
+      "target_id": 13,
+      "message": "Citizen cancelled emergency #86.",
+      "request_id": 86,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1239,
+      "timestamp": "2026-08-02 17:03:45",
+      "target_type": "hospital",
+      "target_id": 11,
+      "message": "Request #85 escalated (no response in time)",
+      "request_id": 85,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1240,
+      "timestamp": "2026-08-02 17:03:46",
+      "target_type": "hospital",
+      "target_id": 14,
+      "message": "NEW emergency request #85 — respond now",
+      "request_id": 85,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1241,
+      "timestamp": "2026-08-02 17:03:47",
+      "target_type": "hospital",
+      "target_id": 11,
+      "message": "Request #85 escalated (no response in time)",
+      "request_id": 85,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1242,
+      "timestamp": "2026-08-02 17:03:48",
+      "target_type": "hospital",
+      "target_id": 14,
+      "message": "NEW emergency request #85 — respond now",
+      "request_id": 85,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1243,
+      "timestamp": "2026-08-02 17:03:50",
+      "target_type": "patient",
+      "target_id": 9,
+      "message": "Request sent to Wadajir Hospital (3.98 km)",
+      "request_id": 85,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1244,
+      "timestamp": "2026-08-02 17:06:45",
+      "target_type": "hospital",
+      "target_id": 14,
+      "message": "Request #85 escalated (no response in time)",
+      "request_id": 85,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1245,
+      "timestamp": "2026-08-02 18:15:10",
+      "target_type": "patient",
+      "target_id": 9,
+      "message": "Your emergency request has been received.",
+      "request_id": 87,
+      "type": "request_received",
+      "read": false
+    },
+    {
+      "id": 1246,
+      "timestamp": "2026-08-02 18:15:11",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "New emergency #87 (fire) — auto-dispatch initiated.",
+      "request_id": 87,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1247,
+      "timestamp": "2026-08-02 18:15:11",
+      "target_type": "admin",
+      "target_id": 14,
+      "message": "New emergency #87 (fire) — auto-dispatch initiated.",
+      "request_id": 87,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1248,
+      "timestamp": "2026-08-02 18:15:11",
+      "target_type": "fire",
+      "target_id": 17,
+      "message": "URGENT: Emergency #87 — respond now",
+      "request_id": 87,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 1249,
+      "timestamp": "2026-08-02 18:15:11",
+      "target_type": "patient",
+      "target_id": 9,
+      "message": "Mogadishu Fire Brigade has been assigned to your request.",
+      "request_id": 87,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 1250,
+      "timestamp": "2026-08-02 18:15:26",
+      "target_type": "fire",
+      "target_id": 17,
+      "message": "New message on request #87",
+      "request_id": 87,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1251,
+      "timestamp": "2026-08-02 18:16:47",
+      "target_type": "patient",
+      "target_id": 9,
+      "message": "Mogadishu Fire Brigade accepted your emergency.",
+      "request_id": 87,
+      "type": "request_accepted",
+      "read": false
+    },
+    {
+      "id": 1252,
+      "timestamp": "2026-08-02 18:16:48",
+      "target_type": "patient",
+      "target_id": 9,
+      "message": "New message from response team",
+      "request_id": 87,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1253,
+      "timestamp": "2026-08-02 18:22:54",
+      "target_type": "fire",
+      "target_id": 17,
+      "message": "New message on request #87",
+      "request_id": 87,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1254,
+      "timestamp": "2026-08-02 18:23:33",
+      "target_type": "patient",
+      "target_id": 11,
+      "message": "Your emergency request has been received.",
+      "request_id": 88,
+      "type": "request_received",
+      "read": false
+    },
+    {
+      "id": 1255,
+      "timestamp": "2026-08-02 18:23:33",
+      "target_type": "super_admin",
+      "target_id": 8,
+      "message": "New emergency #88 (medical) — auto-dispatch initiated.",
+      "request_id": 88,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1256,
+      "timestamp": "2026-08-02 18:23:33",
+      "target_type": "admin",
+      "target_id": 14,
+      "message": "New emergency #88 (medical) — auto-dispatch initiated.",
+      "request_id": 88,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1257,
+      "timestamp": "2026-08-02 18:23:33",
+      "target_type": "hospital",
+      "target_id": 12,
+      "message": "URGENT: Emergency #88 — respond now",
+      "request_id": 88,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 1258,
+      "timestamp": "2026-08-02 18:23:33",
+      "target_type": "patient",
+      "target_id": 11,
+      "message": "Nearest hospital De Martino Public Hospital (1.65 km) has been assigned to your request.",
+      "request_id": 88,
+      "type": "team_assigned",
+      "read": false
+    },
+    {
+      "id": 1259,
+      "timestamp": "2026-08-02 18:24:32",
+      "target_type": "hospital",
+      "target_id": 12,
+      "message": "New message on request #88",
+      "request_id": 88,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1260,
+      "timestamp": "2026-08-02 18:24:46",
+      "target_type": "fire",
+      "target_id": 17,
+      "message": "New message on request #87",
+      "request_id": 87,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1261,
+      "timestamp": "2026-08-02 18:24:54",
+      "target_type": "hospital",
+      "target_id": 12,
+      "message": "New message on request #88",
+      "request_id": 88,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1262,
+      "timestamp": "2026-08-02 18:25:36",
+      "target_type": "hospital",
+      "target_id": 12,
+      "message": "Request #88 escalated (no response in time)",
+      "request_id": 88,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1263,
+      "timestamp": "2026-08-02 18:25:36",
+      "target_type": "hospital",
+      "target_id": 13,
+      "message": "NEW emergency request #88 — respond now",
+      "request_id": 88,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1264,
+      "timestamp": "2026-08-02 18:25:36",
+      "target_type": "patient",
+      "target_id": 11,
+      "message": "Request sent to Erdogan Hospital (Digfer) (2.35 km)",
+      "request_id": 88,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1265,
+      "timestamp": "2026-08-02 18:34:44",
+      "target_type": "hospital",
+      "target_id": 13,
+      "message": "Request #88 escalated (no response in time)",
+      "request_id": 88,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1266,
+      "timestamp": "2026-08-02 18:34:45",
+      "target_type": "hospital",
+      "target_id": 10,
+      "message": "NEW emergency request #88 — respond now",
+      "request_id": 88,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1267,
+      "timestamp": "2026-08-02 18:34:46",
+      "target_type": "patient",
+      "target_id": 11,
+      "message": "Request sent to Banadir Hospital (2.87 km)",
+      "request_id": 88,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1268,
+      "timestamp": "2026-08-02 18:37:36",
+      "target_type": "hospital",
+      "target_id": 10,
+      "message": "Request #88 escalated (no response in time)",
+      "request_id": 88,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1269,
+      "timestamp": "2026-08-02 18:37:36",
+      "target_type": "hospital",
+      "target_id": 11,
+      "message": "NEW emergency request #88 — respond now",
+      "request_id": 88,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1270,
+      "timestamp": "2026-08-02 18:37:37",
+      "target_type": "patient",
+      "target_id": 11,
+      "message": "Request sent to Madina Hospital (3.07 km)",
+      "request_id": 88,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1271,
+      "timestamp": "2026-08-02 18:39:36",
+      "target_type": "hospital",
+      "target_id": 11,
+      "message": "Request #88 escalated (no response in time)",
+      "request_id": 88,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1272,
+      "timestamp": "2026-08-02 18:39:37",
+      "target_type": "hospital",
+      "target_id": 14,
+      "message": "NEW emergency request #88 — respond now",
+      "request_id": 88,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1273,
+      "timestamp": "2026-08-02 18:39:37",
+      "target_type": "patient",
+      "target_id": 11,
+      "message": "Request sent to Wadajir Hospital (4.07 km)",
+      "request_id": 88,
+      "type": "system_alert",
+      "read": false
+    },
+    {
+      "id": 1274,
+      "timestamp": "2026-08-02 18:42:36",
+      "target_type": "hospital",
+      "target_id": 14,
+      "message": "Request #88 escalated (no response in time)",
+      "request_id": 88,
+      "type": "system_alert",
+      "read": false
+    }
+  ],
+  "next_id": 1275
+}

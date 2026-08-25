@@ -16,7 +16,7 @@ class ConsoleEmailProvider(EmailProvider):
             subject,
             text_body or "",
         )
-        print("----- GurmadNet email (console provider) -----")
+        print("----- Somali Help App email (console provider) -----")
         print("To:", to_email)
         print("Subject:", subject)
         print(text_body or "")

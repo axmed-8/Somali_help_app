@@ -412,12 +412,24 @@ def filter_hospitals(hospitals, city="", region="", specialty="", q=""):
     return result
 
 
+def _effective_emergency_capacity(hospital):
+    """Resolve capacity for ranking/dispatch. Missing/NULL → schema default 10."""
+    raw = (hospital or {}).get("emergency_capacity")
+    if raw is None or raw == "":
+        return 10
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return 10
+
+
 def hospitals_by_distance(lat, lng, hospitals, emergency_only=True):
     ranked = []
     for h in hospitals:
         if emergency_only and h.get("operating_status") != "open":
             continue
-        if h.get("emergency_capacity", 0) <= 0:
+        # Missing capacity must not exclude open hospitals (default matches normalize).
+        if _effective_emergency_capacity(h) <= 0:
             continue
         dist = haversine_km(lat, lng, h["latitude"], h["longitude"])
         ranked.append((dist, h))
@@ -469,13 +481,47 @@ def assign_next_hospital(emergency, hospitals_data, timeout_seconds):
     return hospital
 
 
+_ESCALATION_TERMINAL = frozenset({
+    "resolved",
+    "completed",
+    "cancelled",
+    "no_hospital_available",
+    "no_responder_available",
+    "timeout",
+    "rejected",
+})
+
+
 def process_escalations(emergencies, hospitals_data, timeout_seconds, save_emergencies_fn, load_emergencies_fn, add_notification_fn):
     """Forward requests if hospital did not respond in time."""
-    changed = False
+    changed_ids = []
     now = datetime.now()
     for em in emergencies:
-        if em.get("status") not in ("pending_hospital", "pending"):
+        st = em.get("status")
+        if st not in ("pending_hospital", "pending"):
             continue
+
+        # Stuck hospital SOS: pending with no queue and no deadline — never escalates.
+        if (
+            st == "pending"
+            and not em.get("response_deadline")
+            and not em.get("assigned_hospital_id")
+            and not (em.get("escalation_queue") or [])
+            and (
+                em.get("assigned_to") == "hospital"
+                or em.get("type") in ("medical", "family_help")
+            )
+        ):
+            em["status"] = "no_hospital_available"
+            em["tracking_active"] = False
+            em.setdefault("status_history", []).append({
+                "status": "no_hospital_available",
+                "timestamp": _now(),
+                "note": "Closed unassigned pending — no hospitals in escalation queue",
+            })
+            changed_ids.append(em["id"])
+            continue
+
         deadline = _parse_dt(em.get("response_deadline"))
         if not em.get("response_deadline") or now <= deadline:
             continue
@@ -502,10 +548,32 @@ def process_escalations(emergencies, hospitals_data, timeout_seconds, save_emerg
                 f"Request sent to {hospital['name']} ({em.get('hospital_distance_km')} km)",
                 em["id"],
             )
-        changed = True
-    if changed:
+        else:
+            em.setdefault("status_history", []).append({
+                "status": "no_hospital_available",
+                "timestamp": _now(),
+                "note": "No more hospitals in escalation queue",
+            })
+        changed_ids.append(em["id"])
+    if changed_ids:
+        # Merge by id — never replace the whole list (that stomped concurrent accept/complete).
         edata = load_emergencies_fn()
-        edata["emergencies"] = emergencies
+        by_id = {e["id"]: e for e in edata.get("emergencies", [])}
+        touched = {eid: None for eid in changed_ids}
+        for em in emergencies:
+            eid = em.get("id")
+            if eid not in touched:
+                continue
+            live = by_id.get(eid)
+            if live is not None:
+                live_st = (live.get("status") or "").lower()
+                if live_st in _ESCALATION_TERMINAL:
+                    continue
+                # Hospital/desk moved the case forward while we were escalating — keep live.
+                if live_st not in ("pending", "pending_hospital"):
+                    continue
+            by_id[eid] = em
+        edata["emergencies"] = list(by_id.values())
         save_emergencies_fn(edata)
 
 
@@ -570,9 +638,21 @@ def save_messages(data, save_fn):
     save_fn(MESSAGES_STORE, data)
 
 
-def add_message(read_fn, save_fn, request_id, sender_role, sender_id, text, msg_type="text", audio_data=""):
+def add_message(read_fn, save_fn, request_id, sender_role, sender_id, text, msg_type="text", audio_data="", *, unique_system=False):
+    """Append a chat message. If unique_system=True, skip when the same auto text
+    already exists for this request+role (one automatic message per transition).
+    User-written messages must call with unique_system=False (default).
+    """
     data = load_messages(read_fn, save_fn)
     body = text[:2000] if msg_type != "voice" else (audio_data[:500000] or text[:500000])
+    if unique_system and msg_type != "voice":
+        for existing in data["messages"]:
+            if (
+                existing.get("request_id") == request_id
+                and existing.get("sender_role") == sender_role
+                and (existing.get("text") or "") == body
+            ):
+                return existing
     msg = {
         "id": data["next_id"],
         "request_id": request_id,
@@ -585,6 +665,8 @@ def add_message(read_fn, save_fn, request_id, sender_role, sender_id, text, msg_
         "delivered_at": None,
         "seen_at": None,
     }
+    if unique_system:
+        msg["system"] = True
     data["next_id"] += 1
     data["messages"].append(msg)
     save_messages(data, save_fn)

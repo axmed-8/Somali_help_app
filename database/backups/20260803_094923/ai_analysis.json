@@ -1,0 +1,2397 @@
+{
+  "items": [
+    {
+      "id": 1,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "confidence": 0.98,
+      "created_at": "2026-07-14 14:28:25",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 20,
+      "input_snapshot": {
+        "lat": 2.036546,
+        "lng": 45.299481,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 2,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-15 10:28:18",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 21,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 3,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "LIVE TEST: citizen SOS + chat check",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-21 15:04:43",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 22,
+      "input_snapshot": {
+        "lat": 2.0353,
+        "lng": 45.32488,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 4,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-21 15:41:39",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 23,
+      "input_snapshot": {
+        "lat": 2.035308,
+        "lng": 45.324967,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 5,
+      "reason": "Classified as fire (declared type: fire). Required services: Fire only. Priority high, risk high.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Fire emergency — high priority.",
+      "category": "fire",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-07-21 15:46:15",
+      "risk_level": "high",
+      "gurmad_type": "fire",
+      "emergency_id": 24,
+      "input_snapshot": {
+        "lat": 2.035327,
+        "lng": 45.32489,
+        "type": "fire",
+        "has_notes": true
+      },
+      "required_services": [
+        "fire"
+      ],
+      "required_services_label": "Fire only"
+    },
+    {
+      "id": 6,
+      "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Police emergency — high priority.",
+      "category": "police",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-07-21 15:47:33",
+      "risk_level": "medium",
+      "gurmad_type": "security",
+      "emergency_id": 25,
+      "input_snapshot": {
+        "lat": 2.035304,
+        "lng": 45.324906,
+        "type": "security",
+        "has_notes": true
+      },
+      "required_services": [
+        "police"
+      ],
+      "required_services_label": "Police only"
+    },
+    {
+      "id": 7,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-21 17:26:20",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 26,
+      "input_snapshot": {
+        "lat": 2.035327,
+        "lng": 45.32489,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 8,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-21 17:35:55",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 27,
+      "input_snapshot": {
+        "lat": 2.035327,
+        "lng": 45.32489,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 9,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-21 17:39:17",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 28,
+      "input_snapshot": {
+        "lat": 2.035352,
+        "lng": 45.325014,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 10,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-22 10:12:42",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 29,
+      "input_snapshot": {
+        "lat": 2.035304,
+        "lng": 45.324906,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 11,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-22 13:06:51",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 30,
+      "input_snapshot": {
+        "lat": 2.035295,
+        "lng": 45.324879,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 12,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-22 13:11:28",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 31,
+      "input_snapshot": {
+        "lat": 2.035295,
+        "lng": 45.324879,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 13,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "iisoo gara plz waan dhiman raba",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-22 13:14:36",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 32,
+      "input_snapshot": {
+        "lat": 2.035302,
+        "lng": 45.324971,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 14,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "hello",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-22 13:23:26",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 33,
+      "input_snapshot": {
+        "lat": 2.0329,
+        "lng": 45.3462,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 15,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-22 14:30:28",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 34,
+      "input_snapshot": {
+        "lat": 2.035295,
+        "lng": 45.324879,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 16,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-22 14:34:05",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 35,
+      "input_snapshot": {
+        "lat": 2.035295,
+        "lng": 45.324879,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 17,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-22 14:38:27",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 36,
+      "input_snapshot": {
+        "lat": 2.035285,
+        "lng": 45.324898,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 18,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-22 17:27:47",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 37,
+      "input_snapshot": {
+        "lat": 2.035314,
+        "lng": 45.324892,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 19,
+      "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Police desk visibility test",
+      "category": "police",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 09:20:18",
+      "risk_level": "medium",
+      "gurmad_type": "security",
+      "emergency_id": 38,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "security",
+        "has_notes": true
+      },
+      "required_services": [
+        "police"
+      ],
+      "required_services_label": "Police only"
+    },
+    {
+      "id": 20,
+      "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Police desk visibility test",
+      "category": "police",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 09:22:32",
+      "risk_level": "medium",
+      "gurmad_type": "security",
+      "emergency_id": 39,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "security",
+        "has_notes": true
+      },
+      "required_services": [
+        "police"
+      ],
+      "required_services_label": "Police only"
+    },
+    {
+      "id": 21,
+      "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Police emergency — high priority.",
+      "category": "police",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 09:29:08",
+      "risk_level": "medium",
+      "gurmad_type": "security",
+      "emergency_id": 40,
+      "input_snapshot": {
+        "lat": 2.035293,
+        "lng": 45.324897,
+        "type": "security",
+        "has_notes": true
+      },
+      "required_services": [
+        "police"
+      ],
+      "required_services_label": "Police only"
+    },
+    {
+      "id": 22,
+      "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Police emergency — high priority.",
+      "category": "police",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 11:09:34",
+      "risk_level": "medium",
+      "gurmad_type": "security",
+      "emergency_id": 41,
+      "input_snapshot": {
+        "lat": 2.0329,
+        "lng": 45.3462,
+        "type": "security",
+        "has_notes": true
+      },
+      "required_services": [
+        "police"
+      ],
+      "required_services_label": "Police only"
+    },
+    {
+      "id": 23,
+      "reason": "Classified as fire (declared type: fire). Required services: Fire only. Priority high, risk high.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Fire desk visibility test",
+      "category": "fire",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 11:29:09",
+      "risk_level": "high",
+      "gurmad_type": "fire",
+      "emergency_id": 42,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "fire",
+        "has_notes": true
+      },
+      "required_services": [
+        "fire"
+      ],
+      "required_services_label": "Fire only"
+    },
+    {
+      "id": 24,
+      "reason": "Classified as fire (declared type: fire). Required services: Fire only. Priority high, risk high.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "heloo",
+      "category": "fire",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 11:38:29",
+      "risk_level": "high",
+      "gurmad_type": "fire",
+      "emergency_id": 43,
+      "input_snapshot": {
+        "lat": 2.035314,
+        "lng": 45.324892,
+        "type": "fire",
+        "has_notes": true
+      },
+      "required_services": [
+        "fire"
+      ],
+      "required_services_label": "Fire only"
+    },
+    {
+      "id": 25,
+      "reason": "Classified as other (declared type: none). Required services: Medical only. Priority medium, risk medium.",
+      "source": "call_center",
+      "call_id": 3,
+      "summary": "Other emergency — medium priority.",
+      "category": "other",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.563,
+      "created_at": "2026-07-23 12:20:52",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": null,
+      "input_snapshot": {
+        "lat": 2.035295,
+        "lng": 45.324879,
+        "type": "",
+        "has_notes": false
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 26,
+      "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+      "source": "call_center",
+      "call_id": 18,
+      "summary": "Other emergency — low priority.",
+      "category": "other",
+      "priority": "low",
+      "provider": "rule_based",
+      "severity": "low",
+      "confidence": 0.563,
+      "created_at": "2026-07-23 13:09:27",
+      "risk_level": "low",
+      "gurmad_type": "medical",
+      "emergency_id": null,
+      "input_snapshot": {
+        "lat": 2.035293,
+        "lng": 45.324897,
+        "type": "",
+        "has_notes": false
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 27,
+      "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+      "source": "call_center",
+      "call_id": 17,
+      "summary": "Other emergency — low priority.",
+      "category": "other",
+      "priority": "low",
+      "provider": "rule_based",
+      "severity": "low",
+      "confidence": 0.563,
+      "created_at": "2026-07-23 13:22:44",
+      "risk_level": "low",
+      "gurmad_type": "medical",
+      "emergency_id": null,
+      "input_snapshot": {
+        "lat": 2.035295,
+        "lng": 45.324879,
+        "type": "",
+        "has_notes": false
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 28,
+      "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+      "source": "call_center",
+      "call_id": 16,
+      "summary": "Other emergency — low priority.",
+      "category": "other",
+      "priority": "low",
+      "provider": "rule_based",
+      "severity": "low",
+      "confidence": 0.563,
+      "created_at": "2026-07-23 13:24:28",
+      "risk_level": "low",
+      "gurmad_type": "medical",
+      "emergency_id": null,
+      "input_snapshot": {
+        "lat": 2.035302,
+        "lng": 45.324971,
+        "type": "",
+        "has_notes": false
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 29,
+      "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+      "source": "call_center",
+      "call_id": 15,
+      "summary": "Other emergency — low priority.",
+      "category": "other",
+      "priority": "low",
+      "provider": "rule_based",
+      "severity": "low",
+      "confidence": 0.563,
+      "created_at": "2026-07-23 13:29:36",
+      "risk_level": "low",
+      "gurmad_type": "medical",
+      "emergency_id": null,
+      "input_snapshot": {
+        "lat": 2.0329,
+        "lng": 45.3462,
+        "type": "",
+        "has_notes": false
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 30,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "call_center",
+      "call_id": 15,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 13:30:59",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 44,
+      "input_snapshot": {
+        "lat": 2.0329,
+        "lng": 45.3462,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 31,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "call_center",
+      "call_id": 15,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 13:31:02",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 45,
+      "input_snapshot": {
+        "lat": 2.0329,
+        "lng": 45.3462,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 32,
+      "reason": "Classified as other (declared type: none). Required services: Medical only. Priority medium, risk medium.",
+      "source": "call_center",
+      "call_id": 14,
+      "summary": "Other emergency — medium priority.",
+      "category": "other",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.563,
+      "created_at": "2026-07-23 13:31:51",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": null,
+      "input_snapshot": {
+        "lat": 2.035285,
+        "lng": 45.324898,
+        "type": "",
+        "has_notes": false
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 33,
+      "reason": "Classified as other (declared type: none). Required services: Medical only. Priority medium, risk medium.",
+      "source": "call_center",
+      "call_id": 13,
+      "summary": "Other emergency — medium priority.",
+      "category": "other",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.563,
+      "created_at": "2026-07-23 13:57:14",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": null,
+      "input_snapshot": {
+        "lat": 2.035295,
+        "lng": 45.324879,
+        "type": "",
+        "has_notes": false
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 34,
+      "reason": "Classified as other (declared type: none). Required services: Medical only. Priority medium, risk medium.",
+      "source": "call_center",
+      "call_id": 12,
+      "summary": "Other emergency — medium priority.",
+      "category": "other",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.563,
+      "created_at": "2026-07-23 13:58:46",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": null,
+      "input_snapshot": {
+        "lat": 2.0329,
+        "lng": 45.3462,
+        "type": "",
+        "has_notes": false
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 35,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "call_center",
+      "call_id": 12,
+      "summary": "Call Center alert (hospital)",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 14:00:06",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 46,
+      "input_snapshot": {
+        "lat": 2.0329,
+        "lng": 45.3462,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 36,
+      "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+      "source": "call_center",
+      "call_id": 19,
+      "summary": "Other emergency — low priority.",
+      "category": "other",
+      "priority": "low",
+      "provider": "rule_based",
+      "severity": "low",
+      "confidence": 0.563,
+      "created_at": "2026-07-23 14:02:55",
+      "risk_level": "low",
+      "gurmad_type": "medical",
+      "emergency_id": null,
+      "input_snapshot": {
+        "lat": 2.0329,
+        "lng": 45.3462,
+        "type": "",
+        "has_notes": false
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 37,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "call_center",
+      "call_id": 19,
+      "summary": "Call Center alert (hospital)",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 14:03:06",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 47,
+      "input_snapshot": {
+        "lat": 2.0329,
+        "lng": 45.3462,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 38,
+      "reason": "Classified as fire (declared type: fire). Required services: Fire only. Priority high, risk high.",
+      "source": "call_center",
+      "call_id": 19,
+      "summary": "GPS shared by Call Center",
+      "category": "fire",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 14:27:12",
+      "risk_level": "high",
+      "gurmad_type": "fire",
+      "emergency_id": 48,
+      "input_snapshot": {
+        "lat": 2.0329,
+        "lng": 45.3462,
+        "type": "fire",
+        "has_notes": true
+      },
+      "required_services": [
+        "fire"
+      ],
+      "required_services_label": "Fire only"
+    },
+    {
+      "id": 39,
+      "reason": "Classified as other (declared type: none). Required services: Medical only. Priority medium, risk medium.",
+      "source": "call_center",
+      "call_id": 20,
+      "summary": "Other emergency — medium priority.",
+      "category": "other",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.563,
+      "created_at": "2026-07-23 14:27:36",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": null,
+      "input_snapshot": {
+        "lat": 2.035295,
+        "lng": 45.324879,
+        "type": "",
+        "has_notes": false
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 40,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "call_center",
+      "call_id": 20,
+      "summary": "Call Center alert (hospital)",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 14:27:56",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 49,
+      "input_snapshot": {
+        "lat": 2.035295,
+        "lng": 45.324879,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 41,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "call_center",
+      "call_id": 20,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 14:44:44",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 50,
+      "input_snapshot": {
+        "lat": 2.035295,
+        "lng": 45.324879,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 42,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Citizen cancel flow test",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 15:10:39",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 51,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 43,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Citizen cancel flow test",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 15:23:53",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 52,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 44,
+      "reason": "Classified as accident (declared type: accident). Required services: Medical + Police. Priority high, risk high.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Accident emergency — high priority.",
+      "category": "accident",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-07-23 15:45:32",
+      "risk_level": "high",
+      "gurmad_type": "accident",
+      "emergency_id": 53,
+      "input_snapshot": {
+        "lat": 2.035295,
+        "lng": 45.324879,
+        "type": "accident",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical",
+        "police"
+      ],
+      "required_services_label": "Medical + Police"
+    },
+    {
+      "id": 45,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Citizen cancel flow test",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 11:11:55",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 54,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 46,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Citizen cancel flow test",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 16:37:23",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 55,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 47,
+      "reason": "Classified as fire (declared type: fire). Required services: Fire only. Priority high, risk high.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Fire desk visibility test",
+      "category": "fire",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 16:37:35",
+      "risk_level": "high",
+      "gurmad_type": "fire",
+      "emergency_id": 56,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "fire",
+        "has_notes": true
+      },
+      "required_services": [
+        "fire"
+      ],
+      "required_services_label": "Fire only"
+    },
+    {
+      "id": 48,
+      "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Police desk visibility test",
+      "category": "police",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 16:37:44",
+      "risk_level": "medium",
+      "gurmad_type": "security",
+      "emergency_id": 57,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "security",
+        "has_notes": true
+      },
+      "required_services": [
+        "police"
+      ],
+      "required_services_label": "Police only"
+    },
+    {
+      "id": 49,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Citizen cancel flow test",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 16:38:30",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 58,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 50,
+      "reason": "Classified as fire (declared type: fire). Required services: Fire only. Priority high, risk high.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Fire desk visibility test",
+      "category": "fire",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 16:44:04",
+      "risk_level": "high",
+      "gurmad_type": "fire",
+      "emergency_id": 59,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "fire",
+        "has_notes": true
+      },
+      "required_services": [
+        "fire"
+      ],
+      "required_services_label": "Fire only"
+    },
+    {
+      "id": 51,
+      "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Police desk visibility test",
+      "category": "police",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 16:44:10",
+      "risk_level": "medium",
+      "gurmad_type": "security",
+      "emergency_id": 60,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "security",
+        "has_notes": true
+      },
+      "required_services": [
+        "police"
+      ],
+      "required_services_label": "Police only"
+    },
+    {
+      "id": 52,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Citizen cancel flow test",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 16:44:19",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 61,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 53,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Citizen cancel flow test",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 16:45:00",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 62,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 54,
+      "reason": "Classified as fire (declared type: fire). Required services: Fire only. Priority high, risk high.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Fire desk visibility test",
+      "category": "fire",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 16:46:09",
+      "risk_level": "high",
+      "gurmad_type": "fire",
+      "emergency_id": 63,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "fire",
+        "has_notes": true
+      },
+      "required_services": [
+        "fire"
+      ],
+      "required_services_label": "Fire only"
+    },
+    {
+      "id": 55,
+      "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Police desk visibility test",
+      "category": "police",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 16:46:17",
+      "risk_level": "medium",
+      "gurmad_type": "security",
+      "emergency_id": 64,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "security",
+        "has_notes": true
+      },
+      "required_services": [
+        "police"
+      ],
+      "required_services_label": "Police only"
+    },
+    {
+      "id": 56,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "e2e",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 17:03:19",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 65,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 57,
+      "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Police emergency — high priority.",
+      "category": "police",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 17:03:24",
+      "risk_level": "medium",
+      "gurmad_type": "security",
+      "emergency_id": 66,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "security",
+        "has_notes": true
+      },
+      "required_services": [
+        "police"
+      ],
+      "required_services_label": "Police only"
+    },
+    {
+      "id": 58,
+      "reason": "Classified as fire (declared type: fire). Required services: Fire only. Priority high, risk high.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Fire emergency — high priority.",
+      "category": "fire",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 17:03:32",
+      "risk_level": "high",
+      "gurmad_type": "fire",
+      "emergency_id": 67,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "fire",
+        "has_notes": true
+      },
+      "required_services": [
+        "fire"
+      ],
+      "required_services_label": "Fire only"
+    },
+    {
+      "id": 59,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Citizen cancel flow test",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 17:04:10",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 68,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 60,
+      "reason": "Classified as fire (declared type: fire). Required services: Fire only. Priority high, risk high.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Fire desk visibility test",
+      "category": "fire",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 17:05:52",
+      "risk_level": "high",
+      "gurmad_type": "fire",
+      "emergency_id": 69,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "fire",
+        "has_notes": true
+      },
+      "required_services": [
+        "fire"
+      ],
+      "required_services_label": "Fire only"
+    },
+    {
+      "id": 61,
+      "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Police desk visibility test",
+      "category": "police",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 17:06:03",
+      "risk_level": "medium",
+      "gurmad_type": "security",
+      "emergency_id": 70,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "security",
+        "has_notes": true
+      },
+      "required_services": [
+        "police"
+      ],
+      "required_services_label": "Police only"
+    },
+    {
+      "id": 62,
+      "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Police emergency — high priority.",
+      "category": "police",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 17:09:09",
+      "risk_level": "medium",
+      "gurmad_type": "security",
+      "emergency_id": 71,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "security",
+        "has_notes": true
+      },
+      "required_services": [
+        "police"
+      ],
+      "required_services_label": "Police only"
+    },
+    {
+      "id": 63,
+      "reason": "Classified as fire (declared type: fire). Required services: Fire only. Priority high, risk high.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Fire desk visibility test",
+      "category": "fire",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 17:09:41",
+      "risk_level": "high",
+      "gurmad_type": "fire",
+      "emergency_id": 72,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "fire",
+        "has_notes": true
+      },
+      "required_services": [
+        "fire"
+      ],
+      "required_services_label": "Fire only"
+    },
+    {
+      "id": 64,
+      "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Police desk visibility test",
+      "category": "police",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-07-24 17:09:51",
+      "risk_level": "medium",
+      "gurmad_type": "security",
+      "emergency_id": 73,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "security",
+        "has_notes": true
+      },
+      "required_services": [
+        "police"
+      ],
+      "required_services_label": "Police only"
+    },
+    {
+      "id": 65,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-26 10:53:36",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 74,
+      "input_snapshot": {
+        "lat": 2.035299,
+        "lng": 45.324958,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 66,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-26 10:59:41",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 75,
+      "input_snapshot": {
+        "lat": 2.035295,
+        "lng": 45.324879,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 67,
+      "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+      "source": "call_center",
+      "call_id": 24,
+      "summary": "Other emergency — low priority.",
+      "category": "other",
+      "priority": "low",
+      "provider": "rule_based",
+      "severity": "low",
+      "confidence": 0.563,
+      "created_at": "2026-07-26 13:39:41",
+      "risk_level": "low",
+      "gurmad_type": "medical",
+      "emergency_id": null,
+      "input_snapshot": {
+        "lat": 2.035284,
+        "lng": 45.324902,
+        "type": "",
+        "has_notes": false
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 68,
+      "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+      "source": "call_center",
+      "call_id": 26,
+      "summary": "Other emergency — low priority.",
+      "category": "other",
+      "priority": "low",
+      "provider": "rule_based",
+      "severity": "low",
+      "confidence": 0.563,
+      "created_at": "2026-07-27 14:04:22",
+      "risk_level": "low",
+      "gurmad_type": "medical",
+      "emergency_id": null,
+      "input_snapshot": {
+        "lat": 2.0329,
+        "lng": 45.3462,
+        "type": "",
+        "has_notes": false
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 69,
+      "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+      "source": "call_center",
+      "call_id": 26,
+      "summary": "Other emergency — low priority.",
+      "category": "other",
+      "priority": "low",
+      "provider": "rule_based",
+      "severity": "low",
+      "confidence": 0.563,
+      "created_at": "2026-07-27 14:04:25",
+      "risk_level": "low",
+      "gurmad_type": "medical",
+      "emergency_id": null,
+      "input_snapshot": {
+        "lat": 2.0329,
+        "lng": 45.3462,
+        "type": "",
+        "has_notes": false
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 70,
+      "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+      "source": "call_center",
+      "call_id": 27,
+      "summary": "Other emergency — low priority.",
+      "category": "other",
+      "priority": "low",
+      "provider": "rule_based",
+      "severity": "low",
+      "confidence": 0.563,
+      "created_at": "2026-07-27 14:05:14",
+      "risk_level": "low",
+      "gurmad_type": "medical",
+      "emergency_id": null,
+      "input_snapshot": {
+        "lat": 2.0329,
+        "lng": 45.3462,
+        "type": "",
+        "has_notes": false
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 71,
+      "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+      "source": "call_center",
+      "call_id": 28,
+      "summary": "Other emergency — low priority.",
+      "category": "other",
+      "priority": "low",
+      "provider": "rule_based",
+      "severity": "low",
+      "confidence": 0.563,
+      "created_at": "2026-07-27 14:05:53",
+      "risk_level": "low",
+      "gurmad_type": "medical",
+      "emergency_id": null,
+      "input_snapshot": {
+        "lat": 2.0329,
+        "lng": 45.3462,
+        "type": "",
+        "has_notes": false
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 72,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "call_center",
+      "call_id": 28,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-27 14:06:38",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 76,
+      "input_snapshot": {
+        "lat": 2.0329,
+        "lng": 45.3462,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 73,
+      "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+      "source": "call_center",
+      "call_id": 29,
+      "summary": "Other emergency — low priority.",
+      "category": "other",
+      "priority": "low",
+      "provider": "rule_based",
+      "severity": "low",
+      "confidence": 0.563,
+      "created_at": "2026-07-27 14:07:17",
+      "risk_level": "low",
+      "gurmad_type": "medical",
+      "emergency_id": null,
+      "input_snapshot": {
+        "lat": 2.0329,
+        "lng": 45.3462,
+        "type": "",
+        "has_notes": false
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 74,
+      "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+      "source": "call_center",
+      "call_id": 32,
+      "summary": "Other emergency — low priority.",
+      "category": "other",
+      "priority": "low",
+      "provider": "rule_based",
+      "severity": "low",
+      "confidence": 0.563,
+      "created_at": "2026-07-27 14:27:44",
+      "risk_level": "low",
+      "gurmad_type": "medical",
+      "emergency_id": null,
+      "input_snapshot": {
+        "lat": 2.035313,
+        "lng": 45.324907,
+        "type": "",
+        "has_notes": false
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 75,
+      "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+      "source": "call_center",
+      "call_id": 33,
+      "summary": "Other emergency — low priority.",
+      "category": "other",
+      "priority": "low",
+      "provider": "rule_based",
+      "severity": "low",
+      "confidence": 0.563,
+      "created_at": "2026-07-27 14:29:00",
+      "risk_level": "low",
+      "gurmad_type": "medical",
+      "emergency_id": null,
+      "input_snapshot": {
+        "lat": 2.035313,
+        "lng": 45.324907,
+        "type": "",
+        "has_notes": false
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 76,
+      "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+      "source": "call_center",
+      "call_id": 35,
+      "summary": "Other emergency — low priority.",
+      "category": "other",
+      "priority": "low",
+      "provider": "rule_based",
+      "severity": "low",
+      "confidence": 0.563,
+      "created_at": "2026-07-27 14:29:33",
+      "risk_level": "low",
+      "gurmad_type": "medical",
+      "emergency_id": null,
+      "input_snapshot": {
+        "lat": 2.035313,
+        "lng": 45.324907,
+        "type": "",
+        "has_notes": false
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 77,
+      "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+      "source": "call_center",
+      "call_id": 36,
+      "summary": "Other emergency — low priority.",
+      "category": "other",
+      "priority": "low",
+      "provider": "rule_based",
+      "severity": "low",
+      "confidence": 0.563,
+      "created_at": "2026-07-27 14:29:50",
+      "risk_level": "low",
+      "gurmad_type": "medical",
+      "emergency_id": null,
+      "input_snapshot": {
+        "lat": 2.035313,
+        "lng": 45.324907,
+        "type": "",
+        "has_notes": false
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 78,
+      "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+      "source": "call_center",
+      "call_id": 37,
+      "summary": "Other emergency — low priority.",
+      "category": "other",
+      "priority": "low",
+      "provider": "rule_based",
+      "severity": "low",
+      "confidence": 0.563,
+      "created_at": "2026-07-27 14:30:15",
+      "risk_level": "low",
+      "gurmad_type": "medical",
+      "emergency_id": null,
+      "input_snapshot": {
+        "lat": 2.035313,
+        "lng": 45.324907,
+        "type": "",
+        "has_notes": false
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 79,
+      "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+      "source": "call_center",
+      "call_id": 37,
+      "summary": "Other emergency — low priority.",
+      "category": "other",
+      "priority": "low",
+      "provider": "rule_based",
+      "severity": "low",
+      "confidence": 0.563,
+      "created_at": "2026-07-27 14:30:27",
+      "risk_level": "low",
+      "gurmad_type": "medical",
+      "emergency_id": null,
+      "input_snapshot": {
+        "lat": 2.035313,
+        "lng": 45.324907,
+        "type": "",
+        "has_notes": false
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 80,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-07-27 14:33:56",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 77,
+      "input_snapshot": {
+        "lat": 2.028531,
+        "lng": 45.286218,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 81,
+      "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+      "source": "call_center",
+      "call_id": 38,
+      "summary": "Other emergency — low priority.",
+      "category": "other",
+      "priority": "low",
+      "provider": "rule_based",
+      "severity": "low",
+      "confidence": 0.563,
+      "created_at": "2026-07-27 14:38:49",
+      "risk_level": "low",
+      "gurmad_type": "medical",
+      "emergency_id": null,
+      "input_snapshot": {
+        "lat": 2.028531,
+        "lng": 45.286217,
+        "type": "",
+        "has_notes": false
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 82,
+      "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+      "source": "call_center",
+      "call_id": 38,
+      "summary": "Call Center alert (police)",
+      "category": "police",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-07-27 14:50:19",
+      "risk_level": "medium",
+      "gurmad_type": "security",
+      "emergency_id": 78,
+      "input_snapshot": {
+        "lat": 2.028531,
+        "lng": 45.286217,
+        "type": "security",
+        "has_notes": true
+      },
+      "required_services": [
+        "police"
+      ],
+      "required_services_label": "Police only"
+    },
+    {
+      "id": 83,
+      "reason": "Classified as fire (declared type: fire). Required services: Fire only. Priority high, risk high.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Fire emergency — high priority.",
+      "category": "fire",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-07-28 13:31:53",
+      "risk_level": "high",
+      "gurmad_type": "fire",
+      "emergency_id": 79,
+      "input_snapshot": {
+        "lat": 2.0329,
+        "lng": 45.3462,
+        "type": "fire",
+        "has_notes": true
+      },
+      "required_services": [
+        "fire"
+      ],
+      "required_services_label": "Fire only"
+    },
+    {
+      "id": 84,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-08-02 15:29:37",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 80,
+      "input_snapshot": {
+        "lat": 2.03529,
+        "lng": 45.324924,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 85,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-08-02 15:31:31",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 81,
+      "input_snapshot": {
+        "lat": 2.03529,
+        "lng": 45.324924,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 86,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-08-02 16:00:47",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 82,
+      "input_snapshot": {
+        "lat": 2.035302,
+        "lng": 45.325028,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 87,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-08-02 16:39:20",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 83,
+      "input_snapshot": {
+        "lat": 2.03529,
+        "lng": 45.32486,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 88,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-08-02 16:43:27",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 84,
+      "input_snapshot": {
+        "lat": 2.03529,
+        "lng": 45.32486,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 89,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Citizen cancel flow test",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-08-02 16:52:57",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 85,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 90,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "cancel probe",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-08-02 17:02:10",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 86,
+      "input_snapshot": {
+        "lat": 2.0469,
+        "lng": 45.3182,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    },
+    {
+      "id": 91,
+      "reason": "Classified as fire (declared type: fire). Required services: Fire only. Priority high, risk high.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Fire emergency — high priority.",
+      "category": "fire",
+      "priority": "high",
+      "provider": "rule_based",
+      "severity": "high",
+      "confidence": 0.98,
+      "created_at": "2026-08-02 18:15:11",
+      "risk_level": "high",
+      "gurmad_type": "fire",
+      "emergency_id": 87,
+      "input_snapshot": {
+        "lat": 2.035271,
+        "lng": 45.324829,
+        "type": "fire",
+        "has_notes": true
+      },
+      "required_services": [
+        "fire"
+      ],
+      "required_services_label": "Fire only"
+    },
+    {
+      "id": 92,
+      "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+      "source": "sos",
+      "call_id": null,
+      "summary": "Medical emergency — medium priority.",
+      "category": "medical",
+      "priority": "medium",
+      "provider": "rule_based",
+      "severity": "medium",
+      "confidence": 0.98,
+      "created_at": "2026-08-02 18:23:34",
+      "risk_level": "medium",
+      "gurmad_type": "medical",
+      "emergency_id": 88,
+      "input_snapshot": {
+        "lat": 2.03529,
+        "lng": 45.32486,
+        "type": "medical",
+        "has_notes": true
+      },
+      "required_services": [
+        "medical"
+      ],
+      "required_services_label": "Medical only"
+    }
+  ],
+  "next_id": 93
+}

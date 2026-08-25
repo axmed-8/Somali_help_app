@@ -7,8 +7,8 @@
   <meta http-equiv="Pragma" content="no-cache">
   <title>{{ station.name }} — Police Command</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/hospital_command.css') }}?v=pcc4">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/police_command.css') }}?v=pcc4">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/hospital_command.css') }}?v=pcc5">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/police_command.css') }}?v=pcc5">
   {% include "_google_maps.html" %}
 </head>
 <body class="hcc-body pcc-body">
@@ -40,7 +40,7 @@
         </div>
         <p class="hcc-user-line">{{ user.name }}</p>
         <a href="{{ url_for('logout') }}" class="hcc-logout">Logout</a>
-        <p class="hcc-foot-brand">GurmadNet AI · Police Desk</p>
+        <p class="hcc-foot-brand">Somali Help App · Police Desk</p>
       </div>
     </aside>
 
@@ -74,7 +74,7 @@
       <div class="hcc-content">
         {% if not station_linked %}
         <div class="pcc-banner-warn" id="pcc-unlink-banner">
-          This account has no station linked. Ask Admin to set <strong>station_id</strong> for your police user, then refresh.
+          This account has no police station linked. Ask an administrator to link your user to a station, then refresh.
         </div>
         {% endif %}
 
@@ -335,7 +335,7 @@
     window.POLICE_BOOT = JSON.parse(document.getElementById("police-boot").textContent);
   </script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="{{ url_for('static', filename='js/csrf.js') }}?v=pcc4"></script>
-  <script src="{{ url_for('static', filename='js/police_command.js') }}?v=pcc4"></script>
+  <script src="{{ url_for('static', filename='js/csrf.js') }}?v=pcc5"></script>
+  <script src="{{ url_for('static', filename='js/police_command.js') }}?v=pcc5"></script>
 </body>
 </html>

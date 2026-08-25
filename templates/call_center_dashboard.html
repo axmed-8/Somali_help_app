@@ -5,60 +5,104 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <title>{{ content.call_center_dashboard_title }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/gurmadnet.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/call_center.css') }}?v=cc-voice1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/call_center.css') }}?v=cc-s4">
   {% include "_google_maps.html" %}
 </head>
-<body class="dashboard-admin gn-call-center">
+<body class="dashboard-admin gn-call-center cc-command-v1">
   <div class="dashboard-container">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-brand">
-        <h2>Call Center</h2>
-        <span>Emergency Dispatch</span>
+        <span class="cc-brand-mark" aria-hidden="true">SH</span>
+        <div>
+          <h2>Somali Help App</h2>
+          <span class="cc-brand-module">Call Center</span>
+          <small class="cc-brand-sub">Integrated Emergency Help Platform</small>
+        </div>
       </div>
-      <nav class="admin-nav">
-        <a href="#" class="active" data-panel="live">Live Calls</a>
-        <a href="#" data-panel="active">Active Session</a>
-        <a href="{{ url_for('call_center_history_page') }}">Call History</a>
+      <nav class="admin-nav cc-nav">
+        <a href="#" class="active" data-panel="live"><span class="cc-nav-ico" aria-hidden="true">📞</span> Live Calls</a>
+        <a href="#" data-panel="active"><span class="cc-nav-ico" aria-hidden="true">🎧</span> Active Session</a>
+        <a href="{{ url_for('call_center_history_page') }}"><span class="cc-nav-ico" aria-hidden="true">📋</span> Call History</a>
       </nav>
-      <div class="dashboard-links">
-        <span>{{ user.name }}</span>
-        <a href="{{ url_for('logout') }}" class="btn-logout" style="display:inline-block;margin-top:8px;">Logout</a>
+      <div class="dashboard-links cc-sidebar-foot">
+        <span class="cc-sidebar-user">{{ user.name }}</span>
+        <a href="{{ url_for('logout') }}" class="btn-logout cc-logout">Logout</a>
       </div>
     </aside>
 
     <div class="main-content">
-      <header class="top-bar">
+      <header class="top-bar cc-topbar">
         <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="Menu">☰</button>
-        <h1>Emergency Call Center</h1>
-        <div class="top-bar-actions">
-          <span class="status-badge online" id="op-online">Operators: 0</span>
-          <span class="user-badge">{{ user.name }}</span>
+        <div class="cc-topbar-title">
+          <h1>Call Center Command Center</h1>
+          <p class="cc-topbar-sub">National emergency coordination desk</p>
+        </div>
+        <div class="top-bar-actions cc-topbar-actions">
+          <span class="cc-notif-dot" id="cc-notif-dot" aria-hidden="true" title="Alerts"></span>
+          <span class="status-badge online cc-op-status" id="op-online">Operators: 0</span>
+          <span class="user-badge cc-user-badge">{{ user.name }}</span>
         </div>
       </header>
 
       <div class="content-area">
-        <div class="stats cc-stats" id="cc-stats">
-          <div class="stat-card"><div class="stat-value" id="st-online">0</div><div class="stat-label">Online</div></div>
-          <div class="stat-card"><div class="stat-value" id="st-incoming">0</div><div class="stat-label">Incoming</div></div>
-          <div class="stat-card"><div class="stat-value" id="st-waiting">0</div><div class="stat-label">Waiting</div></div>
-          <div class="stat-card"><div class="stat-value" id="st-progress">0</div><div class="stat-label">In progress</div></div>
-          <div class="stat-card"><div class="stat-value" id="st-resolved">0</div><div class="stat-label">Resolved today</div></div>
-          <div class="stat-card"><div class="stat-value" id="st-avg">0</div><div class="stat-label">Avg min</div></div>
+        <div class="stats cc-stats cc-kpi-strip" id="cc-stats">
+          <div class="stat-card cc-kpi cc-kpi-online" id="kpi-online">
+            <span class="cc-kpi-icon" aria-hidden="true">●</span>
+            <div class="stat-value" id="st-online">0</div>
+            <div class="stat-label">Operators Online</div>
+          </div>
+          <div class="stat-card cc-kpi cc-kpi-incoming" id="kpi-incoming">
+            <span class="cc-kpi-icon" aria-hidden="true">↓</span>
+            <div class="stat-value" id="st-incoming">0</div>
+            <div class="stat-label">Incoming Calls</div>
+          </div>
+          <div class="stat-card cc-kpi cc-kpi-waiting" id="kpi-waiting">
+            <span class="cc-kpi-icon" aria-hidden="true">⏱</span>
+            <div class="stat-value" id="st-waiting">0</div>
+            <div class="stat-label">Waiting</div>
+          </div>
+          <div class="stat-card cc-kpi cc-kpi-progress" id="kpi-progress">
+            <span class="cc-kpi-icon" aria-hidden="true">◉</span>
+            <div class="stat-value" id="st-progress">0</div>
+            <div class="stat-label">In Progress</div>
+          </div>
+          <div class="stat-card cc-kpi cc-kpi-resolved" id="kpi-resolved">
+            <span class="cc-kpi-icon" aria-hidden="true">✓</span>
+            <div class="stat-value" id="st-resolved">0</div>
+            <div class="stat-label">Resolved Today</div>
+          </div>
+          <div class="stat-card cc-kpi cc-kpi-avg" id="kpi-avg">
+            <span class="cc-kpi-icon" aria-hidden="true">⌛</span>
+            <div class="stat-value" id="st-avg">0</div>
+            <div class="stat-label">Avg Response Time</div>
+          </div>
         </div>
 
-        <p class="cc-operator-hint">Ask only: <strong>“What happened?”</strong> — GPS and address are already available. Never ask “Where are you?”</p>
+        <div class="cc-operator-hint" role="note">
+          <span class="cc-hint-icon" aria-hidden="true">ℹ</span>
+          <span>Ask only: <strong>“What happened?”</strong> — GPS and address are already available. Never ask “Where are you?”</span>
+        </div>
 
         <div id="panel-live">
-          <h2 class="section-title">Live queue <span class="refresh-indicator" id="refresh-time">Updating…</span></h2>
-          <div id="incoming-list" class="cc-call-grid"></div>
+          <h2 class="section-title cc-queue-title">Live Emergency Queue <span class="refresh-indicator" id="refresh-time">Updating…</span></h2>
+          <div id="incoming-list" class="cc-call-grid" aria-live="polite"></div>
         </div>
 
         <div id="panel-active" class="hidden-panel">
           <div id="active-session" class="cc-session empty">
-            <p>Open a call from <strong>Live queue</strong> and press <strong>Answer</strong>.</p>
+            <p class="cc-ws-empty-title">Operator Workspace</p>
+            <p>No active call open.</p>
+            <ol class="cc-ws-empty-steps">
+              <li>Open <strong>Live Calls</strong> from the sidebar.</li>
+              <li>Choose a call in the <strong>Live Emergency Queue</strong>.</li>
+              <li>Press <strong>Accept</strong> or <strong>Open</strong> to work the case here.</li>
+            </ol>
           </div>
         </div>
       </div>
@@ -109,6 +153,6 @@
     window.CC_TYPE_OPTIONS = {{ type_options|tojson }};
     window.CC_PHONE = {{ call_center_phone|tojson }};
   </script>
-  <script src="{{ url_for('static', filename='js/call_center.js') }}?v=cc-voice5"></script>
+  <script src="{{ url_for('static', filename='js/call_center.js') }}?v=cc-s4"></script>
 </body>
 </html>

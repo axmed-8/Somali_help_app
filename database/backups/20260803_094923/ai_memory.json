@@ -1,0 +1,4704 @@
+{
+  "items": [
+    {
+      "id": 1,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-14 14:28:25",
+      "event_type": "analysis",
+      "analysis_id": 1,
+      "emergency_id": 20
+    },
+    {
+      "id": 2,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "banadir: closest suitable hospital, ETA 3 min. Ambulance available.",
+        "hospital": "banadir",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-14 14:28:25",
+      "event_type": "recommendation",
+      "analysis_id": 1,
+      "emergency_id": 20,
+      "recommendation_id": 1
+    },
+    {
+      "id": 3,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          20
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "banadir"
+      },
+      "timestamp": "2026-07-14 14:28:25",
+      "event_type": "dispatch_result",
+      "emergency_id": 20,
+      "dispatch_log_id": 1,
+      "recommendation_id": 1
+    },
+    {
+      "id": 4,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-15 10:28:18",
+      "event_type": "analysis",
+      "analysis_id": 2,
+      "emergency_id": 21
+    },
+    {
+      "id": 5,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "kalkaal: closest suitable hospital, ETA 3 min. Ambulance available.",
+        "hospital": "kalkaal",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-15 10:28:18",
+      "event_type": "recommendation",
+      "analysis_id": 2,
+      "emergency_id": 21,
+      "recommendation_id": 2
+    },
+    {
+      "id": 6,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          21
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "kalkaal"
+      },
+      "timestamp": "2026-07-15 10:28:18",
+      "event_type": "dispatch_result",
+      "emergency_id": 21,
+      "dispatch_log_id": 2,
+      "recommendation_id": 2
+    },
+    {
+      "id": 7,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-21 15:04:43",
+      "event_type": "analysis",
+      "analysis_id": 3,
+      "emergency_id": 22
+    },
+    {
+      "id": 8,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "banadir: closest suitable hospital, ETA 4 min. Ambulance available.",
+        "hospital": "banadir",
+        "confidence": 0.98,
+        "eta_minutes": 4,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-21 15:04:44",
+      "event_type": "recommendation",
+      "analysis_id": 3,
+      "emergency_id": 22,
+      "recommendation_id": 3
+    },
+    {
+      "id": 9,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          22
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "banadir"
+      },
+      "timestamp": "2026-07-21 15:04:44",
+      "event_type": "dispatch_result",
+      "emergency_id": 22,
+      "dispatch_log_id": 3,
+      "recommendation_id": 3
+    },
+    {
+      "id": 10,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-21 15:41:39",
+      "event_type": "analysis",
+      "analysis_id": 4,
+      "emergency_id": 23
+    },
+    {
+      "id": 11,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "banadir: closest suitable hospital, ETA 4 min. Ambulance available.",
+        "hospital": "banadir",
+        "confidence": 0.98,
+        "eta_minutes": 4,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-21 15:41:40",
+      "event_type": "recommendation",
+      "analysis_id": 4,
+      "emergency_id": 23,
+      "recommendation_id": 4
+    },
+    {
+      "id": 12,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          23
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "banadir"
+      },
+      "timestamp": "2026-07-21 15:41:40",
+      "event_type": "dispatch_result",
+      "emergency_id": 23,
+      "dispatch_log_id": 4,
+      "recommendation_id": 4
+    },
+    {
+      "id": 13,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as fire (declared type: fire). Required services: Fire only. Priority high, risk high.",
+        "source": "sos",
+        "category": "fire",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "high",
+        "required_services": [
+          "fire"
+        ]
+      },
+      "timestamp": "2026-07-21 15:46:15",
+      "event_type": "analysis",
+      "analysis_id": 5,
+      "emergency_id": 24
+    },
+    {
+      "id": 14,
+      "call_id": null,
+      "payload": {
+        "fire": "xarunta dabdamiska gobolka benaadir",
+        "police": null,
+        "reason": "Fire: xarunta dabdamiska gobolka benaadir (~2.48 km, ETA 3 min).",
+        "hospital": null,
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "fire"
+        ]
+      },
+      "timestamp": "2026-07-21 15:46:15",
+      "event_type": "recommendation",
+      "analysis_id": 5,
+      "emergency_id": 24,
+      "recommendation_id": 5
+    },
+    {
+      "id": 15,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "fire"
+        ],
+        "emergency_ids": [
+          24
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": ""
+      },
+      "timestamp": "2026-07-21 15:46:16",
+      "event_type": "dispatch_result",
+      "emergency_id": 24,
+      "dispatch_log_id": 5,
+      "recommendation_id": 5
+    },
+    {
+      "id": 16,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+        "source": "sos",
+        "category": "police",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "police"
+        ]
+      },
+      "timestamp": "2026-07-21 15:47:33",
+      "event_type": "analysis",
+      "analysis_id": 6,
+      "emergency_id": 25
+    },
+    {
+      "id": 17,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": "Saldhigga Hodan",
+        "reason": "Police: Saldhigga Hodan (~0.0 km, ETA 3 min).",
+        "hospital": null,
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "security"
+        ]
+      },
+      "timestamp": "2026-07-21 15:47:33",
+      "event_type": "recommendation",
+      "analysis_id": 6,
+      "emergency_id": 25,
+      "recommendation_id": 6
+    },
+    {
+      "id": 18,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "police"
+        ],
+        "emergency_ids": [
+          25
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": ""
+      },
+      "timestamp": "2026-07-21 15:47:33",
+      "event_type": "dispatch_result",
+      "emergency_id": 25,
+      "dispatch_log_id": 6,
+      "recommendation_id": 6
+    },
+    {
+      "id": 19,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-21 17:26:20",
+      "event_type": "analysis",
+      "analysis_id": 7,
+      "emergency_id": 26
+    },
+    {
+      "id": 20,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "banadir: closest suitable hospital, ETA 4 min. Ambulance available.",
+        "hospital": "banadir",
+        "confidence": 0.98,
+        "eta_minutes": 4,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-21 17:26:20",
+      "event_type": "recommendation",
+      "analysis_id": 7,
+      "emergency_id": 26,
+      "recommendation_id": 7
+    },
+    {
+      "id": 21,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          26
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "banadir"
+      },
+      "timestamp": "2026-07-21 17:26:20",
+      "event_type": "dispatch_result",
+      "emergency_id": 26,
+      "dispatch_log_id": 7,
+      "recommendation_id": 7
+    },
+    {
+      "id": 22,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-21 17:35:55",
+      "event_type": "analysis",
+      "analysis_id": 8,
+      "emergency_id": 27
+    },
+    {
+      "id": 23,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "banadir: closest suitable hospital, ETA 4 min. Ambulance available.",
+        "hospital": "banadir",
+        "confidence": 0.98,
+        "eta_minutes": 4,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-21 17:35:56",
+      "event_type": "recommendation",
+      "analysis_id": 8,
+      "emergency_id": 27,
+      "recommendation_id": 8
+    },
+    {
+      "id": 24,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          27
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "banadir"
+      },
+      "timestamp": "2026-07-21 17:35:56",
+      "event_type": "dispatch_result",
+      "emergency_id": 27,
+      "dispatch_log_id": 8,
+      "recommendation_id": 8
+    },
+    {
+      "id": 25,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-21 17:39:17",
+      "event_type": "analysis",
+      "analysis_id": 9,
+      "emergency_id": 28
+    },
+    {
+      "id": 26,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "banadir: closest suitable hospital, ETA 4 min. Ambulance available.",
+        "hospital": "banadir",
+        "confidence": 0.98,
+        "eta_minutes": 4,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-21 17:39:17",
+      "event_type": "recommendation",
+      "analysis_id": 9,
+      "emergency_id": 28,
+      "recommendation_id": 9
+    },
+    {
+      "id": 27,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          28
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "banadir"
+      },
+      "timestamp": "2026-07-21 17:39:17",
+      "event_type": "dispatch_result",
+      "emergency_id": 28,
+      "dispatch_log_id": 9,
+      "recommendation_id": 9
+    },
+    {
+      "id": 28,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-22 10:12:42",
+      "event_type": "analysis",
+      "analysis_id": 10,
+      "emergency_id": 29
+    },
+    {
+      "id": 29,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "banadir: closest suitable hospital, ETA 4 min. Ambulance available.",
+        "hospital": "banadir",
+        "confidence": 0.98,
+        "eta_minutes": 4,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-22 10:12:42",
+      "event_type": "recommendation",
+      "analysis_id": 10,
+      "emergency_id": 29,
+      "recommendation_id": 10
+    },
+    {
+      "id": 30,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          29
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "banadir"
+      },
+      "timestamp": "2026-07-22 10:12:43",
+      "event_type": "dispatch_result",
+      "emergency_id": 29,
+      "dispatch_log_id": 10,
+      "recommendation_id": 10
+    },
+    {
+      "id": 31,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-22 13:06:51",
+      "event_type": "analysis",
+      "analysis_id": 11,
+      "emergency_id": 30
+    },
+    {
+      "id": 32,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "banadir: closest suitable hospital, ETA 4 min. Ambulance available.",
+        "hospital": "banadir",
+        "confidence": 0.98,
+        "eta_minutes": 4,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-22 13:06:51",
+      "event_type": "recommendation",
+      "analysis_id": 11,
+      "emergency_id": 30,
+      "recommendation_id": 11
+    },
+    {
+      "id": 33,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          30
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "banadir"
+      },
+      "timestamp": "2026-07-22 13:06:52",
+      "event_type": "dispatch_result",
+      "emergency_id": 30,
+      "dispatch_log_id": 11,
+      "recommendation_id": 11
+    },
+    {
+      "id": 34,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-22 13:11:28",
+      "event_type": "analysis",
+      "analysis_id": 12,
+      "emergency_id": 31
+    },
+    {
+      "id": 35,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "banadir: closest suitable hospital, ETA 4 min. Ambulance available.",
+        "hospital": "banadir",
+        "confidence": 0.98,
+        "eta_minutes": 4,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-22 13:11:28",
+      "event_type": "recommendation",
+      "analysis_id": 12,
+      "emergency_id": 31,
+      "recommendation_id": 12
+    },
+    {
+      "id": 36,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          31
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "banadir"
+      },
+      "timestamp": "2026-07-22 13:11:28",
+      "event_type": "dispatch_result",
+      "emergency_id": 31,
+      "dispatch_log_id": 12,
+      "recommendation_id": 12
+    },
+    {
+      "id": 37,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-22 13:14:36",
+      "event_type": "analysis",
+      "analysis_id": 13,
+      "emergency_id": 32
+    },
+    {
+      "id": 38,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "banadir: closest suitable hospital, ETA 4 min.",
+        "hospital": "banadir",
+        "confidence": 0.98,
+        "eta_minutes": 4,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-22 13:14:36",
+      "event_type": "recommendation",
+      "analysis_id": 13,
+      "emergency_id": 32,
+      "recommendation_id": 13
+    },
+    {
+      "id": 39,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          32
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "banadir"
+      },
+      "timestamp": "2026-07-22 13:14:37",
+      "event_type": "dispatch_result",
+      "emergency_id": 32,
+      "dispatch_log_id": 13,
+      "recommendation_id": 13
+    },
+    {
+      "id": 40,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-22 13:23:26",
+      "event_type": "analysis",
+      "analysis_id": 14,
+      "emergency_id": 33
+    },
+    {
+      "id": 41,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "banadir: closest suitable hospital, ETA 7 min. Ambulance available.",
+        "hospital": "banadir",
+        "confidence": 0.98,
+        "eta_minutes": 7,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-22 13:23:26",
+      "event_type": "recommendation",
+      "analysis_id": 14,
+      "emergency_id": 33,
+      "recommendation_id": 14
+    },
+    {
+      "id": 42,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          33
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "banadir"
+      },
+      "timestamp": "2026-07-22 13:23:26",
+      "event_type": "dispatch_result",
+      "emergency_id": 33,
+      "dispatch_log_id": 14,
+      "recommendation_id": 14
+    },
+    {
+      "id": 43,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-22 14:30:28",
+      "event_type": "analysis",
+      "analysis_id": 15,
+      "emergency_id": 34
+    },
+    {
+      "id": 44,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-22 14:30:28",
+      "event_type": "recommendation",
+      "analysis_id": 15,
+      "emergency_id": 34,
+      "recommendation_id": 15
+    },
+    {
+      "id": 45,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          34
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "Hodan Hospital"
+      },
+      "timestamp": "2026-07-22 14:30:29",
+      "event_type": "dispatch_result",
+      "emergency_id": 34,
+      "dispatch_log_id": 15,
+      "recommendation_id": 15
+    },
+    {
+      "id": 46,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-22 14:34:05",
+      "event_type": "analysis",
+      "analysis_id": 16,
+      "emergency_id": 35
+    },
+    {
+      "id": 47,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-22 14:34:05",
+      "event_type": "recommendation",
+      "analysis_id": 16,
+      "emergency_id": 35,
+      "recommendation_id": 16
+    },
+    {
+      "id": 48,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          35
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "Hodan Hospital"
+      },
+      "timestamp": "2026-07-22 14:34:06",
+      "event_type": "dispatch_result",
+      "emergency_id": 35,
+      "dispatch_log_id": 16,
+      "recommendation_id": 16
+    },
+    {
+      "id": 49,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-22 14:38:27",
+      "event_type": "analysis",
+      "analysis_id": 17,
+      "emergency_id": 36
+    },
+    {
+      "id": 50,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-22 14:38:27",
+      "event_type": "recommendation",
+      "analysis_id": 17,
+      "emergency_id": 36,
+      "recommendation_id": 17
+    },
+    {
+      "id": 51,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          36
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "Hodan Hospital"
+      },
+      "timestamp": "2026-07-22 14:38:27",
+      "event_type": "dispatch_result",
+      "emergency_id": 36,
+      "dispatch_log_id": 17,
+      "recommendation_id": 17
+    },
+    {
+      "id": 52,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-22 17:27:47",
+      "event_type": "analysis",
+      "analysis_id": 18,
+      "emergency_id": 37
+    },
+    {
+      "id": 53,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-22 17:27:47",
+      "event_type": "recommendation",
+      "analysis_id": 18,
+      "emergency_id": 37,
+      "recommendation_id": 18
+    },
+    {
+      "id": 54,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          37
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "Hodan Hospital"
+      },
+      "timestamp": "2026-07-22 17:27:47",
+      "event_type": "dispatch_result",
+      "emergency_id": 37,
+      "dispatch_log_id": 18,
+      "recommendation_id": 18
+    },
+    {
+      "id": 55,
+      "call_id": null,
+      "payload": {
+        "type": "security",
+        "notes": "",
+        "status": "completed",
+        "district": "Makka Al-mukarama مكة المكرمة, Hawl Wadaag حول وداك, Muqdisho مقديشو",
+        "latitude": 2.035295,
+        "longitude": 45.324879,
+        "assigned_to": "police",
+        "final_status": "completed"
+      },
+      "timestamp": "2026-07-23 09:02:08",
+      "event_type": "outcome",
+      "emergency_id": 25
+    },
+    {
+      "id": 56,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+        "source": "sos",
+        "category": "police",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "police"
+        ]
+      },
+      "timestamp": "2026-07-23 09:20:18",
+      "event_type": "analysis",
+      "analysis_id": 19,
+      "emergency_id": 38
+    },
+    {
+      "id": 57,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": "Saldhigga Hodan",
+        "reason": "Police: Saldhigga Hodan (~1.49 km, ETA 3 min).",
+        "hospital": null,
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "security"
+        ]
+      },
+      "timestamp": "2026-07-23 09:20:18",
+      "event_type": "recommendation",
+      "analysis_id": 19,
+      "emergency_id": 38,
+      "recommendation_id": 19
+    },
+    {
+      "id": 58,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "police"
+        ],
+        "emergency_ids": [
+          38
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": ""
+      },
+      "timestamp": "2026-07-23 09:20:18",
+      "event_type": "dispatch_result",
+      "emergency_id": 38,
+      "dispatch_log_id": 19,
+      "recommendation_id": 19
+    },
+    {
+      "id": 59,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+        "source": "sos",
+        "category": "police",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "police"
+        ]
+      },
+      "timestamp": "2026-07-23 09:22:32",
+      "event_type": "analysis",
+      "analysis_id": 20,
+      "emergency_id": 39
+    },
+    {
+      "id": 60,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": "Saldhigga Hodan",
+        "reason": "Police: Saldhigga Hodan (~1.49 km, ETA 3 min).",
+        "hospital": null,
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "security"
+        ]
+      },
+      "timestamp": "2026-07-23 09:22:32",
+      "event_type": "recommendation",
+      "analysis_id": 20,
+      "emergency_id": 39,
+      "recommendation_id": 20
+    },
+    {
+      "id": 61,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "police"
+        ],
+        "emergency_ids": [
+          39
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": ""
+      },
+      "timestamp": "2026-07-23 09:22:32",
+      "event_type": "dispatch_result",
+      "emergency_id": 39,
+      "dispatch_log_id": 20,
+      "recommendation_id": 20
+    },
+    {
+      "id": 62,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+        "source": "sos",
+        "category": "police",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "police"
+        ]
+      },
+      "timestamp": "2026-07-23 09:29:08",
+      "event_type": "analysis",
+      "analysis_id": 21,
+      "emergency_id": 40
+    },
+    {
+      "id": 63,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": "Saldhigga Hodan",
+        "reason": "Police: Saldhigga Hodan (~0.0 km, ETA 3 min).",
+        "hospital": null,
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "security"
+        ]
+      },
+      "timestamp": "2026-07-23 09:29:08",
+      "event_type": "recommendation",
+      "analysis_id": 21,
+      "emergency_id": 40,
+      "recommendation_id": 21
+    },
+    {
+      "id": 64,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "police"
+        ],
+        "emergency_ids": [
+          40
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": ""
+      },
+      "timestamp": "2026-07-23 09:29:08",
+      "event_type": "dispatch_result",
+      "emergency_id": 40,
+      "dispatch_log_id": 21,
+      "recommendation_id": 21
+    },
+    {
+      "id": 65,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+        "source": "sos",
+        "category": "police",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "police"
+        ]
+      },
+      "timestamp": "2026-07-23 11:09:34",
+      "event_type": "analysis",
+      "analysis_id": 22,
+      "emergency_id": 41
+    },
+    {
+      "id": 66,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": "Saldhigga Hodan",
+        "reason": "Police: Saldhigga Hodan (~2.38 km, ETA 3 min).",
+        "hospital": null,
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "security"
+        ]
+      },
+      "timestamp": "2026-07-23 11:09:35",
+      "event_type": "recommendation",
+      "analysis_id": 22,
+      "emergency_id": 41,
+      "recommendation_id": 22
+    },
+    {
+      "id": 67,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "police"
+        ],
+        "emergency_ids": [
+          41
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": ""
+      },
+      "timestamp": "2026-07-23 11:09:35",
+      "event_type": "dispatch_result",
+      "emergency_id": 41,
+      "dispatch_log_id": 22,
+      "recommendation_id": 22
+    },
+    {
+      "id": 68,
+      "call_id": null,
+      "payload": {
+        "type": "security",
+        "notes": "",
+        "status": "completed",
+        "district": "Makka Al-mukarama مكة المكرمة, Hawl Wadaag حول وداك, Muqdisho مقديشو",
+        "latitude": 2.035295,
+        "longitude": 45.324879,
+        "assigned_to": "police",
+        "final_status": "completed"
+      },
+      "timestamp": "2026-07-23 11:11:29",
+      "event_type": "outcome",
+      "emergency_id": 41
+    },
+    {
+      "id": 69,
+      "call_id": null,
+      "payload": {
+        "type": "security",
+        "notes": "",
+        "status": "completed",
+        "district": "Makka Al-mukarama مكة المكرمة, Hawl Wadaag حول وداك, Muqdisho مقديشو",
+        "latitude": 2.035295,
+        "longitude": 45.324879,
+        "assigned_to": "police",
+        "final_status": "completed"
+      },
+      "timestamp": "2026-07-23 11:12:11",
+      "event_type": "outcome",
+      "emergency_id": 41
+    },
+    {
+      "id": 70,
+      "call_id": null,
+      "payload": {
+        "type": "security",
+        "notes": "Police desk visibility test",
+        "status": "completed",
+        "district": "Hodan",
+        "latitude": 2.0469,
+        "longitude": 45.3182,
+        "assigned_to": "police",
+        "final_status": "completed"
+      },
+      "timestamp": "2026-07-23 11:12:23",
+      "event_type": "outcome",
+      "emergency_id": 38
+    },
+    {
+      "id": 71,
+      "call_id": null,
+      "payload": {
+        "type": "security",
+        "notes": "Police desk visibility test",
+        "status": "completed",
+        "district": "Hodan",
+        "latitude": 2.0469,
+        "longitude": 45.3182,
+        "assigned_to": "police",
+        "final_status": "completed"
+      },
+      "timestamp": "2026-07-23 11:12:27",
+      "event_type": "outcome",
+      "emergency_id": 38
+    },
+    {
+      "id": 72,
+      "call_id": null,
+      "payload": {
+        "type": "security",
+        "notes": "",
+        "status": "completed",
+        "district": "2.03527, 45.32480",
+        "latitude": 2.035268,
+        "longitude": 45.324797,
+        "assigned_to": "police",
+        "final_status": "completed"
+      },
+      "timestamp": "2026-07-23 11:12:49",
+      "event_type": "outcome",
+      "emergency_id": 40
+    },
+    {
+      "id": 73,
+      "call_id": null,
+      "payload": {
+        "type": "security",
+        "notes": "Police desk visibility test",
+        "status": "completed",
+        "district": "Hodan",
+        "latitude": 2.0469,
+        "longitude": 45.3182,
+        "assigned_to": "police",
+        "final_status": "completed"
+      },
+      "timestamp": "2026-07-23 11:13:33",
+      "event_type": "outcome",
+      "emergency_id": 39
+    },
+    {
+      "id": 74,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as fire (declared type: fire). Required services: Fire only. Priority high, risk high.",
+        "source": "sos",
+        "category": "fire",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "high",
+        "required_services": [
+          "fire"
+        ]
+      },
+      "timestamp": "2026-07-23 11:29:09",
+      "event_type": "analysis",
+      "analysis_id": 23,
+      "emergency_id": 42
+    },
+    {
+      "id": 75,
+      "call_id": null,
+      "payload": {
+        "fire": "xarunta dabdamiska gobolka benaadir",
+        "police": null,
+        "reason": "Fire: xarunta dabdamiska gobolka benaadir (~3.15 km, ETA 4 min).",
+        "hospital": null,
+        "confidence": 0.98,
+        "eta_minutes": 4,
+        "suggested_dispatch_types": [
+          "fire"
+        ]
+      },
+      "timestamp": "2026-07-23 11:29:10",
+      "event_type": "recommendation",
+      "analysis_id": 23,
+      "emergency_id": 42,
+      "recommendation_id": 23
+    },
+    {
+      "id": 76,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "fire"
+        ],
+        "emergency_ids": [
+          42
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": ""
+      },
+      "timestamp": "2026-07-23 11:29:11",
+      "event_type": "dispatch_result",
+      "emergency_id": 42,
+      "dispatch_log_id": 23,
+      "recommendation_id": 23
+    },
+    {
+      "id": 77,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as fire (declared type: fire). Required services: Fire only. Priority high, risk high.",
+        "source": "sos",
+        "category": "fire",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "high",
+        "required_services": [
+          "fire"
+        ]
+      },
+      "timestamp": "2026-07-23 11:38:29",
+      "event_type": "analysis",
+      "analysis_id": 24,
+      "emergency_id": 43
+    },
+    {
+      "id": 78,
+      "call_id": null,
+      "payload": {
+        "fire": "xarunta dabdamiska gobolka benaadir",
+        "police": null,
+        "reason": "Fire: xarunta dabdamiska gobolka benaadir (~2.48 km, ETA 3 min).",
+        "hospital": null,
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "fire"
+        ]
+      },
+      "timestamp": "2026-07-23 11:38:30",
+      "event_type": "recommendation",
+      "analysis_id": 24,
+      "emergency_id": 43,
+      "recommendation_id": 24
+    },
+    {
+      "id": 79,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "fire"
+        ],
+        "emergency_ids": [
+          43
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": ""
+      },
+      "timestamp": "2026-07-23 11:38:30",
+      "event_type": "dispatch_result",
+      "emergency_id": 43,
+      "dispatch_log_id": 24,
+      "recommendation_id": 24
+    },
+    {
+      "id": 80,
+      "call_id": null,
+      "payload": {
+        "type": "fire",
+        "notes": "heloo",
+        "status": "completed",
+        "district": "Makka Al-mukarama مكة المكرمة, Hawl Wadaag حول وداك, Muqdisho مقديشو",
+        "latitude": 2.035295,
+        "longitude": 45.324879,
+        "assigned_to": "fire",
+        "final_status": "completed"
+      },
+      "timestamp": "2026-07-23 11:42:37",
+      "event_type": "outcome",
+      "emergency_id": 43
+    },
+    {
+      "id": 81,
+      "call_id": null,
+      "payload": {
+        "type": "fire",
+        "notes": "Fire desk visibility test",
+        "status": "completed",
+        "district": "Hodan",
+        "latitude": 2.0469,
+        "longitude": 45.3182,
+        "assigned_to": "fire",
+        "final_status": "completed"
+      },
+      "timestamp": "2026-07-23 11:42:46",
+      "event_type": "outcome",
+      "emergency_id": 42
+    },
+    {
+      "id": 82,
+      "call_id": null,
+      "payload": {
+        "type": "fire",
+        "notes": "heloo",
+        "status": "completed",
+        "district": "Makka Al-mukarama مكة المكرمة, Hawl Wadaag حول وداك, Muqdisho مقديشو",
+        "latitude": 2.035295,
+        "longitude": 45.324879,
+        "assigned_to": "fire",
+        "final_status": "completed"
+      },
+      "timestamp": "2026-07-23 11:42:50",
+      "event_type": "outcome",
+      "emergency_id": 43
+    },
+    {
+      "id": 83,
+      "call_id": null,
+      "payload": {
+        "type": "fire",
+        "notes": "Fire desk visibility test",
+        "status": "completed",
+        "district": "Hodan",
+        "latitude": 2.0469,
+        "longitude": 45.3182,
+        "assigned_to": "fire",
+        "final_status": "completed"
+      },
+      "timestamp": "2026-07-23 11:50:13",
+      "event_type": "outcome",
+      "emergency_id": 42
+    },
+    {
+      "id": 84,
+      "call_id": null,
+      "payload": {
+        "type": "fire",
+        "notes": "",
+        "status": "completed",
+        "district": "Makka Al-mukarama مكة المكرمة, Hawl Wadaag حول وداك, Muqdisho مقديشو",
+        "latitude": 2.035304,
+        "longitude": 45.324906,
+        "assigned_to": "fire",
+        "final_status": "completed"
+      },
+      "timestamp": "2026-07-23 12:18:05",
+      "event_type": "outcome",
+      "emergency_id": 24
+    },
+    {
+      "id": 85,
+      "call_id": 3,
+      "payload": {
+        "reason": "Classified as other (declared type: none). Required services: Medical only. Priority medium, risk medium.",
+        "source": "call_center",
+        "category": "other",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.563,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 12:20:52",
+      "event_type": "analysis",
+      "analysis_id": 25,
+      "emergency_id": null
+    },
+    {
+      "id": 86,
+      "call_id": 3,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.613,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 12:20:52",
+      "event_type": "recommendation",
+      "analysis_id": 25,
+      "emergency_id": null,
+      "recommendation_id": 25
+    },
+    {
+      "id": 87,
+      "call_id": 18,
+      "payload": {
+        "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+        "source": "call_center",
+        "category": "other",
+        "priority": "low",
+        "provider": "rule_based",
+        "confidence": 0.563,
+        "risk_level": "low",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 13:09:27",
+      "event_type": "analysis",
+      "analysis_id": 26,
+      "emergency_id": null
+    },
+    {
+      "id": 88,
+      "call_id": 18,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.613,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 13:09:27",
+      "event_type": "recommendation",
+      "analysis_id": 26,
+      "emergency_id": null,
+      "recommendation_id": 26
+    },
+    {
+      "id": 89,
+      "call_id": 17,
+      "payload": {
+        "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+        "source": "call_center",
+        "category": "other",
+        "priority": "low",
+        "provider": "rule_based",
+        "confidence": 0.563,
+        "risk_level": "low",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 13:22:44",
+      "event_type": "analysis",
+      "analysis_id": 27,
+      "emergency_id": null
+    },
+    {
+      "id": 90,
+      "call_id": 17,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.613,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 13:22:44",
+      "event_type": "recommendation",
+      "analysis_id": 27,
+      "emergency_id": null,
+      "recommendation_id": 27
+    },
+    {
+      "id": 91,
+      "call_id": 16,
+      "payload": {
+        "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+        "source": "call_center",
+        "category": "other",
+        "priority": "low",
+        "provider": "rule_based",
+        "confidence": 0.563,
+        "risk_level": "low",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 13:24:28",
+      "event_type": "analysis",
+      "analysis_id": 28,
+      "emergency_id": null
+    },
+    {
+      "id": 92,
+      "call_id": 16,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.613,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 13:24:28",
+      "event_type": "recommendation",
+      "analysis_id": 28,
+      "emergency_id": null,
+      "recommendation_id": 28
+    },
+    {
+      "id": 93,
+      "call_id": 15,
+      "payload": {
+        "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+        "source": "call_center",
+        "category": "other",
+        "priority": "low",
+        "provider": "rule_based",
+        "confidence": 0.563,
+        "risk_level": "low",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 13:29:36",
+      "event_type": "analysis",
+      "analysis_id": 29,
+      "emergency_id": null
+    },
+    {
+      "id": 94,
+      "call_id": 15,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 6 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.613,
+        "eta_minutes": 6,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 13:29:36",
+      "event_type": "recommendation",
+      "analysis_id": 29,
+      "emergency_id": null,
+      "recommendation_id": 29
+    },
+    {
+      "id": 95,
+      "call_id": 15,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "call_center",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 13:30:59",
+      "event_type": "analysis",
+      "analysis_id": 30,
+      "emergency_id": 44
+    },
+    {
+      "id": 96,
+      "call_id": 15,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 6 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.98,
+        "eta_minutes": 6,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 13:30:59",
+      "event_type": "recommendation",
+      "analysis_id": 30,
+      "emergency_id": 44,
+      "recommendation_id": 30
+    },
+    {
+      "id": 97,
+      "call_id": 15,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          44
+        ],
+        "human_decision": "call_center_created",
+        "assigned_hospital_name": "Hodan Hospital"
+      },
+      "timestamp": "2026-07-23 13:30:59",
+      "event_type": "dispatch_result",
+      "emergency_id": 44,
+      "dispatch_log_id": 25,
+      "recommendation_id": 30
+    },
+    {
+      "id": 98,
+      "call_id": 15,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "call_center",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 13:31:02",
+      "event_type": "analysis",
+      "analysis_id": 31,
+      "emergency_id": 45
+    },
+    {
+      "id": 99,
+      "call_id": 15,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 6 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.98,
+        "eta_minutes": 6,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 13:31:02",
+      "event_type": "recommendation",
+      "analysis_id": 31,
+      "emergency_id": 45,
+      "recommendation_id": 31
+    },
+    {
+      "id": 100,
+      "call_id": 15,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          45
+        ],
+        "human_decision": "call_center_created",
+        "assigned_hospital_name": "Hodan Hospital"
+      },
+      "timestamp": "2026-07-23 13:31:02",
+      "event_type": "dispatch_result",
+      "emergency_id": 45,
+      "dispatch_log_id": 26,
+      "recommendation_id": 31
+    },
+    {
+      "id": 101,
+      "call_id": 14,
+      "payload": {
+        "reason": "Classified as other (declared type: none). Required services: Medical only. Priority medium, risk medium.",
+        "source": "call_center",
+        "category": "other",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.563,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 13:31:51",
+      "event_type": "analysis",
+      "analysis_id": 32,
+      "emergency_id": null
+    },
+    {
+      "id": 102,
+      "call_id": 14,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.613,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 13:31:51",
+      "event_type": "recommendation",
+      "analysis_id": 32,
+      "emergency_id": null,
+      "recommendation_id": 32
+    },
+    {
+      "id": 103,
+      "call_id": 13,
+      "payload": {
+        "reason": "Classified as other (declared type: none). Required services: Medical only. Priority medium, risk medium.",
+        "source": "call_center",
+        "category": "other",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.563,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 13:57:14",
+      "event_type": "analysis",
+      "analysis_id": 33,
+      "emergency_id": null
+    },
+    {
+      "id": 104,
+      "call_id": 13,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.613,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 13:57:14",
+      "event_type": "recommendation",
+      "analysis_id": 33,
+      "emergency_id": null,
+      "recommendation_id": 33
+    },
+    {
+      "id": 105,
+      "call_id": 12,
+      "payload": {
+        "reason": "Classified as other (declared type: none). Required services: Medical only. Priority medium, risk medium.",
+        "source": "call_center",
+        "category": "other",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.563,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 13:58:46",
+      "event_type": "analysis",
+      "analysis_id": 34,
+      "emergency_id": null
+    },
+    {
+      "id": 106,
+      "call_id": 12,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 6 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.613,
+        "eta_minutes": 6,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 13:58:46",
+      "event_type": "recommendation",
+      "analysis_id": 34,
+      "emergency_id": null,
+      "recommendation_id": 34
+    },
+    {
+      "id": 107,
+      "call_id": 12,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "call_center",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 14:00:06",
+      "event_type": "analysis",
+      "analysis_id": 35,
+      "emergency_id": 46
+    },
+    {
+      "id": 108,
+      "call_id": 12,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 6 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.98,
+        "eta_minutes": 6,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 14:00:06",
+      "event_type": "recommendation",
+      "analysis_id": 35,
+      "emergency_id": 46,
+      "recommendation_id": 35
+    },
+    {
+      "id": 109,
+      "call_id": 12,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          46
+        ],
+        "human_decision": "call_center_created",
+        "assigned_hospital_name": "Hodan Hospital"
+      },
+      "timestamp": "2026-07-23 14:00:06",
+      "event_type": "dispatch_result",
+      "emergency_id": 46,
+      "dispatch_log_id": 27,
+      "recommendation_id": 35
+    },
+    {
+      "id": 110,
+      "call_id": 19,
+      "payload": {
+        "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+        "source": "call_center",
+        "category": "other",
+        "priority": "low",
+        "provider": "rule_based",
+        "confidence": 0.563,
+        "risk_level": "low",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 14:02:55",
+      "event_type": "analysis",
+      "analysis_id": 36,
+      "emergency_id": null
+    },
+    {
+      "id": 111,
+      "call_id": 19,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 6 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.613,
+        "eta_minutes": 6,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 14:02:55",
+      "event_type": "recommendation",
+      "analysis_id": 36,
+      "emergency_id": null,
+      "recommendation_id": 36
+    },
+    {
+      "id": 112,
+      "call_id": 19,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "call_center",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 14:03:06",
+      "event_type": "analysis",
+      "analysis_id": 37,
+      "emergency_id": 47
+    },
+    {
+      "id": 113,
+      "call_id": 19,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 6 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.98,
+        "eta_minutes": 6,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 14:03:07",
+      "event_type": "recommendation",
+      "analysis_id": 37,
+      "emergency_id": 47,
+      "recommendation_id": 37
+    },
+    {
+      "id": 114,
+      "call_id": 19,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          47
+        ],
+        "human_decision": "call_center_created",
+        "assigned_hospital_name": "Hodan Hospital"
+      },
+      "timestamp": "2026-07-23 14:03:07",
+      "event_type": "dispatch_result",
+      "emergency_id": 47,
+      "dispatch_log_id": 28,
+      "recommendation_id": 37
+    },
+    {
+      "id": 115,
+      "call_id": 19,
+      "payload": {
+        "notes": "",
+        "decision": "reject",
+        "operator_id": 29,
+        "operator_name": "amiin",
+        "selected_types": null
+      },
+      "timestamp": "2026-07-23 14:26:53",
+      "event_type": "human_decision",
+      "emergency_id": 47,
+      "recommendation_id": 36
+    },
+    {
+      "id": 116,
+      "call_id": 19,
+      "payload": {
+        "reason": "Classified as fire (declared type: fire). Required services: Fire only. Priority high, risk high.",
+        "source": "call_center",
+        "category": "fire",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "high",
+        "required_services": [
+          "fire"
+        ]
+      },
+      "timestamp": "2026-07-23 14:27:12",
+      "event_type": "analysis",
+      "analysis_id": 38,
+      "emergency_id": 48
+    },
+    {
+      "id": 117,
+      "call_id": 19,
+      "payload": {
+        "fire": "xarunta dabdamiska gobolka benaadir",
+        "police": null,
+        "reason": "Fire: xarunta dabdamiska gobolka benaadir (~1.05 km, ETA 3 min).",
+        "hospital": null,
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "fire"
+        ]
+      },
+      "timestamp": "2026-07-23 14:27:13",
+      "event_type": "recommendation",
+      "analysis_id": 38,
+      "emergency_id": 48,
+      "recommendation_id": 38
+    },
+    {
+      "id": 118,
+      "call_id": 19,
+      "payload": {
+        "dispatched_to": [
+          "fire"
+        ],
+        "emergency_ids": [
+          48
+        ],
+        "human_decision": "call_center_created",
+        "assigned_hospital_name": ""
+      },
+      "timestamp": "2026-07-23 14:27:13",
+      "event_type": "dispatch_result",
+      "emergency_id": 48,
+      "dispatch_log_id": 29,
+      "recommendation_id": 38
+    },
+    {
+      "id": 119,
+      "call_id": 20,
+      "payload": {
+        "reason": "Classified as other (declared type: none). Required services: Medical only. Priority medium, risk medium.",
+        "source": "call_center",
+        "category": "other",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.563,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 14:27:36",
+      "event_type": "analysis",
+      "analysis_id": 39,
+      "emergency_id": null
+    },
+    {
+      "id": 120,
+      "call_id": 20,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.613,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 14:27:36",
+      "event_type": "recommendation",
+      "analysis_id": 39,
+      "emergency_id": null,
+      "recommendation_id": 39
+    },
+    {
+      "id": 121,
+      "call_id": 20,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "call_center",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 14:27:56",
+      "event_type": "analysis",
+      "analysis_id": 40,
+      "emergency_id": 49
+    },
+    {
+      "id": 122,
+      "call_id": 20,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 14:27:57",
+      "event_type": "recommendation",
+      "analysis_id": 40,
+      "emergency_id": 49,
+      "recommendation_id": 40
+    },
+    {
+      "id": 123,
+      "call_id": 20,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          49
+        ],
+        "human_decision": "call_center_created",
+        "assigned_hospital_name": "Hodan Hospital"
+      },
+      "timestamp": "2026-07-23 14:27:57",
+      "event_type": "dispatch_result",
+      "emergency_id": 49,
+      "dispatch_log_id": 30,
+      "recommendation_id": 40
+    },
+    {
+      "id": 124,
+      "call_id": 20,
+      "payload": {
+        "notes": "",
+        "decision": "reject",
+        "operator_id": 29,
+        "operator_name": "amiin",
+        "selected_types": null
+      },
+      "timestamp": "2026-07-23 14:44:37",
+      "event_type": "human_decision",
+      "emergency_id": 49,
+      "recommendation_id": 39
+    },
+    {
+      "id": 125,
+      "call_id": 20,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "call_center",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 14:44:44",
+      "event_type": "analysis",
+      "analysis_id": 41,
+      "emergency_id": 50
+    },
+    {
+      "id": 126,
+      "call_id": 20,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 14:44:45",
+      "event_type": "recommendation",
+      "analysis_id": 41,
+      "emergency_id": 50,
+      "recommendation_id": 41
+    },
+    {
+      "id": 127,
+      "call_id": 20,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          50
+        ],
+        "human_decision": "call_center_created",
+        "assigned_hospital_name": "Hodan Hospital"
+      },
+      "timestamp": "2026-07-23 14:44:45",
+      "event_type": "dispatch_result",
+      "emergency_id": 50,
+      "dispatch_log_id": 31,
+      "recommendation_id": 41
+    },
+    {
+      "id": 128,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 15:10:39",
+      "event_type": "analysis",
+      "analysis_id": 42,
+      "emergency_id": 51
+    },
+    {
+      "id": 129,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 15:10:39",
+      "event_type": "recommendation",
+      "analysis_id": 42,
+      "emergency_id": 51,
+      "recommendation_id": 42
+    },
+    {
+      "id": 130,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          51
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "Hodan Hospital"
+      },
+      "timestamp": "2026-07-23 15:10:39",
+      "event_type": "dispatch_result",
+      "emergency_id": 51,
+      "dispatch_log_id": 32,
+      "recommendation_id": 42
+    },
+    {
+      "id": 131,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 15:23:53",
+      "event_type": "analysis",
+      "analysis_id": 43,
+      "emergency_id": 52
+    },
+    {
+      "id": 132,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-23 15:23:53",
+      "event_type": "recommendation",
+      "analysis_id": 43,
+      "emergency_id": 52,
+      "recommendation_id": 43
+    },
+    {
+      "id": 133,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          52
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "Hodan Hospital"
+      },
+      "timestamp": "2026-07-23 15:23:53",
+      "event_type": "dispatch_result",
+      "emergency_id": 52,
+      "dispatch_log_id": 33,
+      "recommendation_id": 43
+    },
+    {
+      "id": 134,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as accident (declared type: accident). Required services: Medical + Police. Priority high, risk high.",
+        "source": "sos",
+        "category": "accident",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "high",
+        "required_services": [
+          "medical",
+          "police"
+        ]
+      },
+      "timestamp": "2026-07-23 15:45:32",
+      "event_type": "analysis",
+      "analysis_id": 44,
+      "emergency_id": 53
+    },
+    {
+      "id": 135,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": "Saldhigga Hodan",
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available. Police: Saldhigga Hodan (~0.0 km, ETA 3 min).",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical",
+          "accident"
+        ]
+      },
+      "timestamp": "2026-07-23 15:45:32",
+      "event_type": "recommendation",
+      "analysis_id": 44,
+      "emergency_id": 53,
+      "recommendation_id": 44
+    },
+    {
+      "id": 136,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "police"
+        ],
+        "emergency_ids": [
+          53
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": ""
+      },
+      "timestamp": "2026-07-23 15:45:32",
+      "event_type": "dispatch_result",
+      "emergency_id": 53,
+      "dispatch_log_id": 34,
+      "recommendation_id": 44
+    },
+    {
+      "id": 137,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-24 11:11:55",
+      "event_type": "analysis",
+      "analysis_id": 45,
+      "emergency_id": 54
+    },
+    {
+      "id": 138,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-24 11:11:55",
+      "event_type": "recommendation",
+      "analysis_id": 45,
+      "emergency_id": 54,
+      "recommendation_id": 45
+    },
+    {
+      "id": 139,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          54
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "Hodan Hospital"
+      },
+      "timestamp": "2026-07-24 11:11:55",
+      "event_type": "dispatch_result",
+      "emergency_id": 54,
+      "dispatch_log_id": 35,
+      "recommendation_id": 45
+    },
+    {
+      "id": 140,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-24 16:37:23",
+      "event_type": "analysis",
+      "analysis_id": 46,
+      "emergency_id": 55
+    },
+    {
+      "id": 141,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-24 16:37:24",
+      "event_type": "recommendation",
+      "analysis_id": 46,
+      "emergency_id": 55,
+      "recommendation_id": 46
+    },
+    {
+      "id": 142,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          55
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "Hodan Hospital"
+      },
+      "timestamp": "2026-07-24 16:37:24",
+      "event_type": "dispatch_result",
+      "emergency_id": 55,
+      "dispatch_log_id": 36,
+      "recommendation_id": 46
+    },
+    {
+      "id": 143,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as fire (declared type: fire). Required services: Fire only. Priority high, risk high.",
+        "source": "sos",
+        "category": "fire",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "high",
+        "required_services": [
+          "fire"
+        ]
+      },
+      "timestamp": "2026-07-24 16:37:35",
+      "event_type": "analysis",
+      "analysis_id": 47,
+      "emergency_id": 56
+    },
+    {
+      "id": 144,
+      "call_id": null,
+      "payload": {
+        "fire": "xarunta dabdamiska gobolka benaadir",
+        "police": null,
+        "reason": "Fire: xarunta dabdamiska gobolka benaadir (~3.15 km, ETA 4 min).",
+        "hospital": null,
+        "confidence": 0.98,
+        "eta_minutes": 4,
+        "suggested_dispatch_types": [
+          "fire"
+        ]
+      },
+      "timestamp": "2026-07-24 16:37:36",
+      "event_type": "recommendation",
+      "analysis_id": 47,
+      "emergency_id": 56,
+      "recommendation_id": 47
+    },
+    {
+      "id": 145,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "fire"
+        ],
+        "emergency_ids": [
+          56
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": ""
+      },
+      "timestamp": "2026-07-24 16:37:36",
+      "event_type": "dispatch_result",
+      "emergency_id": 56,
+      "dispatch_log_id": 37,
+      "recommendation_id": 47
+    },
+    {
+      "id": 146,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+        "source": "sos",
+        "category": "police",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "police"
+        ]
+      },
+      "timestamp": "2026-07-24 16:37:44",
+      "event_type": "analysis",
+      "analysis_id": 48,
+      "emergency_id": 57
+    },
+    {
+      "id": 147,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": "Saldhigga Hodan",
+        "reason": "Police: Saldhigga Hodan (~1.49 km, ETA 3 min).",
+        "hospital": null,
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "security"
+        ]
+      },
+      "timestamp": "2026-07-24 16:37:45",
+      "event_type": "recommendation",
+      "analysis_id": 48,
+      "emergency_id": 57,
+      "recommendation_id": 48
+    },
+    {
+      "id": 148,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "police"
+        ],
+        "emergency_ids": [
+          57
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": ""
+      },
+      "timestamp": "2026-07-24 16:37:45",
+      "event_type": "dispatch_result",
+      "emergency_id": 57,
+      "dispatch_log_id": 38,
+      "recommendation_id": 48
+    },
+    {
+      "id": 149,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-24 16:38:30",
+      "event_type": "analysis",
+      "analysis_id": 49,
+      "emergency_id": 58
+    },
+    {
+      "id": 150,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-24 16:38:30",
+      "event_type": "recommendation",
+      "analysis_id": 49,
+      "emergency_id": 58,
+      "recommendation_id": 49
+    },
+    {
+      "id": 151,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          58
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "Hodan Hospital"
+      },
+      "timestamp": "2026-07-24 16:38:31",
+      "event_type": "dispatch_result",
+      "emergency_id": 58,
+      "dispatch_log_id": 39,
+      "recommendation_id": 49
+    },
+    {
+      "id": 152,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as fire (declared type: fire). Required services: Fire only. Priority high, risk high.",
+        "source": "sos",
+        "category": "fire",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "high",
+        "required_services": [
+          "fire"
+        ]
+      },
+      "timestamp": "2026-07-24 16:44:04",
+      "event_type": "analysis",
+      "analysis_id": 50,
+      "emergency_id": 59
+    },
+    {
+      "id": 153,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+        "source": "sos",
+        "category": "police",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "police"
+        ]
+      },
+      "timestamp": "2026-07-24 16:44:10",
+      "event_type": "analysis",
+      "analysis_id": 51,
+      "emergency_id": 60
+    },
+    {
+      "id": 154,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-24 16:44:19",
+      "event_type": "analysis",
+      "analysis_id": 52,
+      "emergency_id": 61
+    },
+    {
+      "id": 155,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-24 16:45:00",
+      "event_type": "analysis",
+      "analysis_id": 53,
+      "emergency_id": 62
+    },
+    {
+      "id": 156,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as fire (declared type: fire). Required services: Fire only. Priority high, risk high.",
+        "source": "sos",
+        "category": "fire",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "high",
+        "required_services": [
+          "fire"
+        ]
+      },
+      "timestamp": "2026-07-24 16:46:09",
+      "event_type": "analysis",
+      "analysis_id": 54,
+      "emergency_id": 63
+    },
+    {
+      "id": 157,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+        "source": "sos",
+        "category": "police",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "police"
+        ]
+      },
+      "timestamp": "2026-07-24 16:46:17",
+      "event_type": "analysis",
+      "analysis_id": 55,
+      "emergency_id": 64
+    },
+    {
+      "id": 158,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-24 17:03:19",
+      "event_type": "analysis",
+      "analysis_id": 56,
+      "emergency_id": 65
+    },
+    {
+      "id": 159,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+        "source": "sos",
+        "category": "police",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "police"
+        ]
+      },
+      "timestamp": "2026-07-24 17:03:24",
+      "event_type": "analysis",
+      "analysis_id": 57,
+      "emergency_id": 66
+    },
+    {
+      "id": 160,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as fire (declared type: fire). Required services: Fire only. Priority high, risk high.",
+        "source": "sos",
+        "category": "fire",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "high",
+        "required_services": [
+          "fire"
+        ]
+      },
+      "timestamp": "2026-07-24 17:03:32",
+      "event_type": "analysis",
+      "analysis_id": 58,
+      "emergency_id": 67
+    },
+    {
+      "id": 161,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-24 17:04:10",
+      "event_type": "analysis",
+      "analysis_id": 59,
+      "emergency_id": 68
+    },
+    {
+      "id": 162,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as fire (declared type: fire). Required services: Fire only. Priority high, risk high.",
+        "source": "sos",
+        "category": "fire",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "high",
+        "required_services": [
+          "fire"
+        ]
+      },
+      "timestamp": "2026-07-24 17:05:52",
+      "event_type": "analysis",
+      "analysis_id": 60,
+      "emergency_id": 69
+    },
+    {
+      "id": 163,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+        "source": "sos",
+        "category": "police",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "police"
+        ]
+      },
+      "timestamp": "2026-07-24 17:06:03",
+      "event_type": "analysis",
+      "analysis_id": 61,
+      "emergency_id": 70
+    },
+    {
+      "id": 164,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+        "source": "sos",
+        "category": "police",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "police"
+        ]
+      },
+      "timestamp": "2026-07-24 17:09:09",
+      "event_type": "analysis",
+      "analysis_id": 62,
+      "emergency_id": 71
+    },
+    {
+      "id": 165,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": "Saldhigga Hodan",
+        "reason": "Police: Saldhigga Hodan (~1.49 km, ETA 3 min).",
+        "hospital": null,
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "security"
+        ]
+      },
+      "timestamp": "2026-07-24 17:09:10",
+      "event_type": "recommendation",
+      "analysis_id": 62,
+      "emergency_id": 71,
+      "recommendation_id": 50
+    },
+    {
+      "id": 166,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "police"
+        ],
+        "emergency_ids": [
+          71
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": ""
+      },
+      "timestamp": "2026-07-24 17:09:10",
+      "event_type": "dispatch_result",
+      "emergency_id": 71,
+      "dispatch_log_id": 40,
+      "recommendation_id": 50
+    },
+    {
+      "id": 167,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as fire (declared type: fire). Required services: Fire only. Priority high, risk high.",
+        "source": "sos",
+        "category": "fire",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "high",
+        "required_services": [
+          "fire"
+        ]
+      },
+      "timestamp": "2026-07-24 17:09:41",
+      "event_type": "analysis",
+      "analysis_id": 63,
+      "emergency_id": 72
+    },
+    {
+      "id": 168,
+      "call_id": null,
+      "payload": {
+        "fire": "xarunta dabdamiska gobolka benaadir",
+        "police": null,
+        "reason": "Fire: xarunta dabdamiska gobolka benaadir (~3.15 km, ETA 4 min).",
+        "hospital": null,
+        "confidence": 0.98,
+        "eta_minutes": 4,
+        "suggested_dispatch_types": [
+          "fire"
+        ]
+      },
+      "timestamp": "2026-07-24 17:09:41",
+      "event_type": "recommendation",
+      "analysis_id": 63,
+      "emergency_id": 72,
+      "recommendation_id": 51
+    },
+    {
+      "id": 169,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "fire"
+        ],
+        "emergency_ids": [
+          72
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": ""
+      },
+      "timestamp": "2026-07-24 17:09:41",
+      "event_type": "dispatch_result",
+      "emergency_id": 72,
+      "dispatch_log_id": 41,
+      "recommendation_id": 51
+    },
+    {
+      "id": 170,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+        "source": "sos",
+        "category": "police",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "police"
+        ]
+      },
+      "timestamp": "2026-07-24 17:09:51",
+      "event_type": "analysis",
+      "analysis_id": 64,
+      "emergency_id": 73
+    },
+    {
+      "id": 171,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": "Saldhigga Hodan",
+        "reason": "Police: Saldhigga Hodan (~1.49 km, ETA 3 min).",
+        "hospital": null,
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "security"
+        ]
+      },
+      "timestamp": "2026-07-24 17:09:52",
+      "event_type": "recommendation",
+      "analysis_id": 64,
+      "emergency_id": 73,
+      "recommendation_id": 52
+    },
+    {
+      "id": 172,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "police"
+        ],
+        "emergency_ids": [
+          73
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": ""
+      },
+      "timestamp": "2026-07-24 17:09:52",
+      "event_type": "dispatch_result",
+      "emergency_id": 73,
+      "dispatch_log_id": 42,
+      "recommendation_id": 52
+    },
+    {
+      "id": 173,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-26 10:53:36",
+      "event_type": "analysis",
+      "analysis_id": 65,
+      "emergency_id": 74
+    },
+    {
+      "id": 174,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-26 10:53:36",
+      "event_type": "recommendation",
+      "analysis_id": 65,
+      "emergency_id": 74,
+      "recommendation_id": 53
+    },
+    {
+      "id": 175,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          74
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "Hodan Hospital"
+      },
+      "timestamp": "2026-07-26 10:53:37",
+      "event_type": "dispatch_result",
+      "emergency_id": 74,
+      "dispatch_log_id": 43,
+      "recommendation_id": 53
+    },
+    {
+      "id": 176,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-26 10:59:41",
+      "event_type": "analysis",
+      "analysis_id": 66,
+      "emergency_id": 75
+    },
+    {
+      "id": 177,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-26 10:59:42",
+      "event_type": "recommendation",
+      "analysis_id": 66,
+      "emergency_id": 75,
+      "recommendation_id": 54
+    },
+    {
+      "id": 178,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          75
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "Hodan Hospital"
+      },
+      "timestamp": "2026-07-26 10:59:42",
+      "event_type": "dispatch_result",
+      "emergency_id": 75,
+      "dispatch_log_id": 44,
+      "recommendation_id": 54
+    },
+    {
+      "id": 179,
+      "call_id": 24,
+      "payload": {
+        "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+        "source": "call_center",
+        "category": "other",
+        "priority": "low",
+        "provider": "rule_based",
+        "confidence": 0.563,
+        "risk_level": "low",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-26 13:39:41",
+      "event_type": "analysis",
+      "analysis_id": 67,
+      "emergency_id": null
+    },
+    {
+      "id": 180,
+      "call_id": 24,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Hodan Hospital: closest suitable hospital, ETA 3 min. Ambulance available.",
+        "hospital": "Hodan Hospital",
+        "confidence": 0.613,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-26 13:39:41",
+      "event_type": "recommendation",
+      "analysis_id": 67,
+      "emergency_id": null,
+      "recommendation_id": 55
+    },
+    {
+      "id": 181,
+      "call_id": 26,
+      "payload": {
+        "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+        "source": "call_center",
+        "category": "other",
+        "priority": "low",
+        "provider": "rule_based",
+        "confidence": 0.563,
+        "risk_level": "low",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-27 14:04:25",
+      "event_type": "analysis",
+      "analysis_id": 69,
+      "emergency_id": null
+    },
+    {
+      "id": 182,
+      "call_id": 26,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Insufficient location or resource data for a firm recommendation.",
+        "hospital": null,
+        "confidence": 0.563,
+        "eta_minutes": null,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-27 14:04:25",
+      "event_type": "recommendation",
+      "analysis_id": 69,
+      "emergency_id": null,
+      "recommendation_id": 56
+    },
+    {
+      "id": 183,
+      "call_id": 27,
+      "payload": {
+        "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+        "source": "call_center",
+        "category": "other",
+        "priority": "low",
+        "provider": "rule_based",
+        "confidence": 0.563,
+        "risk_level": "low",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-27 14:05:14",
+      "event_type": "analysis",
+      "analysis_id": 70,
+      "emergency_id": null
+    },
+    {
+      "id": 184,
+      "call_id": 27,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Insufficient location or resource data for a firm recommendation.",
+        "hospital": null,
+        "confidence": 0.563,
+        "eta_minutes": null,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-27 14:05:14",
+      "event_type": "recommendation",
+      "analysis_id": 70,
+      "emergency_id": null,
+      "recommendation_id": 57
+    },
+    {
+      "id": 185,
+      "call_id": 28,
+      "payload": {
+        "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+        "source": "call_center",
+        "category": "other",
+        "priority": "low",
+        "provider": "rule_based",
+        "confidence": 0.563,
+        "risk_level": "low",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-27 14:05:53",
+      "event_type": "analysis",
+      "analysis_id": 71,
+      "emergency_id": null
+    },
+    {
+      "id": 186,
+      "call_id": 28,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Insufficient location or resource data for a firm recommendation.",
+        "hospital": null,
+        "confidence": 0.563,
+        "eta_minutes": null,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-27 14:05:53",
+      "event_type": "recommendation",
+      "analysis_id": 71,
+      "emergency_id": null,
+      "recommendation_id": 58
+    },
+    {
+      "id": 187,
+      "call_id": 28,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "call_center",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-27 14:06:38",
+      "event_type": "analysis",
+      "analysis_id": 72,
+      "emergency_id": 76
+    },
+    {
+      "id": 188,
+      "call_id": 28,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Insufficient location or resource data for a firm recommendation.",
+        "hospital": null,
+        "confidence": 0.98,
+        "eta_minutes": null,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-27 14:06:40",
+      "event_type": "recommendation",
+      "analysis_id": 72,
+      "emergency_id": 76,
+      "recommendation_id": 59
+    },
+    {
+      "id": 189,
+      "call_id": 28,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          76
+        ],
+        "human_decision": "call_center_created",
+        "assigned_hospital_name": ""
+      },
+      "timestamp": "2026-07-27 14:06:42",
+      "event_type": "dispatch_result",
+      "emergency_id": 76,
+      "dispatch_log_id": 45,
+      "recommendation_id": 59
+    },
+    {
+      "id": 190,
+      "call_id": 29,
+      "payload": {
+        "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+        "source": "call_center",
+        "category": "other",
+        "priority": "low",
+        "provider": "rule_based",
+        "confidence": 0.563,
+        "risk_level": "low",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-27 14:07:17",
+      "event_type": "analysis",
+      "analysis_id": 73,
+      "emergency_id": null
+    },
+    {
+      "id": 191,
+      "call_id": 32,
+      "payload": {
+        "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+        "source": "call_center",
+        "category": "other",
+        "priority": "low",
+        "provider": "rule_based",
+        "confidence": 0.563,
+        "risk_level": "low",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-27 14:27:44",
+      "event_type": "analysis",
+      "analysis_id": 74,
+      "emergency_id": null
+    },
+    {
+      "id": 192,
+      "call_id": 32,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Insufficient location or resource data for a firm recommendation.",
+        "hospital": null,
+        "confidence": 0.563,
+        "eta_minutes": null,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-27 14:27:44",
+      "event_type": "recommendation",
+      "analysis_id": 74,
+      "emergency_id": null,
+      "recommendation_id": 61
+    },
+    {
+      "id": 193,
+      "call_id": 33,
+      "payload": {
+        "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+        "source": "call_center",
+        "category": "other",
+        "priority": "low",
+        "provider": "rule_based",
+        "confidence": 0.563,
+        "risk_level": "low",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-27 14:29:00",
+      "event_type": "analysis",
+      "analysis_id": 75,
+      "emergency_id": null
+    },
+    {
+      "id": 194,
+      "call_id": 33,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Insufficient location or resource data for a firm recommendation.",
+        "hospital": null,
+        "confidence": 0.563,
+        "eta_minutes": null,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-27 14:29:00",
+      "event_type": "recommendation",
+      "analysis_id": 75,
+      "emergency_id": null,
+      "recommendation_id": 62
+    },
+    {
+      "id": 195,
+      "call_id": 35,
+      "payload": {
+        "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+        "source": "call_center",
+        "category": "other",
+        "priority": "low",
+        "provider": "rule_based",
+        "confidence": 0.563,
+        "risk_level": "low",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-27 14:29:33",
+      "event_type": "analysis",
+      "analysis_id": 76,
+      "emergency_id": null
+    },
+    {
+      "id": 196,
+      "call_id": 35,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Insufficient location or resource data for a firm recommendation.",
+        "hospital": null,
+        "confidence": 0.563,
+        "eta_minutes": null,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-27 14:29:33",
+      "event_type": "recommendation",
+      "analysis_id": 76,
+      "emergency_id": null,
+      "recommendation_id": 63
+    },
+    {
+      "id": 197,
+      "call_id": 36,
+      "payload": {
+        "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+        "source": "call_center",
+        "category": "other",
+        "priority": "low",
+        "provider": "rule_based",
+        "confidence": 0.563,
+        "risk_level": "low",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-27 14:29:50",
+      "event_type": "analysis",
+      "analysis_id": 77,
+      "emergency_id": null
+    },
+    {
+      "id": 198,
+      "call_id": 36,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Insufficient location or resource data for a firm recommendation.",
+        "hospital": null,
+        "confidence": 0.563,
+        "eta_minutes": null,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-27 14:29:50",
+      "event_type": "recommendation",
+      "analysis_id": 77,
+      "emergency_id": null,
+      "recommendation_id": 64
+    },
+    {
+      "id": 199,
+      "call_id": 37,
+      "payload": {
+        "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+        "source": "call_center",
+        "category": "other",
+        "priority": "low",
+        "provider": "rule_based",
+        "confidence": 0.563,
+        "risk_level": "low",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-27 14:30:15",
+      "event_type": "analysis",
+      "analysis_id": 78,
+      "emergency_id": null
+    },
+    {
+      "id": 200,
+      "call_id": 37,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Insufficient location or resource data for a firm recommendation.",
+        "hospital": null,
+        "confidence": 0.563,
+        "eta_minutes": null,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-27 14:30:15",
+      "event_type": "recommendation",
+      "analysis_id": 78,
+      "emergency_id": null,
+      "recommendation_id": 65
+    },
+    {
+      "id": 201,
+      "call_id": 37,
+      "payload": {
+        "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+        "source": "call_center",
+        "category": "other",
+        "priority": "low",
+        "provider": "rule_based",
+        "confidence": 0.563,
+        "risk_level": "low",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-27 14:30:27",
+      "event_type": "analysis",
+      "analysis_id": 79,
+      "emergency_id": null
+    },
+    {
+      "id": 202,
+      "call_id": 37,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Insufficient location or resource data for a firm recommendation.",
+        "hospital": null,
+        "confidence": 0.563,
+        "eta_minutes": null,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-27 14:30:27",
+      "event_type": "recommendation",
+      "analysis_id": 79,
+      "emergency_id": null,
+      "recommendation_id": 66
+    },
+    {
+      "id": 203,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-27 14:33:56",
+      "event_type": "analysis",
+      "analysis_id": 80,
+      "emergency_id": 77
+    },
+    {
+      "id": 204,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Insufficient location or resource data for a firm recommendation.",
+        "hospital": null,
+        "confidence": 0.98,
+        "eta_minutes": null,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-27 14:33:56",
+      "event_type": "recommendation",
+      "analysis_id": 80,
+      "emergency_id": 77,
+      "recommendation_id": 67
+    },
+    {
+      "id": 205,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          77
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": ""
+      },
+      "timestamp": "2026-07-27 14:33:57",
+      "event_type": "dispatch_result",
+      "emergency_id": 77,
+      "dispatch_log_id": 46,
+      "recommendation_id": 67
+    },
+    {
+      "id": 206,
+      "call_id": 38,
+      "payload": {
+        "reason": "Classified as other (declared type: none). Required services: Medical only. Priority low, risk low.",
+        "source": "call_center",
+        "category": "other",
+        "priority": "low",
+        "provider": "rule_based",
+        "confidence": 0.563,
+        "risk_level": "low",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-27 14:38:49",
+      "event_type": "analysis",
+      "analysis_id": 81,
+      "emergency_id": null
+    },
+    {
+      "id": 207,
+      "call_id": 38,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Insufficient location or resource data for a firm recommendation.",
+        "hospital": null,
+        "confidence": 0.563,
+        "eta_minutes": null,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-07-27 14:38:49",
+      "event_type": "recommendation",
+      "analysis_id": 81,
+      "emergency_id": null,
+      "recommendation_id": 68
+    },
+    {
+      "id": 208,
+      "call_id": 38,
+      "payload": {
+        "reason": "Classified as police (declared type: security). Required services: Police only. Priority high, risk medium.",
+        "source": "call_center",
+        "category": "police",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "police"
+        ]
+      },
+      "timestamp": "2026-07-27 14:50:19",
+      "event_type": "analysis",
+      "analysis_id": 82,
+      "emergency_id": 78
+    },
+    {
+      "id": 209,
+      "call_id": 38,
+      "payload": {
+        "fire": null,
+        "police": "Police Response Unit",
+        "reason": "Police: Police Response Unit (~3.37 km, ETA 5 min).",
+        "hospital": null,
+        "confidence": 0.98,
+        "eta_minutes": 5,
+        "suggested_dispatch_types": [
+          "security"
+        ]
+      },
+      "timestamp": "2026-07-27 14:50:19",
+      "event_type": "recommendation",
+      "analysis_id": 82,
+      "emergency_id": 78,
+      "recommendation_id": 69
+    },
+    {
+      "id": 210,
+      "call_id": 38,
+      "payload": {
+        "dispatched_to": [
+          "police"
+        ],
+        "emergency_ids": [
+          78
+        ],
+        "human_decision": "call_center_created",
+        "assigned_hospital_name": ""
+      },
+      "timestamp": "2026-07-27 14:50:20",
+      "event_type": "dispatch_result",
+      "emergency_id": 78,
+      "dispatch_log_id": 47,
+      "recommendation_id": 69
+    },
+    {
+      "id": 211,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as fire (declared type: fire). Required services: Fire only. Priority high, risk high.",
+        "source": "sos",
+        "category": "fire",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "high",
+        "required_services": [
+          "fire"
+        ]
+      },
+      "timestamp": "2026-07-28 13:31:53",
+      "event_type": "analysis",
+      "analysis_id": 83,
+      "emergency_id": 79
+    },
+    {
+      "id": 212,
+      "call_id": null,
+      "payload": {
+        "fire": "Fire & Rescue Station",
+        "police": null,
+        "reason": "Fire: Fire & Rescue Station (~2.93 km, ETA 4 min).",
+        "hospital": null,
+        "confidence": 0.98,
+        "eta_minutes": 4,
+        "suggested_dispatch_types": [
+          "fire"
+        ]
+      },
+      "timestamp": "2026-07-28 13:31:53",
+      "event_type": "recommendation",
+      "analysis_id": 83,
+      "emergency_id": 79,
+      "recommendation_id": 70
+    },
+    {
+      "id": 213,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "fire"
+        ],
+        "emergency_ids": [
+          79
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": ""
+      },
+      "timestamp": "2026-07-28 13:31:53",
+      "event_type": "dispatch_result",
+      "emergency_id": 79,
+      "dispatch_log_id": 48,
+      "recommendation_id": 70
+    },
+    {
+      "id": 214,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-08-02 15:29:37",
+      "event_type": "analysis",
+      "analysis_id": 84,
+      "emergency_id": 80
+    },
+    {
+      "id": 215,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "De Martino Public Hospital: closest suitable hospital, ETA 3 min.",
+        "hospital": "De Martino Public Hospital",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-08-02 15:29:37",
+      "event_type": "recommendation",
+      "analysis_id": 84,
+      "emergency_id": 80,
+      "recommendation_id": 71
+    },
+    {
+      "id": 216,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          80
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "De Martino Public Hospital"
+      },
+      "timestamp": "2026-08-02 15:29:38",
+      "event_type": "dispatch_result",
+      "emergency_id": 80,
+      "dispatch_log_id": 49,
+      "recommendation_id": 71
+    },
+    {
+      "id": 217,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-08-02 15:31:31",
+      "event_type": "analysis",
+      "analysis_id": 85,
+      "emergency_id": 81
+    },
+    {
+      "id": 218,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "De Martino Public Hospital: closest suitable hospital, ETA 3 min.",
+        "hospital": "De Martino Public Hospital",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-08-02 15:31:31",
+      "event_type": "recommendation",
+      "analysis_id": 85,
+      "emergency_id": 81,
+      "recommendation_id": 72
+    },
+    {
+      "id": 219,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          81
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "De Martino Public Hospital"
+      },
+      "timestamp": "2026-08-02 15:31:31",
+      "event_type": "dispatch_result",
+      "emergency_id": 81,
+      "dispatch_log_id": 50,
+      "recommendation_id": 72
+    },
+    {
+      "id": 220,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-08-02 16:00:47",
+      "event_type": "analysis",
+      "analysis_id": 86,
+      "emergency_id": 82
+    },
+    {
+      "id": 221,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "De Martino Public Hospital: closest suitable hospital, ETA 3 min.",
+        "hospital": "De Martino Public Hospital",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-08-02 16:00:47",
+      "event_type": "recommendation",
+      "analysis_id": 86,
+      "emergency_id": 82,
+      "recommendation_id": 73
+    },
+    {
+      "id": 222,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          82
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "De Martino Public Hospital"
+      },
+      "timestamp": "2026-08-02 16:00:48",
+      "event_type": "dispatch_result",
+      "emergency_id": 82,
+      "dispatch_log_id": 51,
+      "recommendation_id": 73
+    },
+    {
+      "id": 223,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-08-02 16:39:20",
+      "event_type": "analysis",
+      "analysis_id": 87,
+      "emergency_id": 83
+    },
+    {
+      "id": 224,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "De Martino Public Hospital: closest suitable hospital, ETA 3 min.",
+        "hospital": "De Martino Public Hospital",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-08-02 16:39:20",
+      "event_type": "recommendation",
+      "analysis_id": 87,
+      "emergency_id": 83,
+      "recommendation_id": 74
+    },
+    {
+      "id": 225,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          83
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "De Martino Public Hospital"
+      },
+      "timestamp": "2026-08-02 16:39:21",
+      "event_type": "dispatch_result",
+      "emergency_id": 83,
+      "dispatch_log_id": 52,
+      "recommendation_id": 74
+    },
+    {
+      "id": 226,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-08-02 16:43:27",
+      "event_type": "analysis",
+      "analysis_id": 88,
+      "emergency_id": 84
+    },
+    {
+      "id": 227,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "De Martino Public Hospital: closest suitable hospital, ETA 3 min.",
+        "hospital": "De Martino Public Hospital",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-08-02 16:43:28",
+      "event_type": "recommendation",
+      "analysis_id": 88,
+      "emergency_id": 84,
+      "recommendation_id": 75
+    },
+    {
+      "id": 228,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          84
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "De Martino Public Hospital"
+      },
+      "timestamp": "2026-08-02 16:43:28",
+      "event_type": "dispatch_result",
+      "emergency_id": 84,
+      "dispatch_log_id": 53,
+      "recommendation_id": 75
+    },
+    {
+      "id": 229,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-08-02 16:52:57",
+      "event_type": "analysis",
+      "analysis_id": 89,
+      "emergency_id": 85
+    },
+    {
+      "id": 230,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Erdogan Hospital (Digfer): closest suitable hospital, ETA 3 min.",
+        "hospital": "Erdogan Hospital (Digfer)",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-08-02 16:52:57",
+      "event_type": "recommendation",
+      "analysis_id": 89,
+      "emergency_id": 85,
+      "recommendation_id": 76
+    },
+    {
+      "id": 231,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          85
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "Erdogan Hospital (Digfer)"
+      },
+      "timestamp": "2026-08-02 16:52:58",
+      "event_type": "dispatch_result",
+      "emergency_id": 85,
+      "dispatch_log_id": 54,
+      "recommendation_id": 76
+    },
+    {
+      "id": 232,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-08-02 17:02:10",
+      "event_type": "analysis",
+      "analysis_id": 90,
+      "emergency_id": 86
+    },
+    {
+      "id": 233,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "Erdogan Hospital (Digfer): closest suitable hospital, ETA 3 min.",
+        "hospital": "Erdogan Hospital (Digfer)",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-08-02 17:02:11",
+      "event_type": "recommendation",
+      "analysis_id": 90,
+      "emergency_id": 86,
+      "recommendation_id": 77
+    },
+    {
+      "id": 234,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          86
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "Erdogan Hospital (Digfer)"
+      },
+      "timestamp": "2026-08-02 17:02:11",
+      "event_type": "dispatch_result",
+      "emergency_id": 86,
+      "dispatch_log_id": 55,
+      "recommendation_id": 77
+    },
+    {
+      "id": 235,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as fire (declared type: fire). Required services: Fire only. Priority high, risk high.",
+        "source": "sos",
+        "category": "fire",
+        "priority": "high",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "high",
+        "required_services": [
+          "fire"
+        ]
+      },
+      "timestamp": "2026-08-02 18:15:11",
+      "event_type": "analysis",
+      "analysis_id": 91,
+      "emergency_id": 87
+    },
+    {
+      "id": 236,
+      "call_id": null,
+      "payload": {
+        "fire": "Mogadishu Fire Brigade",
+        "police": null,
+        "reason": "Fire: Mogadishu Fire Brigade (~2.5 km, ETA 3 min).",
+        "hospital": null,
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "fire"
+        ]
+      },
+      "timestamp": "2026-08-02 18:15:12",
+      "event_type": "recommendation",
+      "analysis_id": 91,
+      "emergency_id": 87,
+      "recommendation_id": 78
+    },
+    {
+      "id": 237,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "fire"
+        ],
+        "emergency_ids": [
+          87
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": ""
+      },
+      "timestamp": "2026-08-02 18:15:12",
+      "event_type": "dispatch_result",
+      "emergency_id": 87,
+      "dispatch_log_id": 56,
+      "recommendation_id": 78
+    },
+    {
+      "id": 238,
+      "call_id": null,
+      "payload": {
+        "reason": "Classified as medical (declared type: medical). Required services: Medical only. Priority medium, risk medium.",
+        "source": "sos",
+        "category": "medical",
+        "priority": "medium",
+        "provider": "rule_based",
+        "confidence": 0.98,
+        "risk_level": "medium",
+        "required_services": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-08-02 18:23:34",
+      "event_type": "analysis",
+      "analysis_id": 92,
+      "emergency_id": 88
+    },
+    {
+      "id": 239,
+      "call_id": null,
+      "payload": {
+        "fire": null,
+        "police": null,
+        "reason": "De Martino Public Hospital: closest suitable hospital, ETA 3 min.",
+        "hospital": "De Martino Public Hospital",
+        "confidence": 0.98,
+        "eta_minutes": 3,
+        "suggested_dispatch_types": [
+          "medical"
+        ]
+      },
+      "timestamp": "2026-08-02 18:23:34",
+      "event_type": "recommendation",
+      "analysis_id": 92,
+      "emergency_id": 88,
+      "recommendation_id": 79
+    },
+    {
+      "id": 240,
+      "call_id": null,
+      "payload": {
+        "dispatched_to": [
+          "hospital"
+        ],
+        "emergency_ids": [
+          88
+        ],
+        "human_decision": "auto_sos",
+        "assigned_hospital_name": "De Martino Public Hospital"
+      },
+      "timestamp": "2026-08-02 18:23:34",
+      "event_type": "dispatch_result",
+      "emergency_id": 88,
+      "dispatch_log_id": 57,
+      "recommendation_id": 79
+    }
+  ],
+  "next_id": 241
+}

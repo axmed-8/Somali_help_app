@@ -4,37 +4,47 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Call History — {{ content.app_name }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/gurmadnet.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/call_center.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/call_center.css') }}?v=cc-s4">
 </head>
-<body class="dashboard-admin gn-call-center">
+<body class="dashboard-admin gn-call-center cc-command-v1">
   <div class="dashboard-container">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-brand">
-        <h2>Call Center</h2>
-        <span>History</span>
+        <span class="cc-brand-mark" aria-hidden="true">SH</span>
+        <div>
+          <h2>Somali Help App</h2>
+          <span class="cc-brand-module">Call Center</span>
+          <small class="cc-brand-sub">Integrated Emergency Help Platform</small>
+        </div>
       </div>
-      <nav class="admin-nav">
-        <a href="{{ url_for('call_center_dashboard') }}">📞 Live Calls</a>
-        <a href="{{ url_for('call_center_history_page') }}" class="active">📋 Call History</a>
+      <nav class="admin-nav cc-nav">
+        <a href="{{ url_for('call_center_dashboard') }}"><span class="cc-nav-ico" aria-hidden="true">📞</span> Live Calls</a>
+        <a href="{{ url_for('call_center_history_page') }}" class="active"><span class="cc-nav-ico" aria-hidden="true">📋</span> Call History</a>
       </nav>
-      <div class="dashboard-links">
-        <span>{{ user.name }}</span>
-        <a href="{{ url_for('logout') }}" class="btn-logout" style="display:inline-block;margin-top:8px;">Logout</a>
+      <div class="dashboard-links cc-sidebar-foot">
+        <span class="cc-sidebar-user">{{ user.name }}</span>
+        <a href="{{ url_for('logout') }}" class="btn-logout cc-logout">Logout</a>
       </div>
     </aside>
     <div class="main-content">
-      <header class="top-bar">
-        <button type="button" class="sidebar-toggle" id="sidebar-toggle">☰</button>
-        <h1>Call History</h1>
-        <div class="top-bar-actions">
-          <a href="{{ url_for('call_center_dashboard') }}" class="btn-logout">← Live</a>
+      <header class="top-bar cc-topbar">
+        <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="Menu">☰</button>
+        <div class="cc-topbar-title">
+          <h1>Call History</h1>
+          <p class="cc-topbar-sub">Completed and closed emergency calls</p>
+        </div>
+        <div class="top-bar-actions cc-topbar-actions">
+          <a href="{{ url_for('call_center_dashboard') }}" class="btn-logout cc-back-live">← Live Calls</a>
         </div>
       </header>
       <div class="content-area">
-        <div class="table-wrap">
-          <table class="admin-table" id="history-table">
+        <div class="table-wrap cc-history-wrap">
+          <table class="admin-table cc-history-table" id="history-table">
             <thead>
               <tr>
                 <th>ID</th><th>Caller</th><th>Phone</th><th>GPS</th><th>Address</th>

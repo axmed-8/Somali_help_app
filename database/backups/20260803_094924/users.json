@@ -1,0 +1,688 @@
+{
+  "users": [
+    {
+      "id": 8,
+      "username": "axmednuurc4",
+      "name": "Ahmett Nuur Apdy",
+      "first_name": "",
+      "middle_name": "",
+      "last_name": "",
+      "email": "axmednuurc4@gmail.com",
+      "phone": "613910872",
+      "password_hash": "scrypt:32768:8:1$2hbzAF3Q9sOf5UBD$b94c93cc1b11b63cc3545c916ab4253bd061fc8fe903ef0abb17e80666a25a220c60516b403928a73355ad534d220dcbcda1a564dec4dae2f71f7bdcf982d035",
+      "role": "super_admin",
+      "status": "active",
+      "profile_photo": "",
+      "emergency_contact_name": "",
+      "emergency_contact_phone": "",
+      "emergency_contact_relation": "",
+      "emergency_contact_email": "",
+      "address": "",
+      "city": "",
+      "date_of_birth": "",
+      "gender": "",
+      "national_id_last4": "",
+      "national_id_hash": null,
+      "national_id_encrypted": null,
+      "blood_type": "",
+      "medical_notes": "",
+      "allergies": "",
+      "hospital_id": null,
+      "reset_token": null,
+      "reset_expires": null,
+      "email_verified": true,
+      "email_verify_token": null,
+      "email_verify_expires": null,
+      "email_verify_attempts": 0,
+      "reset_otp_attempts": 0,
+      "failed_logins": 0,
+      "locked_until": null,
+      "created_at": "2026-07-17 03:28:34",
+      "last_login": "2026-08-03 09:49:05",
+      "last_seen_call_center": null,
+      "notify_email_on_sos": true,
+      "notify_email_on_dispatch": true,
+      "station_id": null,
+      "call_center_id": null,
+      "saved_locations": [],
+      "activity": [
+        {
+          "action": "Logged in",
+          "timestamp": "2026-08-03 09:49:05"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-28 13:29:31"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-27 13:17:04"
+        },
+        {
+          "action": "Profile updated from My Profile",
+          "timestamp": "2026-07-27 12:31:52"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-27 12:17:37"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-26 13:17:07"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-26 12:33:53"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-26 10:07:30"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-25 15:58:49"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-25 13:29:39"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-18 10:35:28"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-18 09:38:37"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-17 15:26:51"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-17 15:23:50"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-17 13:16:09"
+        },
+        {
+          "action": "Account created (pending email verification)",
+          "timestamp": "2026-07-17 03:28:34"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "username": "amiishqurux753",
+      "name": "amiish  qurux",
+      "first_name": "",
+      "middle_name": "",
+      "last_name": "",
+      "email": "amiishqurux753@gmail.com",
+      "phone": "613919191",
+      "password_hash": "scrypt:32768:8:1$VcKof2N3fZMbhJ3E$80e42228705d2e9355499745fb411ce2d091a17c21b8e17ef9f4d8fb6389e0f2b4951e52db2dc3a6f697d2b5d43fd3577936beb47f8c26de8a45a1c2b318ba8e",
+      "role": "citizen",
+      "status": "active",
+      "profile_photo": "",
+      "emergency_contact_name": "",
+      "emergency_contact_phone": "",
+      "emergency_contact_relation": "",
+      "emergency_contact_email": "",
+      "address": "",
+      "city": "",
+      "date_of_birth": "",
+      "gender": "",
+      "national_id_last4": "",
+      "national_id_hash": null,
+      "national_id_encrypted": null,
+      "blood_type": "",
+      "medical_notes": "",
+      "allergies": "",
+      "hospital_id": null,
+      "reset_token": null,
+      "reset_expires": null,
+      "email_verified": true,
+      "email_verify_token": null,
+      "email_verify_expires": null,
+      "email_verify_attempts": 0,
+      "reset_otp_attempts": 0,
+      "failed_logins": 0,
+      "locked_until": null,
+      "created_at": "2026-07-26 14:54:22",
+      "last_login": "2026-08-02 15:27:55",
+      "last_seen_call_center": null,
+      "notify_email_on_sos": true,
+      "notify_email_on_dispatch": true,
+      "station_id": null,
+      "call_center_id": null,
+      "saved_locations": [],
+      "activity": [
+        {
+          "action": "Logged in",
+          "timestamp": "2026-08-02 15:27:55"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-28 13:30:38"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-27 14:26:40"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-27 14:25:17"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-27 14:02:49"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-27 13:51:54"
+        },
+        {
+          "action": "Citizen created by admin",
+          "timestamp": "2026-07-26 14:54:22"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "username": "ops",
+      "name": "CC Operator",
+      "first_name": "",
+      "middle_name": "",
+      "last_name": "",
+      "email": "ops@callcenter.so",
+      "phone": "+252612000111",
+      "password_hash": "scrypt:32768:8:1$MMh83IHJyE1KG1Bc$99ed87a8243bc647ef5b81761d106a735ccd69bcc001445103fe6a27b8d0cb8a57832837f5b1b4ed9af932538f155e27d75cfa37cd66b5f3f3001d64ff0a1da4",
+      "role": "call_center",
+      "status": "active",
+      "profile_photo": "",
+      "emergency_contact_name": "",
+      "emergency_contact_phone": "",
+      "emergency_contact_relation": "",
+      "emergency_contact_email": "",
+      "address": "",
+      "city": "",
+      "date_of_birth": "",
+      "gender": "",
+      "national_id_last4": "",
+      "national_id_hash": null,
+      "national_id_encrypted": null,
+      "blood_type": "",
+      "medical_notes": "",
+      "allergies": "",
+      "hospital_id": null,
+      "reset_token": null,
+      "reset_expires": null,
+      "email_verified": true,
+      "email_verify_token": null,
+      "email_verify_expires": null,
+      "email_verify_attempts": 0,
+      "reset_otp_attempts": 0,
+      "failed_logins": 0,
+      "locked_until": null,
+      "created_at": "2026-07-26 15:14:03",
+      "last_login": null,
+      "last_seen_call_center": null,
+      "notify_email_on_sos": true,
+      "notify_email_on_dispatch": true,
+      "station_id": null,
+      "call_center_id": null,
+      "saved_locations": [],
+      "activity": []
+    },
+    {
+      "id": 11,
+      "username": "citizen.voice",
+      "name": "Voice Citizen",
+      "first_name": "",
+      "middle_name": "",
+      "last_name": "",
+      "email": "citizen.voice@test.so",
+      "phone": "+252615000222",
+      "password_hash": "scrypt:32768:8:1$h2MgZtUytH14DILm$5fa4ed7a3541521cf3419a53346764e36772038c62db6c981ee8fff238d7a2d7afb0c0e969fbe42a37990f646961cf65c513e208bde758ddcb1c899bfa9834f0",
+      "role": "citizen",
+      "status": "active",
+      "profile_photo": "",
+      "emergency_contact_name": "",
+      "emergency_contact_phone": "",
+      "emergency_contact_relation": "",
+      "emergency_contact_email": "",
+      "address": "",
+      "city": "",
+      "date_of_birth": "",
+      "gender": "",
+      "national_id_last4": "",
+      "national_id_hash": null,
+      "national_id_encrypted": null,
+      "blood_type": "",
+      "medical_notes": "",
+      "allergies": "",
+      "hospital_id": null,
+      "reset_token": null,
+      "reset_expires": null,
+      "email_verified": true,
+      "email_verify_token": null,
+      "email_verify_expires": null,
+      "email_verify_attempts": 0,
+      "reset_otp_attempts": 0,
+      "failed_logins": 0,
+      "locked_until": null,
+      "created_at": "2026-07-26 15:14:04",
+      "last_login": "2026-08-02 18:20:50",
+      "last_seen_call_center": null,
+      "notify_email_on_sos": true,
+      "notify_email_on_dispatch": true,
+      "station_id": null,
+      "call_center_id": null,
+      "saved_locations": [],
+      "activity": [
+        {
+          "action": "Logged in",
+          "timestamp": "2026-08-02 18:20:50"
+        },
+        {
+          "action": "Profile updated by admin",
+          "timestamp": "2026-08-02 18:20:16"
+        },
+        {
+          "action": "Password reset by admin",
+          "timestamp": "2026-08-02 18:20:16"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "username": "aaminoabdikadir01",
+      "name": "aaamino",
+      "first_name": "",
+      "middle_name": "",
+      "last_name": "",
+      "email": "aaminoabdikadir01@gmail.com",
+      "phone": "6105739865",
+      "password_hash": "scrypt:32768:8:1$zWOHtHA2kIicINA7$50afae0bc7b7d8537927e419e24b0f984fa9f5029a39f7a75b4a5739665d1d65013f8acf8565456535d8e6d5ac020d6e77f01a66a29ff3a5f168422b35cf5a7e",
+      "role": "call_center",
+      "status": "active",
+      "profile_photo": "",
+      "emergency_contact_name": "",
+      "emergency_contact_phone": "",
+      "emergency_contact_relation": "",
+      "emergency_contact_email": "",
+      "address": "",
+      "city": "",
+      "date_of_birth": "",
+      "gender": "",
+      "national_id_last4": "",
+      "national_id_hash": null,
+      "national_id_encrypted": null,
+      "blood_type": "",
+      "medical_notes": "",
+      "allergies": "",
+      "hospital_id": null,
+      "reset_token": null,
+      "reset_expires": null,
+      "email_verified": true,
+      "email_verify_token": null,
+      "email_verify_expires": null,
+      "email_verify_attempts": 0,
+      "reset_otp_attempts": 0,
+      "failed_logins": 0,
+      "locked_until": null,
+      "created_at": "2026-07-27 13:48:56",
+      "last_login": "2026-07-28 13:33:23",
+      "last_seen_call_center": "2026-07-28 14:14:04",
+      "notify_email_on_sos": true,
+      "notify_email_on_dispatch": true,
+      "station_id": null,
+      "call_center_id": null,
+      "saved_locations": [],
+      "activity": [
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-28 13:33:23"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-27 14:27:28"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-27 13:53:22"
+        },
+        {
+          "action": "Call_Center account created by Ahmett Nuur Apdy (upgraded)",
+          "timestamp": "2026-07-27 13:49:11"
+        },
+        {
+          "action": "Call_Center account created by Ahmett Nuur Apdy",
+          "timestamp": "2026-07-27 13:48:56"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "username": "canabquru",
+      "name": "Canab Quru",
+      "first_name": "Canab",
+      "middle_name": "",
+      "last_name": "Quru",
+      "email": "canabquru@gmail.com",
+      "phone": "613231821",
+      "password_hash": "scrypt:32768:8:1$OlzDPVgyeTMinGDy$16d6393f9e962c3f43505a20996ac754a4031e63be201c375c167ab86c92727904e0a80cf642cb9421db5547c4c8a6e35f0e871cebc4f03ce9c988c49f12ad82",
+      "role": "citizen",
+      "status": "active",
+      "profile_photo": "",
+      "emergency_contact_name": "Aamino Abdikadir",
+      "emergency_contact_phone": "610573865",
+      "emergency_contact_relation": "Sister",
+      "emergency_contact_email": "aaminoabdikadir01@gmail.com",
+      "address": "27GP+VFR Haji Maxamed(masjed Quba), Mogadishu",
+      "city": "Muqdisho",
+      "date_of_birth": "2005-03-08",
+      "gender": "female",
+      "national_id_last4": "",
+      "national_id_hash": null,
+      "national_id_encrypted": null,
+      "blood_type": "",
+      "medical_notes": "",
+      "allergies": "",
+      "hospital_id": null,
+      "reset_token": null,
+      "reset_expires": null,
+      "email_verified": true,
+      "email_verify_token": null,
+      "email_verify_expires": null,
+      "email_verify_attempts": 0,
+      "reset_otp_attempts": 0,
+      "failed_logins": 0,
+      "locked_until": null,
+      "created_at": "2026-07-27 14:30:31",
+      "last_login": "2026-07-27 14:31:19",
+      "last_seen_call_center": null,
+      "notify_email_on_sos": true,
+      "notify_email_on_dispatch": true,
+      "station_id": null,
+      "call_center_id": null,
+      "saved_locations": [],
+      "activity": [
+        {
+          "action": "Profile updated by admin",
+          "timestamp": "2026-08-02 18:19:43"
+        },
+        {
+          "action": "Password reset by admin",
+          "timestamp": "2026-08-02 18:19:43"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-07-27 14:31:19"
+        },
+        {
+          "action": "Email verified",
+          "timestamp": "2026-07-27 14:31:19"
+        },
+        {
+          "action": "Account created",
+          "timestamp": "2026-07-27 14:30:31"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "username": "lakiboy989",
+      "name": "banadir",
+      "first_name": "",
+      "middle_name": "",
+      "last_name": "",
+      "email": "lakiboy989@gmail.com",
+      "phone": "6105739865",
+      "password_hash": "scrypt:32768:8:1$6J133xksbooRwDyS$9cf4e5a0d0737bf7be4b4fd3062c1a546fdb5f26cf8baa7b7957cec5e251256885f82c1d38d44429b46633045dd62bca46753e08df2ccedc4c2346b1451a17c0",
+      "role": "admin",
+      "status": "active",
+      "profile_photo": "",
+      "emergency_contact_name": "",
+      "emergency_contact_phone": "",
+      "emergency_contact_relation": "",
+      "emergency_contact_email": "",
+      "address": "",
+      "city": "",
+      "date_of_birth": "",
+      "gender": "",
+      "national_id_last4": "",
+      "national_id_hash": null,
+      "national_id_encrypted": null,
+      "blood_type": "",
+      "medical_notes": "",
+      "allergies": "",
+      "hospital_id": null,
+      "reset_token": null,
+      "reset_expires": null,
+      "email_verified": true,
+      "email_verify_token": null,
+      "email_verify_expires": null,
+      "email_verify_attempts": 0,
+      "reset_otp_attempts": 0,
+      "failed_logins": 0,
+      "locked_until": null,
+      "created_at": "2026-08-02 16:27:33",
+      "last_login": "2026-08-02 16:32:41",
+      "last_seen_call_center": null,
+      "notify_email_on_sos": true,
+      "notify_email_on_dispatch": true,
+      "station_id": null,
+      "call_center_id": null,
+      "saved_locations": [],
+      "activity": [
+        {
+          "action": "Logged in",
+          "timestamp": "2026-08-02 16:32:41"
+        },
+        {
+          "action": "Admin account created by Ahmett Nuur Apdy",
+          "timestamp": "2026-08-02 16:27:33"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "username": "safiaabukarsalad",
+      "name": "Erdogan Hospital (Digfer)",
+      "first_name": "",
+      "middle_name": "",
+      "last_name": "",
+      "email": "safiaabukarsalad@gmail.com",
+      "phone": "61999999999",
+      "password_hash": "scrypt:32768:8:1$Rgfm3ZiIIHHWo42x$c1e0dc407f7cb32a552d98b28d2d30fc1821b59a6c06228e5a7bd2ab9c463c4ea33355444b724a705ebf23b8c6ac8b5c89148e9ad2bc9e77f8d03de9d16d25ef",
+      "role": "hospital",
+      "status": "active",
+      "profile_photo": "",
+      "emergency_contact_name": "",
+      "emergency_contact_phone": "",
+      "emergency_contact_relation": "",
+      "emergency_contact_email": "",
+      "address": "",
+      "city": "",
+      "date_of_birth": "",
+      "gender": "",
+      "national_id_last4": "",
+      "national_id_hash": null,
+      "national_id_encrypted": null,
+      "blood_type": "",
+      "medical_notes": "",
+      "allergies": "",
+      "hospital_id": 13,
+      "reset_token": null,
+      "reset_expires": null,
+      "email_verified": true,
+      "email_verify_token": null,
+      "email_verify_expires": null,
+      "email_verify_attempts": 0,
+      "reset_otp_attempts": 0,
+      "failed_logins": 0,
+      "locked_until": null,
+      "created_at": "2026-08-02 16:31:26",
+      "last_login": "2026-08-02 16:34:25",
+      "last_seen_call_center": null,
+      "notify_email_on_sos": true,
+      "notify_email_on_dispatch": true,
+      "station_id": null,
+      "call_center_id": null,
+      "saved_locations": [],
+      "activity": [
+        {
+          "action": "Logged in",
+          "timestamp": "2026-08-02 16:34:25"
+        },
+        {
+          "action": "Profile updated by admin",
+          "timestamp": "2026-08-02 16:34:03"
+        },
+        {
+          "action": "Password reset by admin",
+          "timestamp": "2026-08-02 16:34:02"
+        },
+        {
+          "action": "Hospital account created by Ahmett Nuur Apdy",
+          "timestamp": "2026-08-02 16:31:26"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "username": "mukhtarsuleyman083",
+      "name": "Wartanabada District Police Station",
+      "first_name": "",
+      "middle_name": "",
+      "last_name": "",
+      "email": "mukhtarsuleyman083@gmail.com",
+      "phone": "61999999999",
+      "password_hash": "scrypt:32768:8:1$piHJ3UDrAy8o3kRT$96ee8d3535f5664748dbe5ed7857dccfbc12762d12dee3775a69c4b747426ddd389cea6899b4258433397efd5d1b4a9301a8a4f479c41d558cac1b9a315a171d",
+      "role": "police",
+      "status": "active",
+      "profile_photo": "",
+      "emergency_contact_name": "",
+      "emergency_contact_phone": "",
+      "emergency_contact_relation": "",
+      "emergency_contact_email": "",
+      "address": "",
+      "city": "",
+      "date_of_birth": "",
+      "gender": "",
+      "national_id_last4": "",
+      "national_id_hash": null,
+      "national_id_encrypted": null,
+      "blood_type": "",
+      "medical_notes": "",
+      "allergies": "",
+      "hospital_id": null,
+      "reset_token": null,
+      "reset_expires": null,
+      "email_verified": true,
+      "email_verify_token": null,
+      "email_verify_expires": null,
+      "email_verify_attempts": 0,
+      "reset_otp_attempts": 0,
+      "failed_logins": 0,
+      "locked_until": null,
+      "created_at": "2026-08-02 18:01:57",
+      "last_login": "2026-08-02 18:07:41",
+      "last_seen_call_center": null,
+      "notify_email_on_sos": true,
+      "notify_email_on_dispatch": true,
+      "station_id": 9,
+      "call_center_id": null,
+      "saved_locations": [],
+      "activity": [
+        {
+          "action": "Logged in",
+          "timestamp": "2026-08-02 18:07:41"
+        },
+        {
+          "action": "Profile updated by admin",
+          "timestamp": "2026-08-02 18:07:27"
+        },
+        {
+          "action": "Password reset by admin",
+          "timestamp": "2026-08-02 18:07:27"
+        },
+        {
+          "action": "Profile updated by admin",
+          "timestamp": "2026-08-02 18:07:25"
+        },
+        {
+          "action": "Password reset by admin",
+          "timestamp": "2026-08-02 18:07:25"
+        },
+        {
+          "action": "Police account created by Ahmett Nuur Apdy",
+          "timestamp": "2026-08-02 18:01:57"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "username": "luluapirashid",
+      "name": "Luluapirashid",
+      "first_name": "",
+      "middle_name": "",
+      "last_name": "",
+      "email": "luluapirashid@gmail.com",
+      "phone": "6105739865",
+      "password_hash": "scrypt:32768:8:1$03WkdD5D5V9MqTbt$d22aa086f6ce8f4913e10303dd85c5e78a700d1dec97a82fce45f795209606fad0721c23a0cd0d13424b0e12f1b0477a82fc5d403f0428a7e628601e4d2b9945",
+      "role": "fire",
+      "status": "active",
+      "profile_photo": "",
+      "emergency_contact_name": "",
+      "emergency_contact_phone": "",
+      "emergency_contact_relation": "",
+      "emergency_contact_email": "",
+      "address": "",
+      "city": "",
+      "date_of_birth": "",
+      "gender": "",
+      "national_id_last4": "",
+      "national_id_hash": null,
+      "national_id_encrypted": null,
+      "blood_type": "",
+      "medical_notes": "",
+      "allergies": "",
+      "hospital_id": null,
+      "reset_token": null,
+      "reset_expires": null,
+      "email_verified": true,
+      "email_verify_token": null,
+      "email_verify_expires": null,
+      "email_verify_attempts": 0,
+      "reset_otp_attempts": 0,
+      "failed_logins": 0,
+      "locked_until": null,
+      "created_at": "2026-08-02 18:03:13",
+      "last_login": "2026-08-02 18:16:38",
+      "last_seen_call_center": null,
+      "notify_email_on_sos": true,
+      "notify_email_on_dispatch": true,
+      "station_id": 13,
+      "call_center_id": null,
+      "saved_locations": [],
+      "activity": [
+        {
+          "action": "Logged in",
+          "timestamp": "2026-08-02 18:16:38"
+        },
+        {
+          "action": "Logged in",
+          "timestamp": "2026-08-02 18:04:29"
+        },
+        {
+          "action": "Fire account created by Ahmett Nuur Apdy",
+          "timestamp": "2026-08-02 18:03:13"
+        }
+      ]
+    }
+  ],
+  "next_id": 18
+}

@@ -64,7 +64,7 @@ class SMTPEmailProvider(EmailProvider):
             "yes",
             "on",
         )
-        self.app_name = _clean(os.environ.get("APP_NAME") or "GurmadNet AI")
+        self.app_name = _clean(os.environ.get("APP_NAME") or "Somali Help App")
 
     def configured(self):
         self._reload_from_env()
